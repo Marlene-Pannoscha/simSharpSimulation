@@ -1,2 +1,8 @@
-Installieren
-sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0
+
+** Simulationsebene
+cd ...\simSharpSimulation\simSharpSimulation
+**Installieren
+dotnet add package SimSharp
+
+**wenn nicht vorhanden
+pip install simpy

@@ -1,32 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\uni\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {}
+    "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {}
   },
   "projects": {
-    "C:\\uni\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {
+    "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\uni\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+        "projectUniqueName": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
         "projectName": "simSharpSimulation",
-        "projectPath": "C:\\uni\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
-        "packagesPath": "C:\\Users\\panno\\.nuget\\packages\\",
-        "outputPath": "C:\\uni\\simSharpSimulation\\simSharpSimulation\\obj\\",
+        "projectPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+        "packagesPath": "C:\\Users\\anhth\\.nuget\\packages\\",
+        "outputPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\panno\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\anhth\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
