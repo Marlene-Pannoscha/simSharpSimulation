@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "jDvoSKxcSPg=",
+  "success": true,
+  "projectFilePath": "C:\\uni\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\panno\\.nuget\\packages\\simsharp\\3.4.2\\simsharp.3.4.2.nupkg.sha512"
+  ],
+  "logs": []
+}
