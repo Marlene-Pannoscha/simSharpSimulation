@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 
 namespace simSharpSimulation
@@ -11,6 +12,8 @@ namespace simSharpSimulation
     /// </summary>
     internal static class KlinikDiagramme
     {
+        private const string ImagesOrdner = "images";
+
         /// <summary>
         /// Erstellt alle Diagramme analog zur SimPy-Version:
         /// 1) Theorie: PDF + CDF
@@ -64,8 +67,9 @@ namespace simSharpSimulation
             axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");
             plot.Legend(location: ScottPlot.Alignment.UpperLeft);
 
-            plot.SaveFig("ankunftsverteilung_theorie_pdf_cdf.png");
-            Console.WriteLine("--- Diagramm 1: ankunftsverteilung_theorie_pdf_cdf.png gespeichert. ---");
+            string outputPath = ErzeugeOutputPfad("ankunftsverteilung_theorie_pdf_cdf.png");
+            plot.SaveFig(outputPath);
+            Console.WriteLine($"--- Diagramm 1 gespeichert: {outputPath} ---");
         }
 
         /// <summary>
@@ -105,8 +109,9 @@ namespace simSharpSimulation
             axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");
             plot.Legend(location: ScottPlot.Alignment.UpperLeft);
 
-            plot.SaveFig("ankuenfte_simulation_vs_theorie.png");
-            Console.WriteLine("--- Diagramm 2: ankuenfte_simulation_vs_theorie.png gespeichert. ---");
+            string outputPath = ErzeugeOutputPfad("ankuenfte_simulation_vs_theorie.png");
+            plot.SaveFig(outputPath);
+            Console.WriteLine($"--- Diagramm 2 gespeichert: {outputPath} ---");
         }
 
         /// <summary>
@@ -133,8 +138,20 @@ namespace simSharpSimulation
             plot.YLabel("Anzahl der Patienten");
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
 
-            plot.SaveFig("wartezeiten_histogramm.png");
-            Console.WriteLine("--- Diagramm 3: wartezeiten_histogramm.png gespeichert. ---");
+            string outputPath = ErzeugeOutputPfad("wartezeiten_histogramm.png");
+            plot.SaveFig(outputPath);
+            Console.WriteLine($"--- Diagramm 3 gespeichert: {outputPath} ---");
+        }
+
+        /// <summary>
+        /// Erstellt (falls nötig) den Unterordner "images" und liefert den vollständigen Dateipfad.
+        /// Dadurch landen alle Diagramme konsistent im selben Zielordner.
+        /// </summary>
+        private static string ErzeugeOutputPfad(string dateiname)
+        {
+            string imagesPfad = Path.Combine(Directory.GetCurrentDirectory(), ImagesOrdner);
+            Directory.CreateDirectory(imagesPfad);
+            return Path.Combine(imagesPfad, dateiname);
         }
 
         /// <summary>

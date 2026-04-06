@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {}
+    "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {}
   },
   "projects": {
-    "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {
+    "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+        "projectUniqueName": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
         "projectName": "simSharpSimulation",
-        "projectPath": "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+        "projectPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
         "packagesPath": "C:\\Users\\anhth\\.nuget\\packages\\",
-        "outputPath": "c:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
+        "outputPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\anhth\\AppData\\Roaming\\NuGet\\NuGet.Config"
