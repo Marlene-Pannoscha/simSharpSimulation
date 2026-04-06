@@ -1,10 +1,10 @@
 
 ** Simulationsebene
 cd ...\simSharpSimulation\simSharpSimulation
-**Installieren
-dotnet add package SimSharp
+** Installieren
 dotnet add package SimSharp
 dotnet add package MathNet.Numerics
+dotnet add package ScottPlot
 dotnet build
 
 **wenn nicht vorhanden

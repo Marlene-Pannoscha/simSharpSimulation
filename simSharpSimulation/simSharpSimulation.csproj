@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="ScottPlot" Version="4.1.71" />
     <PackageReference Include="SimSharp" Version="3.4.2" />
   </ItemGroup>
 

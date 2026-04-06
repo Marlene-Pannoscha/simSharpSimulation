@@ -124,6 +124,15 @@ namespace simSharpSimulation
 
             Console.WriteLine("--- Ende der SimSharp-Simulation. ---");
 
+            // --- 6. VISUALISIERUNG (Diagramme) ---
+            KlinikDiagramme.GeneriereDiagramme(
+                echte_ankunftszeiten,
+                wartezeiten,
+                SIMULATIONSDAUER,
+                ERWARTUNGSWERT,
+                STANDARDABWEICHUNG,
+                ANZAHL_AERZTE);
+
             // --- 7. EXPORT IN TEXTDATEI ---
             Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
             File.WriteAllLines("klinik_trace.txt", trace_data);

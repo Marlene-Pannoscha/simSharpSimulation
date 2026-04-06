@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {}
+    "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {}
   },
   "projects": {
-    "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {
+    "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+        "projectUniqueName": "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
         "projectName": "simSharpSimulation",
-        "projectPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+        "projectPath": "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
         "packagesPath": "C:\\Users\\anhth\\.nuget\\packages\\",
-        "outputPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
+        "outputPath": "c:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\anhth\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -47,6 +47,10 @@
             "MathNet.Numerics": {
               "target": "Package",
               "version": "[5.0.0, )"
+            },
+            "ScottPlot": {
+              "target": "Package",
+              "version": "[4.1.71, )"
             },
             "SimSharp": {
               "target": "Package",
