@@ -2,38 +2,57 @@ using System;
 using System.Collections.Generic;
 using SimSharp;
 
+// Ein 'namespace' (Namensraum) ist wie ein Ordner für Klassen, um den Code zu organisieren und Namenskonflikte zu vermeiden.
 namespace simSharpSimulation
 {
-    /// <summary>
-    /// Enthält die komplette Ablauf-Logik der Simulation:
-    /// - Patientenprozess
-    /// - Generator für Ankünfte
-    /// - Start/Run der SimSharp-Umgebung
-    /// </summary>
+    /* Enthält die komplette Ablauf-Logik der Simulation:
+     - Patientenprozess
+     - Generator für Ankünfte
+     - Start/Run der SimSharp-Umgebung
+    */
+    /* internal: Klasse ist nur innerhalb dieses Projekts sichtbar.
+    sealed: Keine andere Klasse darf von dieser Klasse erben (sie ist "versiegelt").
+    class: Der Bauplan für die Klinik-Simulation. */
     internal sealed class KlinikSimulation
     {
         private readonly Random rnd;
         private readonly SimulationsDaten daten;
 
+        // Schritt 1: Vorbereitung (Der Konstruktor)
+        // Erhält einen Startwert für den Zufallsgenerator und ein Objekt zum Speichern der Ergebnisse.
         public KlinikSimulation(int randomSeed, SimulationsDaten daten)
         {
             this.rnd = new Random(randomSeed);
             this.daten = daten;
         }
 
+        // Schritt 2: Der Start
+        // Richtet die Simulationsuhr und die Ärzte ein und startet den Ablauf.
         public void FuehreAus()
         {
-            // env ist die Simulationsuhr.
-            var env = new Simulation(new DateTime(2000, 1, 1));
-            var arzt = new Resource(env, capacity: SimulationKonfiguration.ANZAHL_AERZTE);
+            // Wir simulieren eine Arbeitswoche: 5 Tage (Montag bis Freitag).
+            // Der 3. Januar 2000 war ein Montag.
+            DateTime startDatum = new DateTime(2000, 1, 3);
 
-            env.Process(PatientenGenerator(env, arzt));
-            env.Run(TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER));
+            for (int tag = 0; tag < 5; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
+            {
+                // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ärzte.
+                // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
+                var env = new Simulation(startDatum.AddDays(tag));
+                var arzt = new Resource(env, capacity: SimulationKonfiguration.ANZAHL_AERZTE);
+
+                // Schritt 3: PatientenGenerator für den jeweiligen Tag starten
+                env.Process(PatientenGenerator(env, arzt)); 
+                
+                // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
+                env.Run(TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER));
+            }
         }
 
-        /// <summary>
-        /// Prozesslogik eines einzelnen Patienten in der Klinik.
-        /// </summary>
+        /*Schritt 4: Der Weg des Patienten
+        Beschreibt exakt, was passiert, von der Tür bis zur Entlassung.
+        Prozesslogik eines einzelnen Patienten in der Klinik.
+        */
         private IEnumerable<Event> Patient(Simulation env, int patientId, Resource arzt)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
@@ -72,9 +91,10 @@ namespace simSharpSimulation
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
         }
 
-        /// <summary>
-        /// Erzeugt alle Patientenankünfte über den Tag und startet deren Prozesse.
-        /// </summary>
+        /* Schritt 3: Patienten zur Klinik kommen
+        Erzeugt alle Patientenankünfte über den Tag und startet deren Prozesse.
+        Ankunftszeiten werden dabei per Zufall (Normalverteilung) berechnet.
+        */
         private IEnumerable<Event> PatientenGenerator(Simulation env, Resource arzt)
         {
             var ankunftszeiten = new List<double>();
@@ -87,8 +107,10 @@ namespace simSharpSimulation
                     SimulationKonfiguration.ERWARTUNGSWERT,
                     SimulationKonfiguration.STANDARDABWEICHUNG);
 
-                // 2) Nur Zeiten innerhalb der Öffnungsdauer [0, SIMULATIONSDAUER] behalten.
-                if (z >= 0 && z <= SimulationKonfiguration.SIMULATIONSDAUER)
+                // 2) Vor der Öffnung (z < 0) -> Warten an der Tür und werden um Punkt 0 Uhr simulativ eingelassen.
+                // Innerhalb der Öffnungsdauer (0 <= z <= SIMULATIONSDAUER) -> Betreten die Klinik normal.
+                // Nach der Öffnungsdauer (z > SIMULATIONSDAUER) -> Werden weggeworfen.
+                if (z <= SimulationKonfiguration.SIMULATIONSDAUER)
                     ankunftszeiten.Add(z);
             }
 
