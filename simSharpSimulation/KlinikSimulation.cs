@@ -80,6 +80,10 @@ namespace simSharpSimulation
                 double behandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
                     rnd,
                     1.0 / SimulationKonfiguration.MITTLERE_BEHANDLUNGSZEIT);
+                    // Behandlungsdauer wird als Exponentialverteilung modelliert, 
+                    // da sie oft für Wartezeiten und Servicezeiten in Warteschlangensystemen verwendet wird.
+                    // Lambda (Rate) = 1 / der mittleren Behandlungszeit, 
+                    // ..rechnet der Code: 1.0 / 5.0 = 0.2 Das bedeutet: Der Arzt schafft durchschnittlich 0,2 Patienten pro Minute
 
                 yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
             }
