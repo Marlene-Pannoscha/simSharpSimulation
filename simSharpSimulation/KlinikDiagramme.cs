@@ -18,15 +18,19 @@ namespace simSharpSimulation
         /// Erstellt alle Diagramme analog zur SimPy-Version:
         /// 1) Theorie: PDF + CDF
         /// 2) Simulation vs. Theorie: Histogramm der Ankünfte + PDF + CDF
-        /// 3) Histogramm der Wartezeiten
+        /// 3) Histogramm der Wartezeiten (Arzt)
+        /// 4) Histogramm der Wartezeiten (Schwester)
+        /// 5) Vergleich der Wartezeiten (Arzt vs. Schwester)
         /// </summary>
         public static void GeneriereDiagramme(
             IReadOnlyList<double> echteAnkunftszeiten,
             IReadOnlyList<double> wartezeiten,
+            IReadOnlyList<double> schwesternWartezeiten,
             double simulationsdauer,
             double erwartungswert,
             double standardabweichung,
-            int anzahlAerzte)
+            int anzahlAerzte,
+            int anzahlSchwestern)
         {
             Console.WriteLine("Generiere Diagramme (Wartezeiten, Ankünfte, Theorie)...");
 
@@ -45,6 +49,8 @@ namespace simSharpSimulation
             ErzeugeTheorieDiagramm(x, pdf, cdf, erwartungswert, standardabweichung);
             ErzeugeAnkuenfteVergleichsDiagramm(echteAnkunftszeiten, x, pdf, cdf, simulationsdauer, erwartungswert, standardabweichung);
             ErzeugeWartezeitenDiagramm(wartezeiten, anzahlAerzte);
+            ErzeugeSchwesternWartezeitenDiagramm(schwesternWartezeiten, anzahlSchwestern);
+            ErzeugeWartezeitenVergleichsDiagramm(wartezeiten, schwesternWartezeiten, anzahlAerzte, anzahlSchwestern);
         }
 
         /// <summary>
@@ -141,6 +147,79 @@ namespace simSharpSimulation
             string outputPath = ErzeugeOutputPfad("wartezeiten_histogramm.png");
             plot.SaveFig(outputPath);
             Console.WriteLine($"--- Diagramm 3 gespeichert: {outputPath} ---");
+        }
+
+        /// <summary>
+        /// Diagramm 4: Histogramm der Wartezeiten bei der Schwester.
+        /// </summary>
+        private static void ErzeugeSchwesternWartezeitenDiagramm(IReadOnlyList<double> schwesternWartezeiten, int anzahlSchwestern)
+        {
+            var plot = new ScottPlot.Plot(1000, 600);
+
+            if (schwesternWartezeiten.Count > 0)
+            {
+                int bins = 20;
+                double maxWartezeit = Math.Max(schwesternWartezeiten.Max(), 1.0); // Schutz vor max=0
+                var (counts, centers, binWidth) = BuildHistogram(schwesternWartezeiten, bins, 0, maxWartezeit);
+
+                var bars = plot.AddBar(counts, centers);
+                bars.BarWidth = binWidth * 0.9;
+                bars.FillColor = Color.PeachPuff; // Distinct color for nurses
+                bars.BorderColor = Color.Black;
+            }
+
+            plot.Title($"Verteilung der Wartezeiten bei den Schwestern (Schwestern: {anzahlSchwestern})");
+            plot.XLabel("Wartezeit in Minuten");
+            plot.YLabel("Anzahl der Patienten");
+            plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
+
+            string outputPath = ErzeugeOutputPfad("wartezeiten_schwester_histogramm.png");
+            plot.SaveFig(outputPath);
+            Console.WriteLine($"--- Diagramm 4 gespeichert: {outputPath} ---");
+        }
+
+        /// <summary>
+        /// Diagramm 5: Vergleich der Wartezeiten von Ärzten und Schwestern in einem Diagramm.
+        /// </summary>
+        private static void ErzeugeWartezeitenVergleichsDiagramm(
+            IReadOnlyList<double> wartezeiten,
+            IReadOnlyList<double> schwesternWartezeiten,
+            int anzahlAerzte,
+            int anzahlSchwestern)
+        {
+            var plot = new ScottPlot.Plot(1000, 600);
+
+            int bins = 20;
+            double maxWartezeit = Math.Max(
+                wartezeiten.Count > 0 ? wartezeiten.Max() : 0,
+                schwesternWartezeiten.Count > 0 ? schwesternWartezeiten.Max() : 0);
+            maxWartezeit = Math.Max(maxWartezeit, 1.0);
+
+            var (doctorCounts, centers, binWidth) = BuildHistogram(wartezeiten, bins, 0, maxWartezeit);
+            var (nurseCounts, _, _) = BuildHistogram(schwesternWartezeiten, bins, 0, maxWartezeit);
+
+            double offset = binWidth * 0.2;
+            var doctorBars = plot.AddBar(doctorCounts, centers.Select(c => c - offset).ToArray());
+            doctorBars.BarWidth = binWidth * 0.35;
+            doctorBars.FillColor = Color.Teal;
+            doctorBars.BorderColor = Color.Black;
+            doctorBars.Label = "Arzt-Wartezeiten";
+
+            var nurseBars = plot.AddBar(nurseCounts, centers.Select(c => c + offset).ToArray());
+            nurseBars.BarWidth = binWidth * 0.35;
+            nurseBars.FillColor = Color.PeachPuff;
+            nurseBars.BorderColor = Color.Black;
+            nurseBars.Label = "Schwester-Wartezeiten";
+
+            plot.Title($"Wartezeitenvergleich: Ärzte vs. Schwestern\n(Ärzte: {anzahlAerzte}, Schwestern: {anzahlSchwestern})");
+            plot.XLabel("Wartezeit in Minuten");
+            plot.YLabel("Anzahl der Patienten");
+            plot.Legend(location: ScottPlot.Alignment.UpperRight);
+            plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
+
+            string outputPath = ErzeugeOutputPfad("wartezeiten_vergleich_arzt_schwester.png");
+            plot.SaveFig(outputPath);
+            Console.WriteLine($"--- Diagramm 5 gespeichert: {outputPath} ---");
         }
 
         /// <summary>

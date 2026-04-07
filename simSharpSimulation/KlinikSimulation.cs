@@ -40,9 +40,10 @@ namespace simSharpSimulation
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
                 var arzt = new Resource(env, capacity: SimulationKonfiguration.ANZAHL_AERZTE);
+            var schwester = new Resource(env, capacity: SimulationKonfiguration.ANZAHL_SCHWESTERN);
 
                 // Schritt 3: PatientenGenerator für den jeweiligen Tag starten
-                env.Process(PatientenGenerator(env, arzt)); 
+                env.Process(PatientenGenerator(env, arzt, schwester)); 
                 
                 // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
                 env.Run(TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER));
@@ -52,8 +53,9 @@ namespace simSharpSimulation
         /*Schritt 4: Der Weg des Patienten
         Beschreibt exakt, was passiert, von der Tür bis zur Entlassung.
         Prozesslogik eines einzelnen Patienten in der Klinik.
+        /// Ablauf: Ankunft -> Schwester -> Arzt -> Abgang
         */
-        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource arzt)
+        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource schwester, Resource arzt)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
@@ -62,32 +64,62 @@ namespace simSharpSimulation
             double ankunftszeit = nowMinutes;
             daten.EchteAnkunftszeiten.Add(ankunftszeit);
 
-            using (var anfrage = arzt.Request())
+            // --- SCHWESTER (NURSE) PHASE ---
+            using (var schwesterAnfrage = schwester.Request())
             {
-                // EREIGNIS 2: Patient geht zur Warteschlange
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zu_warteschlange", patientId);
-                yield return anfrage;
+                // EREIGNIS 2: Patient geht zur Schwester-Warteschlange
+                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zu_schwester_warteschlange", patientId);
+                yield return schwesterAnfrage;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double wartezeit = nowMinutes - ankunftszeit;
-                daten.Wartezeiten.Add(wartezeit);
+                double schwesterWartezeit = nowMinutes - ankunftszeit;
+                daten.SchwesternWartezeiten.Add(schwesterWartezeit);
 
-                // EREIGNIS 3: Patient verlässt die Warteschlange
-                daten.LogEvent(nowMinutes, "verlaesst_warteschlange", patientId);
-                // EREIGNIS 4: Patient geht zum Arzt
+                // EREIGNIS 3: Patient verlässt die Schwester-Warteschlange
+                daten.LogEvent(nowMinutes, "verlaesst_schwester_warteschlange", patientId);
+                // EREIGNIS 4: Patient geht zur Schwester
+                daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
+
+                double schwesternBehandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
+                    rnd,
+                    1.0 / SimulationKonfiguration.MITTLERE_SCHWESTER_ZEIT);
+
+                yield return env.Timeout(TimeSpan.FromMinutes(schwesternBehandlungsdauer));
+
+                // EREIGNIS 5: Patient verlässt die Schwester
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                daten.LogEvent(nowMinutes, "verlaesst_schwester", patientId);
+            }
+
+            // --- ARZT (DOCTOR) PHASE ---
+            using (var arztAnfrage = arzt.Request())
+            {
+                // EREIGNIS 6: Patient geht zur Arzt-Warteschlange
+                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zu_arzt_warteschlange", patientId);
+                yield return arztAnfrage;
+
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                double arztWartezeit = nowMinutes - ankunftszeit;
+                daten.Wartezeiten.Add(arztWartezeit);
+
+                // EREIGNIS 7: Patient verlässt die Arzt-Warteschlange
+                daten.LogEvent(nowMinutes, "verlaesst_arzt_warteschlange", patientId);
+                // EREIGNIS 8: Patient geht zum Arzt
                 daten.LogEvent(nowMinutes, "geht_zu_arzt", patientId);
 
-                double behandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
+                double arztBehandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
                     rnd,
                     1.0 / SimulationKonfiguration.MITTLERE_BEHANDLUNGSZEIT);
 
-                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+                yield return env.Timeout(TimeSpan.FromMinutes(arztBehandlungsdauer));
+
+                // EREIGNIS 9: Patient verlässt den Arzt
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                daten.LogEvent(nowMinutes, "verlaesst_arzt", patientId);
             }
 
-            // EREIGNIS 5: Patient verlässt den Arzt
+            // EREIGNIS 10: Patient verlässt die Klinik
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_arzt", patientId);
-            // EREIGNIS 6: Patient verlässt die Klinik
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
         }
 
@@ -95,7 +127,7 @@ namespace simSharpSimulation
         Erzeugt alle Patientenankünfte über den Tag und startet deren Prozesse.
         Ankunftszeiten werden dabei per Zufall (Normalverteilung) berechnet.
         */
-        private IEnumerable<Event> PatientenGenerator(Simulation env, Resource arzt)
+        private IEnumerable<Event> PatientenGenerator(Simulation env, Resource arzt, Resource schwester)
         {
             var ankunftszeiten = new List<double>();
 
@@ -125,7 +157,7 @@ namespace simSharpSimulation
                 if (warteBisAnkunft > 0)
                     yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
 
-                env.Process(Patient(env, patientCount, arzt));
+                env.Process(Patient(env, patientCount, schwester, arzt));
                 patientCount++;
             }
         }

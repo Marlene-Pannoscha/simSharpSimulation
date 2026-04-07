@@ -11,6 +11,7 @@ namespace simSharpSimulation
     {
         public List<string> TraceData { get; } = new();
         public List<double> Wartezeiten { get; } = new();
+        public List<double> SchwesternWartezeiten { get; } = new();
         public List<double> EchteAnkunftszeiten { get; } = new();
 
         /// <summary>
