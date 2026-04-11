@@ -13,32 +13,34 @@ namespace simSharpSimulation
             Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
 
             var daten = new SimulationsDaten();
-            var simulation = new KlinikSimulation(SimulationKonfiguration.RANDOM_SEED, daten);
+            var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
             simulation.FuehreAus();
 
             Console.WriteLine("--- Ende der SimSharp-Simulation. ---");
 
             // --- 6. VISUALISIERUNG (Diagramme) ---
-            KlinikDiagramme.GeneriereDiagramme(
+            GenerateDiagramme.GeneriereDiagramme(
                 daten.EchteAnkunftszeiten,
                 daten.Wartezeiten,
                 daten.SchwesternWartezeiten,
                 SimulationKonfiguration.SIMULATIONSDAUER,
-                SimulationKonfiguration.ERWARTUNGSWERT,
-                SimulationKonfiguration.STANDARDABWEICHUNG,
-                SimulationKonfiguration.ANZAHL_AERZTE,
-                SimulationKonfiguration.ANZAHL_SCHWESTERN);
+                PatientenKonfiguration.ERWARTUNGSWERT,
+                PatientenKonfiguration.STANDARDABWEICHUNG,
+                ArztKonfiguration.ANZAHL_AERZTE,
+                SchwesterKonfiguration.ANZAHL_SCHWESTERN);
 
             // --- 7. EXPORT IN TEXTDATEI ---
             Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
             File.WriteAllLines("klinik_trace.txt", daten.TraceData);
             Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
             
-            double avgWartezeit = daten.Wartezeiten.Count > 0 ? daten.Wartezeiten.Average() : 0;
-            double avgSchwesternWartezeit = daten.SchwesternWartezeiten.Count > 0 ? daten.SchwesternWartezeiten.Average() : 0;
+            double avgWartezeit = daten.DurchschnittlicheWartezeitArzt;
+            double avgSchwesternWartezeit = daten.DurchschnittlicheWartezeitSchwester;
+            double avgRezeptionsWartezeit = daten.DurchschnittlicheWartezeitRezeption;
             Console.WriteLine($"Simulation beendet. {daten.EchteAnkunftszeiten.Count} Patienten empfangen.");
-            Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
+            Console.WriteLine($"Durchschnittliche Wartezeit (Rezeption): {avgRezeptionsWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
+            Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
         }
     }
 }

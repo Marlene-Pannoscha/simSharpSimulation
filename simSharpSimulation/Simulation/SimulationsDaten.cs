@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace simSharpSimulation
 {
@@ -12,7 +13,12 @@ namespace simSharpSimulation
         public List<string> TraceData { get; } = new();
         public List<double> Wartezeiten { get; } = new();
         public List<double> SchwesternWartezeiten { get; } = new();
+        public List<double> RezeptionsWartezeiten { get; } = new();
         public List<double> EchteAnkunftszeiten { get; } = new();
+
+        public double DurchschnittlicheWartezeitArzt => Wartezeiten.Count > 0 ? Wartezeiten.Average() : 0;
+        public double DurchschnittlicheWartezeitSchwester => SchwesternWartezeiten.Count > 0 ? SchwesternWartezeiten.Average() : 0;
+        public double DurchschnittlicheWartezeitRezeption => RezeptionsWartezeiten.Count > 0 ? RezeptionsWartezeiten.Average() : 0;
 
         /// <summary>
         /// Speichert ein Ereignis im Trace-Format: "Zeit;EventTyp;PatientId".
