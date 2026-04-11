@@ -35,8 +35,20 @@ namespace simSharpSimulation
             Func<Simulation, int, Resource, Resource, Resource, IEnumerable<Event>> patientFactory)
         {
             var ankunftszeiten = new List<double>();
+            int patientCount = 1;
 
-            for (int i = 0; i < PatientenKonfiguration.ANZAHL_PATIENTEN_TAG; i++)
+            // Zufällige Anzahl Patienten steht bereits bei Öffnung an (Minute 0).
+            // Die Anzahl liegt zwischen 0 und ANZAHL_PATIENTEN_TAG.
+            int startWarteschlange = rnd.Next(0, PatientenKonfiguration.ANZAHL_PATIENTEN_TAG + 1);
+            for (int i = 0; i < startWarteschlange; i++)
+            {
+                env.Process(patientFactory(env, patientCount, rezeption, schwester, arzt));
+                patientCount++;
+            }
+
+            // Restliche Patienten kommen zufällig während der Öffnungszeit.
+            int restlichePatienten = PatientenKonfiguration.ANZAHL_PATIENTEN_TAG - startWarteschlange;
+            while (ankunftszeiten.Count < restlichePatienten)
             {
                 // z = geplanter Ankunftszeitpunkt (in Minuten seit Tagesstart)
                 double z = MathNet.Numerics.Distributions.Normal.Sample(
@@ -44,14 +56,14 @@ namespace simSharpSimulation
                     PatientenKonfiguration.ERWARTUNGSWERT,
                     PatientenKonfiguration.STANDARDABWEICHUNG);
 
-                if (z <= SimulationKonfiguration.SIMULATIONSDAUER)
+                // Nur Patienten innerhalb der Öffnungszeit werden übernommen.
+                if (z >= 0 && z <= SimulationKonfiguration.SIMULATIONSDAUER)
                     ankunftszeiten.Add(z);
             }
 
             // Wichtig: Ohne Sortierung kämen Patienten ggf. in falscher Reihenfolge an.
             ankunftszeiten.Sort();
 
-            int patientCount = 1;
             foreach (double ankunftszeit in ankunftszeiten)
             {
                 // Warte in der Simulationsuhr bis zur nächsten Ankunft.
