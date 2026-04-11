@@ -68,27 +68,8 @@ namespace simSharpSimulation
             daten.EchteAnkunftszeiten.Add(ankunftszeit);
 
             // --- REZEPTION (RECEPTION) PHASE ---
-            using (var rezeptionAnfrage = rezeption.Request())
-            {
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_rezeption_warteschlange", patientId);
-                yield return rezeptionAnfrage;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double rezeptionWartezeit = nowMinutes - ankunftszeit;
-                daten.RezeptionsWartezeiten.Add(rezeptionWartezeit);
-
-                daten.LogEvent(nowMinutes, "verlaesst_rezeption_warteschlange", patientId);
-                daten.LogEvent(nowMinutes, "geht_zur_rezeption", patientId);
-
-                double rezeptionServiceDauer = MathNet.Numerics.Distributions.Exponential.Sample(
-                    rnd,
-                    1.0 / RezeptionKonfiguration.MITTELREZEPTIONSZEIT);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(rezeptionServiceDauer));
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "verlaesst_rezeption", patientId);
-            }
+            foreach (var ev in DurchlaufeRezeption(env, patientId, rezeption, ankunftszeit))
+                yield return ev;
 
             bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
             bool brauchtVorbereitung = false;
@@ -103,9 +84,7 @@ namespace simSharpSimulation
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
-                    var usersProperty = typeof(Resource).GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
-                    var usersCollection = usersProperty.GetValue(schwester) as System.Collections.Generic.IReadOnlyCollection<SimSharp.Request>;
-                    int users = usersCollection.Count;
+                    int users = ErmittleAktiveNutzer(schwester);
                     if (users < SchwesterKonfiguration.ANZAHL_SCHWESTERN)
                     {
                         direktZurSchwester = true;
@@ -149,46 +128,15 @@ namespace simSharpSimulation
             if (!ueberspringeSchwester)
             {
                 // --- SCHWESTER (NURSE) PHASE ---
-                using (var schwesterAnfrage = schwester.Request())
-                {
-                    if (!direktZurSchwester)
-                    {
-                        // EREIGNIS 4: Patient geht zur Schwester-Warteschlange
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zu_schwester_warteschlange", patientId);
-                    }
-
-                    yield return schwesterAnfrage;
-
-                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                    double schwesterWartezeit = nowMinutes - ankunftszeit;
-                    daten.SchwesternWartezeiten.Add(schwesterWartezeit);
-
-                    if (!direktZurSchwester)
-                    {
-                        daten.LogEvent(nowMinutes, "verlaesst_schwester_warteschlange", patientId);
-                    }
-
-                    // EREIGNIS 4: Patient geht zur Schwester
-                    daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
-
-                    bool brauchtVorbereitungNachZimmer = rnd.NextDouble() < PatientenKonfiguration.SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT;
-                    if (brauchtVorbereitungNachZimmer)
-                    {
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "braucht_vorbereitung_nach_schwesterzimmer", patientId);
-
-                        double schwesternBehandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
-                            rnd,
-                            1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
-                        yield return env.Timeout(TimeSpan.FromMinutes(schwesternBehandlungsdauer));
-
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "verlaesst_schwester", patientId);
-                    }
-                    else
-                    {
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ohne_vorbereitung_zum_arzt", patientId);
-                    }
-                }
+                foreach (var ev in DurchlaufeSchwester(
+                    env,
+                    patientId,
+                    schwester,
+                    ankunftszeit,
+                    direktZurSchwester,
+                    pruefeVorbereitungNachZimmer: true,
+                    wahrscheinlichkeitVorbereitung: PatientenKonfiguration.SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT))
+                    yield return ev;
             }
             else
             {
@@ -196,73 +144,64 @@ namespace simSharpSimulation
             }
 
             // --- ARZT (DOCTOR) PHASE ---
-            using (var schwesterAnfrage = schwester.Request())
-            {
-                if (!direktZurSchwester)
-                {
-                    // EREIGNIS 4: Patient geht zur Schwester-Warteschlange
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zu_schwester_warteschlange", patientId);
-                }
-
-                yield return schwesterAnfrage;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double schwesterWartezeit = nowMinutes - ankunftszeit;
-                daten.SchwesternWartezeiten.Add(schwesterWartezeit);
-
-                if (!direktZurSchwester)
-                {
-                    daten.LogEvent(nowMinutes, "verlaesst_schwester_warteschlange", patientId);
-                }
-
-                // EREIGNIS 4: Patient geht zur Schwester
-                daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
-
-                double schwesternBehandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
-                    rnd,
-                    1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(schwesternBehandlungsdauer));
-
-                // EREIGNIS 5: Patient verlässt die Schwester
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "verlaesst_schwester", patientId);
-            }
+            foreach (var ev in DurchlaufeSchwester(
+                env,
+                patientId,
+                schwester,
+                ankunftszeit,
+                direktZurSchwester,
+                pruefeVorbereitungNachZimmer: false,
+                wahrscheinlichkeitVorbereitung: 0.0))
+                yield return ev;
 
             // --- ARZT (DOCTOR) PHASE ---
-            using (var arztAnfrage = arzt.Request())
-            {
-                // EREIGNIS 6: Patient geht zur Arzt-Warteschlange
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zu_arzt_warteschlange", patientId);
-                yield return arztAnfrage;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double arztWartezeit = nowMinutes - ankunftszeit;
-                daten.Wartezeiten.Add(arztWartezeit);
-
-                // EREIGNIS 7: Patient verlässt die Arzt-Warteschlange
-                daten.LogEvent(nowMinutes, "verlaesst_arzt_warteschlange", patientId);
-                // EREIGNIS 8: Patient geht zum Arzt
-                daten.LogEvent(nowMinutes, "geht_zu_arzt", patientId);
-
-                double arztBehandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
-                    rnd,
-                    1.0 / ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT);
-                    // Behandlungsdauer wird als Exponentialverteilung modelliert, 
-                    // da sie oft für Wartezeiten und Servicezeiten in Warteschlangensystemen verwendet wird.
-                    // Lambda (Rate) = 1 / der mittleren Behandlungszeit, 
-                    // ..rechnet der Code: 1.0 / 5.0 = 0.2 Das bedeutet: Der Arzt schafft durchschnittlich 0,2 Patienten pro Minute
-
-                yield return env.Timeout(TimeSpan.FromMinutes(arztBehandlungsdauer));
-
-                // EREIGNIS 9: Patient verlässt den Arzt
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "verlaesst_arzt", patientId);
-            }
+            foreach (var ev in DurchlaufeArzt(env, patientId, arzt, ankunftszeit))
+                yield return ev;
 
             // EREIGNIS 10: Patient verlässt die Klinik
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+        }
+
+        private IEnumerable<Event> DurchlaufeRezeption(Simulation env, int patientId, Resource rezeption, double ankunftszeit)
+        {
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeit, rnd, daten))
+                yield return ev;
+        }
+
+        private IEnumerable<Event> DurchlaufeSchwester(
+            Simulation env,
+            int patientId,
+            Resource schwester,
+            double ankunftszeit,
+            bool direktZurSchwester,
+            bool pruefeVorbereitungNachZimmer,
+            double wahrscheinlichkeitVorbereitung)
+        {
+            foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
+                env,
+                patientId,
+                schwester,
+                ankunftszeit,
+                direktZurSchwester,
+                pruefeVorbereitungNachZimmer,
+                wahrscheinlichkeitVorbereitung,
+                rnd,
+                daten))
+                yield return ev;
+        }
+
+        private IEnumerable<Event> DurchlaufeArzt(Simulation env, int patientId, Resource arzt, double ankunftszeit)
+        {
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arzt, ankunftszeit, rnd, daten))
+                yield return ev;
+        }
+
+        private static int ErmittleAktiveNutzer(Resource resource)
+        {
+            var usersProperty = typeof(Resource).GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
+            var usersCollection = usersProperty?.GetValue(resource) as IReadOnlyCollection<Request>;
+            return usersCollection?.Count ?? 0;
         }
 
     }
