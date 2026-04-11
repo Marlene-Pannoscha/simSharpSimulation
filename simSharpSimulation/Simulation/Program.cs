@@ -7,6 +7,13 @@ namespace simSharpSimulation
 {
     class Program
     {
+        /* Einfache Gesamtidee des Programms:
+        - Program.cs startet die Simulation.
+        - PatientenProzess.cs beschreibt den Weg eines Patienten (Rezeption -> Schwester -> Arzt).
+        - PatientenGenerator.cs bestimmt, wann neue Patienten ankommen.
+        - SimulationsDaten.cs sammelt alle Wartezeiten und Ereignisse.
+        - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
+        */
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
         static void Main(string[] args)
         {

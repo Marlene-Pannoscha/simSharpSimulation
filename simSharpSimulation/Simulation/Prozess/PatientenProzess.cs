@@ -45,6 +45,8 @@ namespace simSharpSimulation
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
 
                 // Schritt 3: PatientenGenerator für den jeweiligen Tag starten
+                // PatientenGenerator liefert die Ankunftszeiten und startet für jede Ankunft
+                // diesen Patient()-Ablauf als eigenen Simulationsprozess.
                 env.Process(PatientenGenerator.Generiere(env, rezeption, arzt, schwester, rnd, daten, Patient));
                 // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
                 env.Run(TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER));
