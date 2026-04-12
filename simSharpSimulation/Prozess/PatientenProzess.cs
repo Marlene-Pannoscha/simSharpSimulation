@@ -58,6 +58,12 @@ namespace simSharpSimulation
         */
         private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, Resource schwester, Resource arzt)
         {
+            // WICHTIG ZUM VERSTÄNDNIS:
+            // Diese Methode läuft wie ein "Drehbuch" pro Patient.
+            // Jeder "yield return" bedeutet: Hier pausiert der Patienten-Prozess,
+            // bis ein Ereignis eintritt (z.B. Ressource frei oder Zeit abgelaufen).
+            // Danach geht die Methode genau an der nächsten Zeile weiter.
+
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
             // EREIGNIS 1: Patient betritt die Klinik
@@ -93,6 +99,12 @@ namespace simSharpSimulation
             bool direktZurSchwester = false;
             bool ueberspringeSchwester = false;
 
+            // Die vier Flags steuern den Ablaufpfad:
+            // - hatTermin: hat der Patient einen Termin?
+            // - brauchtVorbereitung: braucht er vor dem Arztbesuch Vorbereitung?
+            // - direktZurSchwester: kann er sofort ins Schwesterzimmer (ohne Warteschlange)?
+            // - ueberspringeSchwester: Schwesterkontakt komplett überspringen.
+
             if (hatTermin)
             {
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_termin", patientId);
@@ -101,6 +113,9 @@ namespace simSharpSimulation
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
+                    // SimSharp bietet den aktuellen "Users"-Zähler hier nicht direkt öffentlich an.
+                    // Darum wird per Reflection auf die interne Users-Liste zugegriffen.
+                    // Ziel: prüfen, ob mindestens eine Schwester gerade frei ist.
                     var usersProperty = typeof(Resource).GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
                     var usersCollection = usersProperty.GetValue(schwester) as System.Collections.Generic.IReadOnlyCollection<SimSharp.Request>;
                     int users = usersCollection.Count;
@@ -115,6 +130,8 @@ namespace simSharpSimulation
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
 
+                        // Keine Schwester frei -> Patient wartet zunächst im Wartezimmer
+                        // für eine zufällige Dauer.
                         double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
                             rnd,
                             1.0 / PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER);
@@ -174,6 +191,7 @@ namespace simSharpSimulation
                     {
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "braucht_vorbereitung_nach_schwesterzimmer", patientId);
 
+                        // Vorbereitung durch Schwester dauert zufällig lang (exponentielle Verteilung).
                         double schwesternBehandlungsdauer = MathNet.Numerics.Distributions.Exponential.Sample(
                             rnd,
                             1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
@@ -194,6 +212,8 @@ namespace simSharpSimulation
             }
 
             // --- ARZT (DOCTOR) PHASE ---
+            // HINWEIS: Hier gibt es aktuell noch einen weiteren Schwester-Abschnitt vor dem Arzt.
+            // Die Logik bleibt unverändert; Kommentar dient nur als Orientierung beim Lesen.
             using (var schwesterAnfrage = schwester.Request())
             {
                 if (!direktZurSchwester)
