@@ -8,7 +8,8 @@ namespace simSharpSimulation
         public const double TERMIN_WAHRSCHEINLICHKEIT = 0.5; // Wahrscheinlichkeit, dass ein Patient einen Termin hat
         public const double TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = 0.4; // Wahrscheinlichkeit, dass Terminpatienten initial eine Schwester-Vorbereitung benötigen
         public const double SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT = 0.5; // Wahrscheinlichkeit, dass Patienten nach dem Schwesternzimmer Vorbereitung brauchen
-        public const double MITTLERE_WARTEZIMMER_DAUER = 15.0; // durchschnittliche Dauer im Wartezimmer in Minuten
+        public const double MITTLERE_WARTEZIMMER_DAUER_SCHWESTER = 2.0; // durchschnittliche Dauer im Wartezimmer für die Schwester in Minuten
+        public const double MITTLERE_WARTEZIMMER_DAUER_ARZT = 5.0; // durchschnittliche Dauer im Wartezimmer für den Arzt in Minuten
 
         public override int Anzahl => ANZAHL_PATIENTEN_TAG;
         public override double MittlereServicezeit => ERWARTUNGSWERT;

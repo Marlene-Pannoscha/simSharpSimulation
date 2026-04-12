@@ -85,7 +85,7 @@ namespace simSharpSimulation
 
             // Schritt P4.4: Rezeption durchlaufen.
             // --- REZEPTION (RECEPTION) PHASE ---
-            foreach (var ev in DurchlaufeRezeption(env, patientId, rezeption, ankunftszeit, hatTermin))
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeit, hatTermin, rnd, daten))
                 yield return ev;
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
@@ -122,7 +122,7 @@ namespace simSharpSimulation
                         // Schritt P4.10B: Terminpatienten warten im Schnitt kürzer im Wartezimmer.
                         double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
                             rnd,
-                            1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER * 0.5));
+                            1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * 0.5));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
                         // Schritt P4.11B: Wartezimmer verlassen.
@@ -146,7 +146,7 @@ namespace simSharpSimulation
                 // Schritt P4.8C: Ohne Termin warten Patienten im Schnitt länger im Wartezimmer.
                 double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
                     rnd,
-                    1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER * 1.8));
+                    1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * 1.8));
                 yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
                 // Schritt P4.9C: Wartezimmer verlassen.
@@ -162,38 +162,39 @@ namespace simSharpSimulation
             if (!ueberspringeSchwester)
             {
                 // --- SCHWESTER (NURSE) PHASE ---
-                foreach (var ev in DurchlaufeSchwester(
+                foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
                     env,
                     patientId,
                     schwester,
                     ankunftszeit,
                     direktZurSchwester,
                     pruefeVorbereitungNachZimmer: true,
-                    wahrscheinlichkeitVorbereitung: PatientenKonfiguration.SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT))
+                    wahrscheinlichkeitVorbereitung: PatientenKonfiguration.SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT,
+                    rnd,
+                    daten))
                     yield return ev;
             }
             else
             {
-                // Schritt P4.10B: Schwester wird in diesem Pfad übersprungen.
+                // Schritt P4.10B: Schwester wird in diesem Pfad übersprungen (nur bei Terminpatienten).
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "ueberspringt_schwester", patientId);
             }
 
-            // Schritt P4.11: Zusätzliche Schwester-Phase ohne Vorbereitungsprüfung.
-            // (Dieser Ablauf ist wie im bisherigen Verhalten beibehalten.)
-            // --- SCHWESTER (NURSE) PHASE ---
-            foreach (var ev in DurchlaufeSchwester(
-                env,
-                patientId,
-                schwester,
-                ankunftszeit,
-                direktZurSchwester,
-                pruefeVorbereitungNachZimmer: false,
-                wahrscheinlichkeitVorbereitung: 0.0))
-                yield return ev;
+            // Schritt P4.11: Wartezeit auf den Arzt.
+            // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_fuer_arzt", patientId);
+
+            double wartezeitFaktor = hatTermin ? 0.8 : 1; // Mit Termin kürzer (Faktor < 1), ohne Termin länger (Faktor  1)
+            double wartezimmerDauerArzt = MathNet.Numerics.Distributions.Exponential.Sample(
+                rnd, 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * wartezeitFaktor));
+            yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauerArzt));
+
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
+
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
-            foreach (var ev in DurchlaufeArzt(env, patientId, arzt, ankunftszeit))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arzt, ankunftszeit, rnd, daten))
                 yield return ev;
 
             // Schritt P4.13: Patient verlässt die Klinik (Ende des Patientenablaufs).

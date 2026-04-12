@@ -55,7 +55,7 @@ namespace simSharpSimulation
 
                 // Schritt A4: Dauer der ärztlichen Behandlung simulieren.
                 // Die Dauer wird zufällig aus einer Exponentialverteilung bestimmt.
-                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / ArztKonfiguration.MITTLERE_DAUER);
+                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT);
                 
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));

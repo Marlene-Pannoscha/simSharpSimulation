@@ -59,7 +59,7 @@ namespace simSharpSimulation
 
                 // Die Wartezeit auf die Schwester berechnen und speichern.
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
-                daten.WartezeitenSchwester.Add(wartezeitSchwester);
+                daten.SchwesternWartezeiten.Add(wartezeitSchwester);
 
                 // Schritt S4: Prüfen, ob eine Vorbereitung durch die Schwester stattfinden soll.
                 // Dies wird durch den aufrufenden Prozess gesteuert.
@@ -73,7 +73,7 @@ namespace simSharpSimulation
                         daten.LogEvent(nowMinutes, "startet_vorbereitung_schwester", patientId);
 
                         // Dauer der Vorbereitung zufällig bestimmen (Exponentialverteilung).
-                        double dauerVorbereitung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / SchwesterKonfiguration.MITTLERE_DAUER_VORBEREITUNG);
+                        double dauerVorbereitung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
                         yield return env.Timeout(TimeSpan.FromMinutes(dauerVorbereitung)); // Prozess für die Dauer anhalten.
 
                         // Vorbereitung ist abgeschlossen.
@@ -83,7 +83,7 @@ namespace simSharpSimulation
 
                 // Schritt S5: Die eigentliche Behandlung/Interaktion mit der Schwester.
                 // Dauer der Behandlung zufällig bestimmen (Exponentialverteilung).
-                double dauerBehandlung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / SchwesterKonfiguration.MITTLERE_DAUER_BEHANDLUNG);
+                double dauerBehandlung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
                 yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung)); // Prozess für die Dauer anhalten.
 
                 // Schritt S6: Der gesamte Schwester-Prozess ist beendet.

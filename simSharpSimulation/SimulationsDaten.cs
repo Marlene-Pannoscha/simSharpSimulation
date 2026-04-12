@@ -8,7 +8,7 @@ namespace simSharpSimulation
     /// Hält alle während der Simulation gesammelten Daten (Trace, Wartezeiten, Ankünfte).
     /// Diese Klasse entkoppelt Datenspeicherung von der eigentlichen Simulationslogik.
     /// </summary>
-    internal sealed class SimulationsDaten
+    public sealed class SimulationsDaten
     {
         public List<string> TraceData { get; } = new();
         public List<double> Wartezeiten { get; } = new();

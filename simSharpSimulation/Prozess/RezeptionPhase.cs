@@ -53,18 +53,19 @@ namespace simSharpSimulation
 
                 // Die Wartezeit an der Rezeption berechnen und für die Statistik speichern.
                 double wartezeitRezeption = nowMinutes - ankunftszeit;
-                daten.WartezeitenRezeption.Add(wartezeitRezeption);
+                daten.RezeptionsWartezeiten.Add(wartezeitRezeption);
 
                 // Schritt R4: Dauer der Bedienung an der Rezeption simulieren.
                 // Die Dauer wird zufällig aus einer Exponentialverteilung gezogen.
-                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / RezeptionKonfiguration.MITTLERE_DAUER);
+                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / RezeptionKonfiguration.MITTELREZEPTIONSZEIT);
                 
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));
 
                 // Schritt R5: Die Bedienung ist abgeschlossen.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_rezeption", patientId, new Dictionary<string, object> { { "hat_termin", hatTermin } });
+                daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
+                daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
             }
             // Die Ressource wird hier durch 'using' automatisch freigegeben.
         }
