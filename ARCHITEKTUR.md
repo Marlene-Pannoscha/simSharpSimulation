@@ -37,7 +37,8 @@ simSharpSimulation/
 │  │  ├─ SchwesterKonfiguration.cs
 │  │  └─ ArztKonfiguration.cs
 │  ├─ Diagramm/
-│  │  └─ GenerateDiagramms.cs
+│  │  ├─ GenerateDiagram.cs
+│  │  └─ *.cs (weitere Diagramm-Dateien)
 │  └─ simSharpSimulation.csproj
 └─ klinik_trace.txt
 ```
@@ -89,9 +90,23 @@ simSharpSimulation/
     - `PatientenKonfiguration`: Ankunftsverteilung, Terminwahrscheinlichkeiten, Wartezimmerdauer
 
 ### Visualisierung
-- `Diagramm/GenerateDiagramms.cs`
+- `Diagramm/GenerateDiagram.cs`
   - Erzeugt Diagramme auf Basis der Simulationsdaten
   - Speichert Ergebnisse in `images/`
+
+## 9) Anmerkungen & Qualitätscheck
+
+- **Stärken:**
+  - Klare Trennung von Ablauf (`Prozess`), Parametern (`Ressourcen`) und Darstellung (`Diagramm`).
+  - `SimulationsDaten` als zentrale Sammelstelle vereinfacht KPI-Auswertung.
+  - Gute Basis für spätere Szenariovergleiche.
+
+- **Empfohlene Pflegekonventionen:**
+  - KPI-Definitionen (Wartezeit je Station, Gesamtprozesszeit) explizit dokumentieren und bei Änderungen versionieren.
+  - Bei neuen Stationen (z. B. Labor) dieselbe Struktur beibehalten: eigene `*Phase.cs`, Konfiguration, Diagramm.
+
+- **Technische Notiz:**
+  - Für reproduzierbare Ergebnisse sollten `RANDOM_SEED` und alle Konfigurationswerte in Ergebnisreports mit ausgegeben werden.
 
 ## 4) Ablauf (End-to-End)
 

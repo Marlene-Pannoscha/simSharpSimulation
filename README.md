@@ -33,3 +33,16 @@ dotnet build
 ```powershell
 dotnet run
 ```
+
+## Anmerkungen zum Gesamtprogramm
+
+- **Kennzahlen-Definitionen (für Auswertung):**
+	- `Wartezeit Rezeption`: Zeit bis Start der Rezeption
+	- `Wartezeit Schwester`: Zeit bis Start des Schwester-Prozesses
+	- `Wartezeit Arzt`: Zeit bis Start der Arzt-Behandlung
+	- `Gesamtprozesszeit`: Eintritt in die Klinik bis Verlassen der Klinik
+- **Patienten-IDs** sind pro Tag eindeutig, damit Trace- und Zeitachsen-Auswertungen stabil bleiben.
+- **Trace-Datei** wird als `klinik_trace.txt` im Projektordner gespeichert.
+- **Diagramme** werden in `simSharpSimulation/images/` gespeichert.
+
+
