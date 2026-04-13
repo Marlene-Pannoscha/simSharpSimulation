@@ -30,6 +30,8 @@ namespace simSharpSimulation
                 daten.EchteAnkunftszeiten,
                 daten.Wartezeiten,
                 daten.SchwesternWartezeiten,
+                daten.Gesamtprozesszeiten,
+                daten.TraceData,
                 SimulationKonfiguration.SIMULATIONSDAUER,
                 PatientenKonfiguration.ERWARTUNGSWERT,
                 PatientenKonfiguration.STANDARDABWEICHUNG,
@@ -44,10 +46,12 @@ namespace simSharpSimulation
             double avgWartezeit = daten.DurchschnittlicheWartezeitArzt;
             double avgSchwesternWartezeit = daten.DurchschnittlicheWartezeitSchwester;
             double avgRezeptionsWartezeit = daten.DurchschnittlicheWartezeitRezeption;
+            double avgGesamtprozesszeit = daten.DurchschnittlicheGesamtprozesszeit;
             Console.WriteLine($"Simulation beendet. {daten.EchteAnkunftszeiten.Count} Patienten empfangen.");
             Console.WriteLine($"Durchschnittliche Wartezeit (Rezeption): {avgRezeptionsWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
+            Console.WriteLine($"Durchschnittliche Gesamtprozesszeit: {avgGesamtprozesszeit:F2} Minuten");
         }
     }
 }

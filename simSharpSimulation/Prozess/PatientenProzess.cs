@@ -49,7 +49,9 @@ namespace simSharpSimulation
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
                 // PatientenGenerator liefert die Ankunftszeiten und startet für jede Ankunft
                 // diesen Patient()-Ablauf als eigenen Simulationsprozess.
-                env.Process(PatientenGenerator.Generiere(env, rezeption, arzt, schwester, rnd, daten, Patient));
+                // Eindeutige Patienten-IDs pro Tag, damit Trace-Auswertungen (z.B. Zeitachse eines Patienten) sauber sind.
+                int patientIdStart = (tag * 10_000) + 1;
+                env.Process(PatientenGenerator.Generiere(env, rezeption, arzt, schwester, rnd, daten, patientIdStart, Patient));
 
                 // Schritt P2.2: Tages-Simulation bis zur konfigurierten Dauer ausführen.
                 // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
@@ -225,6 +227,10 @@ namespace simSharpSimulation
             // EREIGNIS 10: Patient verlässt die Klinik
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+
+            // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
+            double gesamtprozesszeit = nowMinutes - ankunftszeit;
+            daten.Gesamtprozesszeiten.Add(gesamtprozesszeit);
         }
 
         // Phase P-C: Delegation an ausgelagerte Phasenklassen.

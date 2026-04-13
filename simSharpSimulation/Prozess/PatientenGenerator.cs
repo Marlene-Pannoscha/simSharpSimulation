@@ -17,6 +17,7 @@ namespace simSharpSimulation
             Resource schwester,
             Random rnd,
             SimulationsDaten daten,
+            int patientIdStart,
             Func<Simulation, int, Resource, Resource, Resource, IEnumerable<Event>> patientFactory)
         {
             // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
@@ -55,7 +56,7 @@ namespace simSharpSimulation
                 .Where(x => x.zeit >= 0)
                 .ToList();
 
-            int patientCount = 1;
+            int patientCount = patientIdStart;
             foreach (var eintrag in warteschlangeVorOeffnung)
             {
                 // Optionales Trace-Event: Patient ist vor Öffnungszeit da und wartet.
