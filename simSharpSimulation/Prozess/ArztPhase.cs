@@ -35,7 +35,7 @@ namespace simSharpSimulation
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
             // Schritt A1: Patient stellt sich in die Warteschlange für den Arzt.
-            daten.LogEvent(nowMinutes, "betritt_arzt_warteschlange", patientId);
+            //daten.LogEvent(nowMinutes, "betritt_arzt_warteschlange", patientId);
 
             // Schritt A2: Einen Arzt anfordern.
             // 'using' sorgt dafür, dass die Ressource (der Arzt) nach der Behandlung

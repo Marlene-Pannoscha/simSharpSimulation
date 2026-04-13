@@ -61,25 +61,6 @@ namespace simSharpSimulation
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
                 daten.SchwesternWartezeiten.Add(wartezeitSchwester);
 
-                // Schritt S4: Prüfen, ob eine Vorbereitung durch die Schwester stattfinden soll.
-                // Dies wird durch den aufrufenden Prozess gesteuert.
-                if (pruefeVorbereitungNachZimmer)
-                {
-                    // Zufällig entscheiden, ob eine Vorbereitung tatsächlich notwendig ist.
-                    bool brauchtVorbereitung = rnd.NextDouble() < wahrscheinlichkeitVorbereitung;
-                    if (brauchtVorbereitung)
-                    {
-                        // Schritt S4A: Vorbereitungsprozess starten.
-                        daten.LogEvent(nowMinutes, "startet_vorbereitung_schwester", patientId);
-
-                        // Dauer der Vorbereitung zufällig bestimmen (Exponentialverteilung).
-                        double dauerVorbereitung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
-                        yield return env.Timeout(TimeSpan.FromMinutes(dauerVorbereitung)); // Prozess für die Dauer anhalten.
-
-                        // Vorbereitung ist abgeschlossen.
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "beendet_vorbereitung_schwester", patientId);
-                    }
-                }
 
                 // Schritt S5: Die eigentliche Behandlung/Interaktion mit der Schwester.
                 // Dauer der Behandlung zufällig bestimmen (Exponentialverteilung).
