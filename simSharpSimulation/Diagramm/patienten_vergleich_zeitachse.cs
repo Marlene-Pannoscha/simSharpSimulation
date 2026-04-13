@@ -124,14 +124,25 @@ namespace simSharpSimulation
                     markerSize: 0,
                     label: null);
 
-                plot.AddPoint(p.Betritt!.Value, y, color: Color.DimGray, size: 10, label: null);
+                string? eintrittLabel = i == 0 ? "Eintritt" : null;
+                plot.AddPoint(p.Betritt!.Value, y, color: Color.DimGray, size: 10, label: eintrittLabel);
                 if (p.StartRezeption.HasValue)
-                    plot.AddPoint(p.StartRezeption.Value, y, color: Color.SteelBlue, size: 9, label: null);
+                {
+                    string? rezeptionLabel = i == 0 ? "Rezeption" : null;
+                    plot.AddPoint(p.StartRezeption.Value, y, color: Color.SteelBlue, size: 9, label: rezeptionLabel);
+                }
                 if (p.StartSchwester.HasValue)
-                    plot.AddPoint(p.StartSchwester.Value, y, color: Color.MediumVioletRed, size: 9, label: null);
+                {
+                    string? schwesterLabel = i == 0 ? "Schwester" : null;
+                    plot.AddPoint(p.StartSchwester.Value, y, color: Color.MediumVioletRed, size: 9, label: schwesterLabel);
+                }
                 if (p.StartArzt.HasValue)
-                    plot.AddPoint(p.StartArzt.Value, y, color: Color.DarkGreen, size: 9, label: null);
-                plot.AddPoint(p.Verlaesst!.Value, y, color: Color.Black, size: 10, label: null);
+                {
+                    string? arztLabel = i == 0 ? "Arzt" : null;
+                    plot.AddPoint(p.StartArzt.Value, y, color: Color.DarkGreen, size: 9, label: arztLabel);
+                }
+                string? austrittLabel = i == 0 ? "Austritt" : null;
+                plot.AddPoint(p.Verlaesst!.Value, y, color: Color.Black, size: 10, label: austrittLabel);
 
                 string laneLabel = $"ID {p.PatientId} | {(p.HatTermin ? "mit Termin" : "ohne Termin")} | {(p.HatSchwesterVorbereitung ? "mit Schwester-Vorbereitung" : "ohne Schwester-Vorbereitung")}";
                 plot.AddText(laneLabel, p.Verlaesst!.Value + 1.0, y, color: Color.Black);
@@ -141,7 +152,10 @@ namespace simSharpSimulation
             string[] laneLabels = kandidaten.Select(p => $"P{p.PatientId}").ToArray();
             plot.YTicks(laneYs, laneLabels);
 
-            plot.AddText("Marker: ♦ Eintritt | ● Rezeption | ■ Schwester | ▲ Arzt | ○ Austritt", minZeit - linkerPuffer + 1.0, kandidaten.Count + 0.6, color: Color.Black);
+            var legend = plot.Legend(location: ScottPlot.Alignment.UpperLeft);
+            legend.Orientation = ScottPlot.Orientation.Vertical;
+            legend.FillColor = Color.White;
+            legend.OutlineColor = Color.Black;
 
             plot.Title("Vergleich 10 Patienten: Prozesspfade (Rezeption → Schwester → Arzt)");
             plot.XLabel("Zeit in Minuten seit Tagesbeginn");
