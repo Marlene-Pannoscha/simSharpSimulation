@@ -139,22 +139,46 @@ namespace simSharpSimulation
             }
             else
             {
-                // Schritt P4.7B: Ohne Termin -> zuerst ins Wartezimmer.
+                // Schritt P4.7B: Patient hat keinen Termin.
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_keinen_termin", patientId);
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
 
-                // Schritt P4.8C: Ohne Termin warten Patienten im Schnitt länger im Wartezimmer.
-                double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
-                    rnd,
-                    1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * 1.8));
-                yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
+                // Auch ohne Termin prüfen, ob eine Schwester-Vorbereitung anfällt.
+                brauchtVorbereitung = rnd.NextDouble() < PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
+                if (brauchtVorbereitung)
+                {
+                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
-                // Schritt P4.9C: Wartezimmer verlassen.
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                    // Prüfen, ob eine Schwester frei ist.
+                    int users = ErmittleAktiveNutzer(schwester);
+                    if (users < SchwesterKonfiguration.ANZAHL_SCHWESTERN)
+                    {
+                        // Schwester ist frei -> direkt ins Schwesterzimmer.
+                        direktZurSchwester = true;
+                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_frei", patientId);
+                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_schwester_zimmer", patientId);
+                    }
+                    else
+                    {
+                        // Keine Schwester frei -> zuerst ins Wartezimmer.
+                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
+                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
 
-                // Schritt P4.9D: Ohne Termin darf der Patient trotzdem weiter in den medizinischen Prozess.
-                daten.LogEvent(nowMinutes, "ohne_termin_darf_weiter", patientId);
+                        // Ohne Termin warten Patienten im Schnitt länger im Wartezimmer auf die Schwester.
+                        double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
+                            rnd,
+                            1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER*1));
+                        yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
+
+                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                    }
+                }
+                else
+                {
+                    // Keine Schwester-Vorbereitung nötig -> Schwester wird übersprungen.
+                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "keine_schwester_vorbereitung", patientId);
+                    ueberspringeSchwester = true;
+                }
             }
 
             // Schritt P4.10: Falls Schwester nicht übersprungen wird,
