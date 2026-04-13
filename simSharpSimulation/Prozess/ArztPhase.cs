@@ -51,7 +51,7 @@ namespace simSharpSimulation
 
                 // Die Wartezeit auf den Arzt berechnen und für die Statistik speichern.
                 double wartezeitArzt = nowMinutes - ankunftszeit;
-                daten.WartezeitenArzt.Add(wartezeitArzt);
+                daten.Wartezeiten.Add(wartezeitArzt);
 
                 // Schritt A4: Dauer der ärztlichen Behandlung simulieren.
                 // Die Dauer wird zufällig aus einer Exponentialverteilung bestimmt.
