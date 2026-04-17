@@ -11,6 +11,16 @@ namespace simSharpSimulation
      */
     public static class ArztPhase
     {
+        private static int GetPriority(PatientenTyp typ)
+        {
+            return typ switch
+            {
+                PatientenTyp.Kurz => 3,
+                PatientenTyp.Mittel => 2,
+                PatientenTyp.Lang => 1,
+                _ => 1
+            };
+        }
         /*
          * Beschreibt den Prozess, den ein Patient beim Arzt durchläuft.
          * Von der Ankunft in der Warteschlange bis zum Ende der Behandlung.
@@ -26,7 +36,8 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeArzt(
             Simulation env,
             int patientId,
-            Resource arzt,
+            PriorityResource arzt,
+            PatientenTyp patientenTyp,
             double ankunftszeit,
             Random rnd,
             SimulationsDaten daten)
@@ -40,7 +51,7 @@ namespace simSharpSimulation
             // Schritt A2: Einen Arzt anfordern.
             // 'using' sorgt dafür, dass die Ressource (der Arzt) nach der Behandlung
             // automatisch wieder für den nächsten Patienten freigegeben wird.
-            using (var req = arzt.Request())
+            using (var req = arzt.Request(priority: GetPriority(patientenTyp)))
             {
                 // Der Prozess pausiert hier (yield return), bis ein Arzt verfügbar ist.
                 yield return req;
@@ -54,8 +65,10 @@ namespace simSharpSimulation
                 daten.Wartezeiten.Add(wartezeitArzt);
 
                 // Schritt A4: Dauer der ärztlichen Behandlung simulieren.
-                // Die Dauer wird zufällig aus einer Exponentialverteilung bestimmt.
-                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT);
+                // Die Dauer basiert auf dem Patienten-Typ.
+                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+                double mittlereDauer = typInfo.BehandlungszeitArzt;
+                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
                 
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));

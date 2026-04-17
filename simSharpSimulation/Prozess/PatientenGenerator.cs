@@ -13,12 +13,12 @@ namespace simSharpSimulation
         public static IEnumerable<Event> Generiere(
             Simulation env,
             Resource rezeption,
-            Resource arzt,
-            Resource schwester,
+            List<PriorityResource> aerzte,
+            List<PriorityResource> schwestern,
             Random rnd,
             SimulationsDaten daten,
             int patientIdStart,
-            Func<Simulation, int, Resource, Resource, Resource, IEnumerable<Event>> patientFactory)
+            Func<Simulation, int, Resource, List<PriorityResource>, List<PriorityResource>, IEnumerable<Event>> patientFactory)
         {
             // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
             // drawIndex sorgt bei gleichen Zeiten für eine stabile (FIFO-)Reihenfolge.
@@ -63,7 +63,7 @@ namespace simSharpSimulation
                 daten.LogEvent(eintrag.zeit, "wartet_vor_oeffnung", patientCount);
 
                 // Bei Öffnung werden wartende Patienten nacheinander in FIFO-Reihenfolge gestartet.
-                env.Process(patientFactory(env, patientCount, rezeption, schwester, arzt));
+                env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
                 patientCount++;
             }
 
@@ -81,7 +81,7 @@ namespace simSharpSimulation
                     yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
 
                 // Startet den individuellen Ablauf für genau diesen Patienten.
-                env.Process(patientFactory(env, patientCount, rezeption, schwester, arzt));
+                env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
                 patientCount++;
             }
         }

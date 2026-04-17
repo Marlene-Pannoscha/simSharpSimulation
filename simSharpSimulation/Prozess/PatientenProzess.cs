@@ -42,8 +42,16 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
-                var arzt = new Resource(env, capacity: ArztKonfiguration.ANZAHL_AERZTE);
-                var schwester = new Resource(env, capacity: SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+                var aerzte = new List<PriorityResource>();
+                for (int i = 0; i < ArztKonfiguration.ANZAHL_AERZTE; i++)
+                {
+                    aerzte.Add(new PriorityResource(env, capacity: 1));
+                }
+                var schwestern = new List<PriorityResource>();
+                for (int i = 0; i < SchwesterKonfiguration.ANZAHL_SCHWESTERN; i++)
+                {
+                    schwestern.Add(new PriorityResource(env, capacity: 1));
+                }
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
@@ -51,7 +59,7 @@ namespace simSharpSimulation
                 // diesen Patient()-Ablauf als eigenen Simulationsprozess.
                 // Eindeutige Patienten-IDs pro Tag, damit Trace-Auswertungen (z.B. Zeitachse eines Patienten) sauber sind.
                 int patientIdStart = (tag * 10_000) + 1;
-                env.Process(PatientenGenerator.Generiere(env, rezeption, arzt, schwester, rnd, daten, patientIdStart, Patient));
+                env.Process(PatientenGenerator.Generiere(env, rezeption, aerzte, schwestern, rnd, daten, patientIdStart, Patient));
 
                 // Schritt P2.2: Tages-Simulation bis zur konfigurierten Dauer ausführen.
                 // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
@@ -68,19 +76,29 @@ namespace simSharpSimulation
         - Terminpatienten warten im Schnitt kürzer über kürzere Wartezimmerdauer.
         - Patienten ohne Termin warten im Schnitt länger, laufen aber parallel weiter.
         */
-        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, Resource schwester, Resource arzt)
+        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, List<PriorityResource> schwestern, List<PriorityResource> aerzte)
         {
+            // Hilfsmethode zum Auswählen einer Ressource
+            (Resource res, int id) WaehleRessource(List<Resource> ressourcen)
+            {
+                // Wähle zufällig eine Ressource
+                int index = rnd.Next(ressourcen.Count);
+                return (ressourcen[index], index + 1); // IDs starten bei 1
+            }
             // Phase P-B: Individueller Patientenablauf.
             // Schritt P4.1: Aktuelle Simulationszeit in Minuten holen.
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
             // Schritt P4.2: Patient betritt die Klinik (Startpunkt des individuellen Ablaufs).
             // EREIGNIS 1: Patient betritt die Klinik
-            daten.LogEvent(nowMinutes, "betritt_klinik", patientId);
+            daten.LogEvent(nowMinutes, "betritt_klinik", patientId, objektTyp: "Patient");
 
             // Schritt P4.3: Ankunftszeit merken (Basis für Wartezeit-Berechnungen).
             double ankunftszeit = nowMinutes;
             daten.EchteAnkunftszeiten.Add(ankunftszeit);
+
+            // Schritt P4.3B: Patienten-Typ zuweisen basierend auf Verteilung.
+            PatientenTyp patientenTyp = WaehlePatientenTyp(rnd);
 
             // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
             bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
@@ -107,7 +125,7 @@ namespace simSharpSimulation
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
                     // Schritt P4.8A: Prüfen, ob sofort eine Schwester frei ist.
-                    int users = ErmittleAktiveNutzer(schwester);
+                    int users = ErmittleAktiveNutzer(schwestern);
                     if (users < SchwesterKonfiguration.ANZAHL_SCHWESTERN)
                     {
                         // Schritt P4.9A: Schwester ist frei -> direkt ins Schwesterzimmer.
@@ -151,7 +169,7 @@ namespace simSharpSimulation
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
                     // Prüfen, ob eine Schwester frei ist.
-                    int users = ErmittleAktiveNutzer(schwester);
+                    int users = ErmittleAktiveNutzer(schwestern);
                     if (users < SchwesterKonfiguration.ANZAHL_SCHWESTERN)
                     {
                         // Schwester ist frei -> direkt ins Schwesterzimmer.
@@ -187,11 +205,14 @@ namespace simSharpSimulation
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
             if (!ueberspringeSchwester)
             {
+                var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
                     env,
                     patientId,
-                    schwester,
+                    schwesterRes,
+                    schwesterId,
+                    patientenTyp,
                     ankunftszeit,
                     direktZurSchwester,
                     pruefeVorbereitungNachZimmer: true,
@@ -220,13 +241,14 @@ namespace simSharpSimulation
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arzt, ankunftszeit, rnd, daten))
+            var (arztRes, arztId) = WaehleRessource(aerzte);
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, rnd, daten))
                 yield return ev;
 
             // Schritt P4.13: Patient verlässt die Klinik (Ende des Patientenablaufs).
             // EREIGNIS 10: Patient verlässt die Klinik
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId, objektTyp: "Patient");
 
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
@@ -234,12 +256,28 @@ namespace simSharpSimulation
         }
 
         // Phase P-C: Delegation an ausgelagerte Phasenklassen.
-        // Schritt P8: Interne Hilfsmethode, um aktuelle Belegung der Ressource zu prüfen.
-        private static int ErmittleAktiveNutzer(Resource resource)
+        // Schritt P8: Interne Hilfsmethode, um Patienten-Typ zu wählen.
+        private static PatientenTyp WaehlePatientenTyp(Random rnd)
         {
-            var usersProperty = typeof(Resource).GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
-            var usersCollection = usersProperty?.GetValue(resource) as IReadOnlyCollection<Request>;
-            return usersCollection?.Count ?? 0;
+            double rand = rnd.NextDouble();
+            double cumulative = 0.0;
+            foreach (var (typ, wahrsch, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            {
+                cumulative += wahrsch;
+                if (rand <= cumulative)
+                    return typ;
+            }
+            return PatientenTyp.Mittel; // Fallback
+        }
+
+        // Schritt P9: Interne Hilfsmethode, um aktuelle Belegung der Ressource zu prüfen.
+        private static int ErmittleAktiveNutzer(List<Resource> ressourcen)
+        {
+            return ressourcen.Sum(r => {
+                var usersProperty = typeof(Resource).GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
+                var usersCollection = usersProperty?.GetValue(r) as IReadOnlyCollection<Request>;
+                return usersCollection?.Count ?? 0;
+            });
         }
 
     }

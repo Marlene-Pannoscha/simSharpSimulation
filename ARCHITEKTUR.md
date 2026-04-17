@@ -9,6 +9,7 @@ Das Projekt simuliert den Patientenfluss in einer Klinik über eine Arbeitswoche
 Dabei werden Wartezeiten und Prozessereignisse erfasst, als Trace gespeichert und als Diagramme visualisiert.
 
 **Hauptziele:**
+
 - Simulation von Ankunft, Rezeption, Schwester und Arzt
 - Messung von Wartezeiten je Station
 - Export von Ereignissen in `klinik_trace.txt`
@@ -20,32 +21,35 @@ Dabei werden Wartezeiten und Prozessereignisse erfasst, als Trace gespeichert un
 simSharpSimulation/
 ├─ README.md
 ├─ ARCHITEKTUR.md
+├─ klinik_trace.txt
+├─ simSharpSimulation.slnx
 ├─ simSharpSimulation/
 │  ├─ Program.cs
 │  ├─ SimulationKonfiguration.cs
 │  ├─ SimulationsDaten.cs
-│  ├─ Prozess/
-│  │  ├─ PatientenProzess.cs
-│  │  ├─ PatientenGenerator.cs
-│  │  ├─ RezeptionPhase.cs
-│  │  ├─ SchwesterPhase.cs
-│  │  └─ ArztPhase.cs
-│  ├─ Ressourcen/
-│  │  ├─ Personen.cs
-│  │  ├─ PatientenKonfiguration.cs
-│  │  ├─ RezeptionKonfiguration.cs
-│  │  ├─ SchwesterKonfiguration.cs
-│  │  └─ ArztKonfiguration.cs
-│  ├─ Diagramm/
-│  │  ├─ GenerateDiagram.cs
-│  │  └─ *.cs (weitere Diagramm-Dateien)
-│  └─ simSharpSimulation.csproj
-└─ klinik_trace.txt
+│  ├─ simSharpSimulation.csproj
+│  ├─ Simulation/
+│  │  ├─ Prozess/
+│  │  │  ├─ PatientenProzess.cs
+│  │  │  └─ PatientenGenerator.cs
+│  │  ├─ Ressourcen/
+│  │  │  ├─ Personen.cs
+│  │  │  ├─ PatientenKonfiguration.cs
+│  │  │  ├─ RezeptionKonfiguration.cs
+│  │  │  ├─ SchwesterKonfiguration.cs
+│  │  │  └─ ArztKonfiguration.cs
+│  │  └─ Diagramm/
+│  │     └─ GenerateDiagramms.cs
+│  ├─ bin/
+│  ├─ obj/
+│  └─ images/
+└─ sim_py/
 ```
 
 ## 3) Verantwortlichkeiten der wichtigsten Dateien
 
 ### Einstieg und Orchestrierung
+
 - `Program.cs`
   - Startet die Simulation
   - Initialisiert `SimulationsDaten` und `PatientenProzess`
@@ -54,16 +58,19 @@ simSharpSimulation/
   - Gibt Kennzahlen (Durchschnittswartezeiten) in der Konsole aus
 
 ### Globale Einstellungen
+
 - `SimulationKonfiguration.cs`
   - Legt zentrale Simulationsparameter fest (Seed, Simulationsdauer)
 
 ### Datensammlung und Auswertung
+
 - `SimulationsDaten.cs`
   - Sammelt Trace-Events
   - Speichert Wartezeiten (Rezeption, Schwester, Arzt)
   - Berechnet Durchschnittswerte über Properties
 
 ### Prozesslogik
+
 - `Prozess/PatientenProzess.cs`
   - Kernablauf der Simulation über 5 Tage
   - Verwaltet Ressourcen (Rezeption, Schwester, Arzt)
@@ -79,6 +86,7 @@ simSharpSimulation/
   - Enthält Arzt-Logik und Behandlungsdauer
 
 ### Ressourcen- und Fachkonfiguration
+
 - `Ressourcen/Personen.cs`
   - Basisklasse für gemeinsame Ressourcenmerkmale
 - `Ressourcen/*Konfiguration.cs`
@@ -90,6 +98,7 @@ simSharpSimulation/
     - `PatientenKonfiguration`: Ankunftsverteilung, Terminwahrscheinlichkeiten, Wartezimmerdauer
 
 ### Visualisierung
+
 - `Diagramm/GenerateDiagram.cs`
   - Erzeugt Diagramme auf Basis der Simulationsdaten
   - Speichert Ergebnisse in `images/`
@@ -138,6 +147,7 @@ simSharpSimulation/
 ## 6) Externe Abhängigkeiten
 
 Aus `simSharpSimulation.csproj`:
+
 - `SimSharp` – diskrete Ereignissimulation
 - `MathNet.Numerics` – Verteilungen und Zufallsziehungen
 - `ScottPlot` – Diagrammerzeugung
@@ -145,6 +155,7 @@ Aus `simSharpSimulation.csproj`:
 ## 7) Erweiterungspunkte
 
 Typische Erweiterungen ohne großen Umbau:
+
 - Neue Station (z. B. Labor) als eigene Phase
 - Zusätzliche KPIs in `SimulationsDaten`
 - Alternative Verteilungen für Ankünfte/Servicezeiten
@@ -159,5 +170,3 @@ Typische Erweiterungen ohne großen Umbau:
 - Diagrammlogik ausschließlich in `GenerateDiagramms.cs` erweitern.
 
 ---
-
-

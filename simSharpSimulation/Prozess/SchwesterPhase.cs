@@ -11,6 +11,16 @@ namespace simSharpSimulation
      */
     public static class SchwesterPhase
     {
+        private static int GetPriority(PatientenTyp typ)
+        {
+            return typ switch
+            {
+                PatientenTyp.Kurz => 3,
+                PatientenTyp.Mittel => 2,
+                PatientenTyp.Lang => 1,
+                _ => 1
+            };
+        }
         /*
          * Beschreibt den Prozess, den ein Patient bei der Krankenschwester durchläuft.
          *
@@ -28,7 +38,9 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeSchwester(
             Simulation env,
             int patientId,
-            Resource schwester,
+            PriorityResource schwester,
+            int schwesterId,
+            PatientenTyp patientenTyp,
             double ankunftszeit,
             bool direktZurSchwester,
             bool pruefeVorbereitungNachZimmer,
@@ -49,13 +61,13 @@ namespace simSharpSimulation
             // Schritt S2: Eine Schwester anfordern.
             // 'using' stellt sicher, dass die Ressource am Ende wieder freigegeben wird.
             // Der Prozess pausiert hier (yield return req), bis eine Schwester frei ist.
-            using (var req = schwester.Request())
+            using (var req = schwester.Request(priority: GetPriority(patientenTyp)))
             {
                 yield return req; // Warten, bis die Schwester-Ressource verfügbar ist.
 
                 // Schritt S3: Schwester ist frei, der Prozess wird fortgesetzt.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId);
+                daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId, objektTyp: "Schwester");
 
                 // Die Wartezeit auf die Schwester berechnen und speichern.
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
@@ -63,14 +75,16 @@ namespace simSharpSimulation
 
 
                 // Schritt S5: Die eigentliche Behandlung/Interaktion mit der Schwester.
-                // Dauer der Behandlung zufällig bestimmen (Exponentialverteilung).
-                double dauerBehandlung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT);
+                // Dauer der Behandlung basiert auf dem Patienten-Typ.
+                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+                double mittlereDauer = typInfo.BehandlungszeitSchwester;
+                double dauerBehandlung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
                 yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung)); // Prozess für die Dauer anhalten.
 
                 // Schritt S6: Der gesamte Schwester-Prozess ist beendet.
                 // Die Ressource wird durch das 'using'-Statement automatisch freigegeben.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId);
+                daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId, objektTyp: "Schwester");
             }
         }
     }
