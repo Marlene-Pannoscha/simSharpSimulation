@@ -79,7 +79,7 @@ namespace simSharpSimulation
         private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, List<PriorityResource> schwestern, List<PriorityResource> aerzte)
         {
             // Hilfsmethode zum Auswählen einer Ressource
-            (Resource res, int id) WaehleRessource(List<Resource> ressourcen)
+            (T res, int id) WaehleRessource<T>(List<T> ressourcen)
             {
                 // Wähle zufällig eine Ressource
                 int index = rnd.Next(ressourcen.Count);
@@ -91,7 +91,7 @@ namespace simSharpSimulation
 
             // Schritt P4.2: Patient betritt die Klinik (Startpunkt des individuellen Ablaufs).
             // EREIGNIS 1: Patient betritt die Klinik
-            daten.LogEvent(nowMinutes, "betritt_klinik", patientId, objektTyp: "Patient");
+            daten.LogEvent(nowMinutes, "betritt_klinik", patientId);
 
             // Schritt P4.3: Ankunftszeit merken (Basis für Wartezeit-Berechnungen).
             double ankunftszeit = nowMinutes;
@@ -242,13 +242,24 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var (arztRes, arztId) = WaehleRessource(aerzte);
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, rnd, daten))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, patientenTyp, ankunftszeit, rnd, daten))
                 yield return ev;
 
-            // Schritt P4.13: Patient verlässt die Klinik (Ende des Patientenablaufs).
+            // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
+            bool gehtNachArztZurRezeption = rnd.NextDouble() < 0.6;
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            daten.LogEvent(nowMinutes, gehtNachArztZurRezeption ? "geht_nach_arzt_zur_rezeption" : "verlaesst_nach_arzt_ohne_rezeption", patientId);
+
+            if (gehtNachArztZurRezeption)
+            {
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, rnd, daten))
+                    yield return ev;
+            }
+
+            // Schritt P4.14: Patient verlässt die Klinik (Ende des Patientenablaufs).
             // EREIGNIS 10: Patient verlässt die Klinik
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId, objektTyp: "Patient");
+            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
 
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
@@ -271,10 +282,10 @@ namespace simSharpSimulation
         }
 
         // Schritt P9: Interne Hilfsmethode, um aktuelle Belegung der Ressource zu prüfen.
-        private static int ErmittleAktiveNutzer(List<Resource> ressourcen)
+        private static int ErmittleAktiveNutzer<T>(List<T> ressourcen)
         {
             return ressourcen.Sum(r => {
-                var usersProperty = typeof(Resource).GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
+                var usersProperty = r?.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
                 var usersCollection = usersProperty?.GetValue(r) as IReadOnlyCollection<Request>;
                 return usersCollection?.Count ?? 0;
             });

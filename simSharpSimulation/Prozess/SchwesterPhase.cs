@@ -67,7 +67,7 @@ namespace simSharpSimulation
 
                 // Schritt S3: Schwester ist frei, der Prozess wird fortgesetzt.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId, objektTyp: "Schwester");
+                daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId);
 
                 // Die Wartezeit auf die Schwester berechnen und speichern.
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
@@ -84,7 +84,7 @@ namespace simSharpSimulation
                 // Schritt S6: Der gesamte Schwester-Prozess ist beendet.
                 // Die Ressource wird durch das 'using'-Statement automatisch freigegeben.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId, objektTyp: "Schwester");
+                daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId);
             }
         }
     }
