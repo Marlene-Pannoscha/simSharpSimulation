@@ -99,6 +99,7 @@ namespace simSharpSimulation
 
             // Schritt P4.3B: Patienten-Typ zuweisen basierend auf Verteilung.
             PatientenTyp patientenTyp = WaehlePatientenTyp(rnd);
+            daten.ErfassePatientenTyp(patientenTyp);
 
             // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
             bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
@@ -142,7 +143,7 @@ namespace simSharpSimulation
                         // Schritt P4.10B: Terminpatienten warten im Schnitt kürzer im Wartezimmer.
                         double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
                             rnd,
-                            1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * 0.5));
+                                1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
                         // Schritt P4.11B: Wartezimmer verlassen.
@@ -163,7 +164,7 @@ namespace simSharpSimulation
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_keinen_termin", patientId);
 
                 // Auch ohne Termin prüfen, ob eine Schwester-Vorbereitung anfällt.
-                brauchtVorbereitung = rnd.NextDouble() < PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
+                brauchtVorbereitung = rnd.NextDouble() < PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
                 if (brauchtVorbereitung)
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
@@ -186,7 +187,7 @@ namespace simSharpSimulation
                         // Ohne Termin warten Patienten im Schnitt länger im Wartezimmer auf die Schwester.
                         double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
                             rnd,
-                            1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER*1));
+                            1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
                         nowMinutes = (env.Now - env.StartDate).TotalMinutes;
@@ -214,9 +215,9 @@ namespace simSharpSimulation
                     schwesterId,
                     patientenTyp,
                     ankunftszeit,
+                    hatTermin,
                     direktZurSchwester,
-                    pruefeVorbereitungNachZimmer: true,
-                    wahrscheinlichkeitVorbereitung: PatientenKonfiguration.SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT,
+                    pruefeVorbereitungNachZimmer: false,
                     rnd,
                     daten))
                     yield return ev;
@@ -231,7 +232,9 @@ namespace simSharpSimulation
             // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
             daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_fuer_arzt", patientId);
 
-            double wartezeitFaktor = hatTermin ? 0.8 : 1; // Mit Termin kürzer (Faktor < 1), ohne Termin länger (Faktor  1)
+            double wartezeitFaktor = hatTermin
+                ? PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT
+                : PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT;
             double wartezimmerDauerArzt = MathNet.Numerics.Distributions.Exponential.Sample(
                 rnd, 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * wartezeitFaktor));
             yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauerArzt));
@@ -242,7 +245,7 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var (arztRes, arztId) = WaehleRessource(aerzte);
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, rnd, daten))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, rnd, daten))
                 yield return ev;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
@@ -263,7 +266,7 @@ namespace simSharpSimulation
 
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
-            daten.Gesamtprozesszeiten.Add(gesamtprozesszeit);
+            daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
         }
 
         // Phase P-C: Delegation an ausgelagerte Phasenklassen.

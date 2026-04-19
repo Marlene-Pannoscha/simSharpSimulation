@@ -30,7 +30,6 @@ namespace simSharpSimulation
          * ankunftszeit: Der Zeitpunkt, an dem der Patient die Klinik betreten hat (für Wartezeitberechnung).
          * direktZurSchwester: Gibt an, ob der Patient das Wartezimmer übersprungen hat.
          * pruefeVorbereitungNachZimmer: Steuert, ob eine zufällige Vorbereitung stattfinden soll.
-         * wahrscheinlichkeitVorbereitung: Die Wahrscheinlichkeit, dass eine Vorbereitung nötig ist.
          * rnd: Der Zufallsgenerator für stochastische Dauern.
          * daten: Das Objekt zum Sammeln und Speichern von Simulationsdaten.
          * returns: Eine Sequenz von Simulationsereignissen.
@@ -42,9 +41,9 @@ namespace simSharpSimulation
             int schwesterId,
             PatientenTyp patientenTyp,
             double ankunftszeit,
+            bool hatTermin,
             bool direktZurSchwester,
             bool pruefeVorbereitungNachZimmer,
-            double wahrscheinlichkeitVorbereitung,
             Random rnd,
             SimulationsDaten daten)
         {
@@ -71,13 +70,14 @@ namespace simSharpSimulation
 
                 // Die Wartezeit auf die Schwester berechnen und speichern.
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
-                daten.SchwesternWartezeiten.Add(wartezeitSchwester);
+                daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
 
                 // Schritt S5: Die eigentliche Behandlung/Interaktion mit der Schwester.
                 // Dauer der Behandlung basiert auf dem Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitSchwester;
                 double dauerBehandlung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
+                daten.ErfasseSchwesterBehandlungszeit(dauerBehandlung, hatTermin);
                 yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung)); // Prozess für die Dauer anhalten.
 
                 // Schritt S6: Der gesamte Schwester-Prozess ist beendet.

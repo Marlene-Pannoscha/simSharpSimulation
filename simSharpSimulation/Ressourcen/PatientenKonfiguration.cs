@@ -14,9 +14,13 @@ namespace simSharpSimulation
         public const double STANDARDABWEICHUNG = 80.0; // Streuung der Ankunftszeiten
         public const double TERMIN_WAHRSCHEINLICHKEIT = 0.7; // Wahrscheinlichkeit, dass ein Patient einen Termin hat
         public const double TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = 0.4; // Wahrscheinlichkeit, dass Terminpatienten initial eine Schwester-Vorbereitung benötigen
-        public const double SCHWESTERZIMMER_VORBEREITUNG_WAHRSCHEINLICHKEIT = 0.5; // Wahrscheinlichkeit, dass Patienten nach dem Schwesternzimmer Vorbereitung brauchen
+        public const double OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = 0.80; // ohne Termin deutlich häufiger zusätzliche Vorbereitung
         public const double MITTLERE_WARTEZIMMER_DAUER_SCHWESTER = 2.0; // durchschnittliche Dauer im Wartezimmer für die Schwester in Minuten
         public const double MITTLERE_WARTEZIMMER_DAUER_ARZT = 5.0; // durchschnittliche Dauer im Wartezimmer für den Arzt in Minuten
+        public const double MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 0.6; // mit Termin: kürzeres Warten vor Schwester
+        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 2.2; // ohne Termin: deutlich längeres Warten vor Schwester
+        public const double MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 0.40; // mit Termin: stark verkürztes Warten vor Arzt
+        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 3.5; // ohne Termin: stark verlängertes Warten vor Arzt
 
         // Patiententypen Verteilung
         public static readonly (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double BehandlungszeitSchwester)[] TYPEN_VERTEILUNG = new[]

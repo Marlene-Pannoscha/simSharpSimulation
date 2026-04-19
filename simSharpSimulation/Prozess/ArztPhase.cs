@@ -40,6 +40,7 @@ namespace simSharpSimulation
             int arztId,
             PatientenTyp patientenTyp,
             double ankunftszeit,
+            bool hatTermin,
             Random rnd,
             SimulationsDaten daten)
         {
@@ -63,13 +64,14 @@ namespace simSharpSimulation
 
                 // Die Wartezeit auf den Arzt berechnen und für die Statistik speichern.
                 double wartezeitArzt = nowMinutes - ankunftszeit;
-                daten.Wartezeiten.Add(wartezeitArzt);
+                daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
 
                 // Schritt A4: Dauer der ärztlichen Behandlung simulieren.
                 // Die Dauer basiert auf dem Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
                 double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
+                daten.ErfasseArztBehandlungszeit(dauer, hatTermin);
 
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));
