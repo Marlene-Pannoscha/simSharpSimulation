@@ -42,14 +42,8 @@ namespace simSharpSimulation
             // --- 7. EXPORT IN TEXTDATEI ---
             Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
             var traceWithHeader = daten.TraceData.ToList();
-            // Kommentarzeilen mit IDs
-            int anzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE;
-            int anzahlSchwestern = SchwesterKonfiguration.ANZAHL_SCHWESTERN;
-            string arztKommentar = $"# Aerzte: {string.Join(", ", Enumerable.Range(1, anzahlAerzte).Select(i => $"Arzt{i}=ID {i}"))}";
-            string schwesterKommentar = $"# Schwestern: {string.Join(", ", Enumerable.Range(1, anzahlSchwestern).Select(i => $"Schwester{i}=ID {i}"))}";
-            traceWithHeader.Insert(0, schwesterKommentar);
-            traceWithHeader.Insert(0, arztKommentar);
-            traceWithHeader.Insert(2, "Zeit;EventTyp;PatientId;ArztId;SchwesterId");
+            // Nur noch Heading-Zeile (keine Kommentarzeilen mehr)
+            traceWithHeader.Insert(0, "Zeit;EventTyp;PatientId;ArztId;SchwesterId");
             File.WriteAllLines("klinik_trace.txt", traceWithHeader);
             Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
             
