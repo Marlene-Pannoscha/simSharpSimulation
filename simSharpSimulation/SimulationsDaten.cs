@@ -23,12 +23,14 @@ namespace simSharpSimulation
         public double DurchschnittlicheGesamtprozesszeit => Gesamtprozesszeiten.Count > 0 ? Gesamtprozesszeiten.Average() : 0;
 
         /// <summary>
-        /// Speichert ein Ereignis im Trace-Format: "Zeit;EventTyp;PatientId".
+        /// Speichert ein Ereignis im Trace-Format: "Zeit;EventTyp;PatientId;ArztId;SchwesterId".
         /// </summary>
-        public void LogEvent(double zeit, string eventTyp, int patientId)
+        public void LogEvent(double zeit, string eventTyp, int patientId, int? arztId = null, int? schwesterId = null)
         {
             string timeStr = zeit.ToString("000.00", CultureInfo.InvariantCulture);
-            string logEntry = $"{timeStr};{eventTyp};{patientId}";
+            string arztStr = arztId.HasValue ? arztId.Value.ToString() : "";
+            string schwesterStr = schwesterId.HasValue ? schwesterId.Value.ToString() : "";
+            string logEntry = $"{timeStr};{eventTyp};{patientId};{arztStr};{schwesterStr}";
             TraceData.Add(logEntry);
         }
     }

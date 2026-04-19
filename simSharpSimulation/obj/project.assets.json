@@ -264,11 +264,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+      "projectUniqueName": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
       "projectName": "simSharpSimulation",
-      "projectPath": "c:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
+      "projectPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\simSharpSimulation.csproj",
       "packagesPath": "C:\\Users\\anhth\\.nuget\\packages\\",
-      "outputPath": "c:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
+      "outputPath": "C:\\home\\simSharpSimulation\\simSharpSimulation\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\anhth\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -330,7 +330,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",

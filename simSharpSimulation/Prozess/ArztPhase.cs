@@ -37,6 +37,7 @@ namespace simSharpSimulation
             Simulation env,
             int patientId,
             PriorityResource arzt,
+            int arztId,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             Random rnd,
@@ -58,7 +59,7 @@ namespace simSharpSimulation
 
                 // Schritt A3: Arzt ist frei, die Behandlung beginnt.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "startet_arzt_behandlung", patientId);
+                daten.LogEvent(nowMinutes, "startet_arzt_behandlung", patientId, arztId: arztId);
 
                 // Die Wartezeit auf den Arzt berechnen und für die Statistik speichern.
                 double wartezeitArzt = nowMinutes - ankunftszeit;
@@ -69,13 +70,13 @@ namespace simSharpSimulation
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
                 double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
-                
+
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));
 
                 // Schritt A5: Die Behandlung ist abgeschlossen.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId);
+                daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
             }
             // Die Arzt-Ressource wird hier durch das 'using'-Statement automatisch freigegeben.
         }

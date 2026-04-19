@@ -242,7 +242,7 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var (arztRes, arztId) = WaehleRessource(aerzte);
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, patientenTyp, ankunftszeit, rnd, daten))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, rnd, daten))
                 yield return ev;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
