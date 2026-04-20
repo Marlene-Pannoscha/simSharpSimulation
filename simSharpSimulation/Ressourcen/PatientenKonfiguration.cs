@@ -9,7 +9,7 @@ namespace simSharpSimulation
 
     internal sealed class PatientenKonfiguration : PersonenKonfiguration
     {
-        public const int ANZAHL_PATIENTEN_TAG = 100; // erwartete Patienten pro Tag
+        public const int ANZAHL_PATIENTEN_TAG = 80; // erwartete Patienten pro Tag
         public const double ERWARTUNGSWERT = 180.0; // Zeitpunkt des Patientengipfels
         public const double STANDARDABWEICHUNG = 80.0; // Streuung der Ankunftszeiten
         public const double TERMIN_WAHRSCHEINLICHKEIT = 0.7; // Wahrscheinlichkeit, dass ein Patient einen Termin hat
@@ -18,9 +18,9 @@ namespace simSharpSimulation
         public const double MITTLERE_WARTEZIMMER_DAUER_SCHWESTER = 2.0; // durchschnittliche Dauer im Wartezimmer für die Schwester in Minuten
         public const double MITTLERE_WARTEZIMMER_DAUER_ARZT = 5.0; // durchschnittliche Dauer im Wartezimmer für den Arzt in Minuten
         public const double MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 0.6; // mit Termin: kürzeres Warten vor Schwester
-        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 2.2; // ohne Termin: deutlich längeres Warten vor Schwester
+        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 2.0; // ohne Termin: deutlich längeres Warten vor Schwester
         public const double MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 0.40; // mit Termin: stark verkürztes Warten vor Arzt
-        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 3.5; // ohne Termin: stark verlängertes Warten vor Arzt
+        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 2.0; // ohne Termin: verlängertes Warten vor Arzt (reduziert von 3.5)
 
         // Patiententypen Verteilung
         public static readonly (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double BehandlungszeitSchwester)[] TYPEN_VERTEILUNG = new[]

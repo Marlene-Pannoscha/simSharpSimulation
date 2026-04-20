@@ -29,6 +29,8 @@ namespace simSharpSimulation
             GenerateDiagramme.GeneriereDiagramme(
                 daten.EchteAnkunftszeiten,
                 daten.Wartezeiten,
+                daten.WartezeitenMitTermin,
+                daten.WartezeitenOhneTermin,
                 daten.SchwesternWartezeiten,
                 daten.Gesamtprozesszeiten,
                 daten.TraceData,
@@ -77,7 +79,7 @@ namespace simSharpSimulation
             Console.WriteLine($"Durchschnittliche Gesamtprozesszeit: {avgGesamtprozesszeit:F2} Minuten");
 
             Console.WriteLine();
-            Console.WriteLine("--- Vergleich mit Termin vs. ohne Termin (Wartezeiten & Gesamtprozess) ---");
+            Console.WriteLine("--- Vergleich mit Termin vs. ohne Termin (Wartezeiten, Behandlungszeiten & Gesamtprozess) ---");
             Console.WriteLine($"{"Gruppe",-12} | {"Anz",5} | {"Rezept.W",8} | {"Rezept.B",8} | {"Schwest.W",8} | {"Schwest.B",8} | {"Arzt.W",8} | {"Arzt.B",8} | {"GesamtΣ",8}");
             Console.WriteLine(new string('-', 116));
 

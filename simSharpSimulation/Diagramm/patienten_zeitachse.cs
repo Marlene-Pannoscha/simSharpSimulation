@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 7 - Zeitachse eines einzelnen Patienten aus den Trace-Ereignissen.
     internal static partial class GenerateDiagramme
     {
         // Diagramm 7

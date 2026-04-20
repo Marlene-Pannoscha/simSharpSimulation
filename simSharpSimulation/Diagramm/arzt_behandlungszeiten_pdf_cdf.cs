@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 9 - Arzt-Behandlungszeiten je Patiententyp (Histogramm + Lognormal PDF/CDF).
     internal static partial class GenerateDiagramme
     {
         // Diagramm: Arzt-Behandlungszeiten je Patiententyp

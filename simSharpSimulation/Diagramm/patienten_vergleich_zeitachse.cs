@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 8 - Vergleichszeitachse von mehreren Patientenpfaden.
     internal static partial class GenerateDiagramme
     {
         // Diagramm 8

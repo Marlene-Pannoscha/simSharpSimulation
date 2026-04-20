@@ -3,6 +3,7 @@ using System.Drawing;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 1 - theoretische Ankunftsverteilung (Normalverteilung) als PDF/CDF.
     internal static partial class GenerateDiagramme
     {
         // Diagramm 1

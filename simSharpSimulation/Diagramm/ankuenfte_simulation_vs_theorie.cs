@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 2 - Vergleich von simulierten Ankünften mit theoretischer PDF/CDF.
     internal static partial class GenerateDiagramme
     {
         // Diagramm 2

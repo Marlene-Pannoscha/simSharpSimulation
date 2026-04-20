@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 6 - Histogramm der Gesamtprozesszeit (Eintritt bis Austritt).
     internal static partial class GenerateDiagramme
     {
         // Diagramm 6

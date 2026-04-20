@@ -5,12 +5,14 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Zentrale Orchestrierung aller Diagramme inkl. gemeinsamer Hilfsfunktionen (Pfad, Linspace, Histogramm).
     // Diese Klasse ist verantwortlich für die Erstellung von Diagrammen aus den Simulationsdaten.
     // Sie verwendet die ScottPlot-Bibliothek, um verschiedene Aspekte der Simulation zu visualisieren,
     // wie z.B. Ankunftszeiten und Wartezeiten.
     internal static partial class GenerateDiagramme
     {
         private const string ImagesOrdner = "images";
+        private static readonly Lazy<string> ProjektRoot = new(ErmittleProjektRoot);
 
         // Erstellt alle Diagramme analog zur SimPy-Version:
         // 1) Theorie: PDF + CDF der Normalverteilung für Patientenankünfte.
@@ -24,6 +26,8 @@ namespace simSharpSimulation
         public static void GeneriereDiagramme(
             IReadOnlyList<double> echteAnkunftszeiten,
             IReadOnlyList<double> wartezeiten,
+            IReadOnlyList<double> wartezeitenMitTermin,
+            IReadOnlyList<double> wartezeitenOhneTermin,
             IReadOnlyList<double> schwesternWartezeiten,
             IReadOnlyList<double> gesamtprozesszeiten,
             IReadOnlyList<string> traceData,
@@ -71,6 +75,8 @@ namespace simSharpSimulation
             ErzeugeArztBehandlungszeitenJeTyp(arztBehandlungszeitenNachTyp);
             // [Diagramm 10] Schwester-Behandlungszeiten (Histogramm + PDF + CDF je Typ)
             ErzeugeSchwesterBehandlungszeitenJeTyp(schwesternBehandlungszeitenNachTyp);
+            // [Diagramm 11] Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin
+            ErzeugeWartezeitenTheorieExponentialDiagramm(wartezeitenMitTermin, wartezeitenOhneTermin);
         }
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)
@@ -96,9 +102,35 @@ namespace simSharpSimulation
         // Stellt sicher, dass der Ausgabeordner für die Bilder existiert und gibt den vollständigen Pfad für eine Datei zurück.
         private static string ErzeugeOutputPfad(string dateiname)
         {
-            string imagesPfad = Path.Combine(Directory.GetCurrentDirectory(), ImagesOrdner);
+            string imagesPfad = Path.Combine(ProjektRoot.Value, ImagesOrdner);
             Directory.CreateDirectory(imagesPfad);
             return Path.Combine(imagesPfad, dateiname);
+        }
+
+        private static string ErmittleProjektRoot()
+        {
+            string? vonCwd = FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
+            if (!string.IsNullOrEmpty(vonCwd))
+                return vonCwd;
+
+            string? vonBinary = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj");
+            if (!string.IsNullOrEmpty(vonBinary))
+                return vonBinary;
+
+            // Fallback, falls die .csproj-Datei unerwartet nicht gefunden wird.
+            return Directory.GetCurrentDirectory();
+        }
+
+        private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
+        {
+            var current = new DirectoryInfo(startPfad);
+            while (current != null)
+            {
+                if (File.Exists(Path.Combine(current.FullName, dateiname)))
+                    return current.FullName;
+                current = current.Parent;
+            }
+            return null;
         }
 
         // Erzeugt eine Sequenz von gleichmäßig verteilten Zahlen über ein angegebenes Intervall.
@@ -118,6 +150,12 @@ namespace simSharpSimulation
             double min,
             double max)
         {
+            if (binCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(binCount), "binCount muss größer als 0 sein.");
+
+            if (max <= min)
+                max = min + 1.0;
+
             double binWidth = (max - min) / binCount;
             double[] counts = new double[binCount];
             double[] centers = new double[binCount];

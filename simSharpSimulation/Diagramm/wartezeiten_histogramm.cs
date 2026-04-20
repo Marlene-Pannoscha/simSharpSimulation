@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 3 - Histogramm der Arzt-Wartezeiten.
     internal static partial class GenerateDiagramme
     {
         // Diagramm 3

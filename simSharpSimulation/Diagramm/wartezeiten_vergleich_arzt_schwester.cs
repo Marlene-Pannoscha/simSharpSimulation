@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
+    // Dateirolle: Diagramm 5 - direkter Vergleich Arzt- vs. Schwester-Wartezeiten.
     internal static partial class GenerateDiagramme
     {
         // Diagramm 5
