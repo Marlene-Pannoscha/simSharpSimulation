@@ -18,9 +18,9 @@ namespace simSharpSimulation
         public const double MITTLERE_WARTEZIMMER_DAUER_SCHWESTER = 2.0; // durchschnittliche Dauer im Wartezimmer für die Schwester in Minuten
         public const double MITTLERE_WARTEZIMMER_DAUER_ARZT = 5.0; // durchschnittliche Dauer im Wartezimmer für den Arzt in Minuten
         public const double MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 0.6; // mit Termin: kürzeres Warten vor Schwester
-        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 2.0; // ohne Termin: deutlich längeres Warten vor Schwester
+        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = 2.5; // ohne Termin: deutlich längeres Warten vor Schwester
         public const double MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 0.40; // mit Termin: stark verkürztes Warten vor Arzt
-        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 2.0; // ohne Termin: verlängertes Warten vor Arzt (reduziert von 3.5)
+        public const double OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = 3.0; // ohne Termin: deutlich längeres Warten vor Arzt (≈20 Min Unterschied)
 
         // Patiententypen Verteilung
         public static readonly (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double BehandlungszeitSchwester)[] TYPEN_VERTEILUNG = new[]
