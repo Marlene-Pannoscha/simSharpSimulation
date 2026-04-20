@@ -27,6 +27,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> schwesternWartezeiten,
             IReadOnlyList<double> gesamtprozesszeiten,
             IReadOnlyList<string> traceData,
+            IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp,
+            IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp,
             double simulationsdauer,
             double erwartungswert,
             double standardabweichung,
@@ -65,6 +67,30 @@ namespace simSharpSimulation
             ErzeugePatientenZeitachsenDiagramm(traceData);
             // [Diagramm 8] Vergleich 3-10 Patienten (verschiedene Pfade)
             ErzeugeMehrpatientenVergleichsZeitachse(traceData);
+            // [Diagramm 9] Arzt-Behandlungszeiten (Histogramm + PDF + CDF je Typ)
+            ErzeugeArztBehandlungszeitenJeTyp(arztBehandlungszeitenNachTyp);
+            // [Diagramm 10] Schwester-Behandlungszeiten (Histogramm + PDF + CDF je Typ)
+            ErzeugeSchwesterBehandlungszeitenJeTyp(schwesternBehandlungszeitenNachTyp);
+        }
+
+        private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)
+        {
+            foreach (var (typ, _, behandlungszeitArzt, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            {
+                if (!arztBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
+                    continue;
+                ErzeugeArztBehandlungszeitenPdfCdfDiagramm(werte, typ, behandlungszeitArzt);
+            }
+        }
+
+        private static void ErzeugeSchwesterBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp)
+        {
+            foreach (var (typ, _, _, behandlungszeitSchwester) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            {
+                if (!schwesternBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
+                    continue;
+                ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(werte, typ, behandlungszeitSchwester);
+            }
         }
 
         // Stellt sicher, dass der Ausgabeordner für die Bilder existiert und gibt den vollständigen Pfad für eine Datei zurück.

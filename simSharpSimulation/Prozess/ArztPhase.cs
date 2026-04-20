@@ -70,8 +70,13 @@ namespace simSharpSimulation
                 // Die Dauer basiert auf dem Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
-                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
-                daten.ErfasseArztBehandlungszeit(dauer, hatTermin);
+                
+                // Wechsel zur Log-Normalverteilung für realistischere Zeiten
+                // sigma = 0.4 sorgt für eine natürliche Streuung ohne zu viele Extremwerte.
+                double sigma = 0.4; 
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Pow(sigma, 2);
+                double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
+                daten.ErfasseArztBehandlungszeit(dauer, hatTermin, patientenTyp);
 
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));

@@ -32,6 +32,8 @@ namespace simSharpSimulation
                 daten.SchwesternWartezeiten,
                 daten.Gesamtprozesszeiten,
                 daten.TraceData,
+                daten.ArztBehandlungszeitenNachTyp,
+                daten.SchwesternBehandlungszeitenNachTyp,
                 SimulationKonfiguration.SIMULATIONSDAUER,
                 PatientenKonfiguration.ERWARTUNGSWERT,
                 PatientenKonfiguration.STANDARDABWEICHUNG,

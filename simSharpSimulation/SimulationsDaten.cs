@@ -37,6 +37,10 @@ namespace simSharpSimulation
             Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => 0);
         public List<double> ArztBehandlungszeitenMitTermin { get; } = new();
         public List<double> ArztBehandlungszeitenOhneTermin { get; } = new();
+        public Dictionary<PatientenTyp, List<double>> ArztBehandlungszeitenNachTyp { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
+        public Dictionary<PatientenTyp, List<double>> SchwesternBehandlungszeitenNachTyp { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
 
         public double DurchschnittlicheWartezeitArzt => Wartezeiten.Count > 0 ? Wartezeiten.Average() : 0;
         public double DurchschnittlicheWartezeitArztMitTermin => WartezeitenMitTermin.Count > 0 ? WartezeitenMitTermin.Average() : 0;
@@ -89,8 +93,9 @@ namespace simSharpSimulation
                 SchwesternWartezeitenOhneTermin.Add(wartezeitSchwester);
         }
 
-        public void ErfasseSchwesterBehandlungszeit(double dauerSchwester, bool hatTermin)
+        public void ErfasseSchwesterBehandlungszeit(double dauerSchwester, bool hatTermin, PatientenTyp patientenTyp)
         {
+            SchwesternBehandlungszeitenNachTyp[patientenTyp].Add(dauerSchwester);
             if (hatTermin)
                 SchwesternBehandlungszeitenMitTermin.Add(dauerSchwester);
             else
@@ -114,8 +119,9 @@ namespace simSharpSimulation
                 RezeptionsBehandlungszeitenOhneTermin.Add(dauerRezeption);
         }
 
-        public void ErfasseArztBehandlungszeit(double dauerArzt, bool hatTermin)
+        public void ErfasseArztBehandlungszeit(double dauerArzt, bool hatTermin, PatientenTyp patientenTyp)
         {
+            ArztBehandlungszeitenNachTyp[patientenTyp].Add(dauerArzt);
             if (hatTermin)
                 ArztBehandlungszeitenMitTermin.Add(dauerArzt);
             else

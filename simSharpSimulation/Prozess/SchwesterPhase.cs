@@ -76,8 +76,11 @@ namespace simSharpSimulation
                 // Dauer der Behandlung basiert auf dem Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitSchwester;
-                double dauerBehandlung = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / mittlereDauer);
-                daten.ErfasseSchwesterBehandlungszeit(dauerBehandlung, hatTermin);
+                
+                double sigma = 0.35; // Etwas geringere Streuung bei standardisierten Schwester-Aufgaben
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Pow(sigma, 2);
+                double dauerBehandlung = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
+                daten.ErfasseSchwesterBehandlungszeit(dauerBehandlung, hatTermin, patientenTyp);
                 yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung)); // Prozess für die Dauer anhalten.
 
                 // Schritt S6: Der gesamte Schwester-Prozess ist beendet.
