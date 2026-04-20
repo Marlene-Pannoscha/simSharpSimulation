@@ -78,6 +78,11 @@ namespace simSharpSimulation
         */
         private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, List<PriorityResource> schwestern, List<PriorityResource> aerzte)
         {
+            TimeSpan eingangZurRezeptionDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN);
+            TimeSpan interneBewegungsdauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN);
+            TimeSpan arztZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN);
+            TimeSpan rezeptionZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN);
+
             // Hilfsmethode zum Auswählen einer Ressource
             (T res, int id) WaehleRessource<T>(List<T> ressourcen)
             {
@@ -106,7 +111,12 @@ namespace simSharpSimulation
 
             // Schritt P4.4: Rezeption durchlaufen.
             // --- REZEPTION (RECEPTION) PHASE ---
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeit, hatTermin, rnd, daten))
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_rezeption", patientId);
+            yield return env.Timeout(eingangZurRezeptionDauer);
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_rezeption", patientId);
+            double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
+
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, rnd, daten))
                 yield return ev;
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
@@ -132,13 +142,16 @@ namespace simSharpSimulation
                         // Schritt P4.9A: Schwester ist frei -> direkt ins Schwesterzimmer.
                         direktZurSchwester = true;
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_frei", patientId);
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_schwester_zimmer", patientId);
                     }
                     else
                     {
                         // Schritt P4.9B: Keine Schwester frei -> zuerst ins Wartezimmer.
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
+
+                        // Schritt P4.9C: Der Weg ins Wartezimmer ist eine interne Bewegung.
+                        yield return env.Timeout(interneBewegungsdauer);
+                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer", patientId);
 
                         // Schritt P4.10B: Terminpatienten warten im Schnitt kürzer im Wartezimmer.
                         double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
@@ -176,13 +189,16 @@ namespace simSharpSimulation
                         // Schwester ist frei -> direkt ins Schwesterzimmer.
                         direktZurSchwester = true;
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_frei", patientId);
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_schwester_zimmer", patientId);
                     }
                     else
                     {
                         // Keine Schwester frei -> zuerst ins Wartezimmer.
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
+
+                        // Schritt P4.9D: Auch der Weg ins Wartezimmer ist eine interne Bewegung.
+                        yield return env.Timeout(interneBewegungsdauer);
+                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer", patientId);
 
                         // Ohne Termin warten Patienten im Schnitt länger im Wartezimmer auf die Schwester.
                         double wartezimmerDauer = MathNet.Numerics.Distributions.Exponential.Sample(
@@ -206,6 +222,10 @@ namespace simSharpSimulation
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
             if (!ueberspringeSchwester)
             {
+                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_schwester", patientId);
+                yield return env.Timeout(interneBewegungsdauer);
+                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_schwesterzimmer", patientId);
+
                 var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
@@ -232,6 +252,10 @@ namespace simSharpSimulation
             // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
             daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_fuer_arzt", patientId);
 
+            // Der Weg ins Arzt-Wartezimmer ist ebenfalls eine interne Bewegung.
+            yield return env.Timeout(interneBewegungsdauer);
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer_fuer_arzt", patientId);
+
             double wartezeitFaktor = hatTermin
                 ? PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT
                 : PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT;
@@ -244,6 +268,10 @@ namespace simSharpSimulation
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_arzt", patientId);
+            yield return env.Timeout(interneBewegungsdauer);
+            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_arztzimmer", patientId);
+
             var (arztRes, arztId) = WaehleRessource(aerzte);
             foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, rnd, daten))
                 yield return ev;
@@ -255,8 +283,19 @@ namespace simSharpSimulation
 
             if (gehtNachArztZurRezeption)
             {
+                yield return env.Timeout(interneBewegungsdauer);
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                daten.LogEvent(nowMinutes, "betritt_rezeption_nach_arzt", patientId);
                 foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, rnd, daten))
                     yield return ev;
+
+                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
+                yield return env.Timeout(rezeptionZumAusgangDauer);
+            }
+            else
+            {
+                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
+                yield return env.Timeout(arztZumAusgangDauer);
             }
 
             // Schritt P4.14: Patient verlässt die Klinik (Ende des Patientenablaufs).

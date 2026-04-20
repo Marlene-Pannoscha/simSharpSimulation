@@ -128,6 +128,8 @@ simSharpSimulation/
    - ggf. Wartezimmer / Schwester
    - Arzt
 6. Jede Phase schreibt Events in den Trace und Zeiten in `SimulationsDaten`.
+  - Bewegungen werden einheitlich geloggt als `geht_*` (Start) und `betritt_*` (Ankunft).
+  - Standardzeiten: Eingang→Rezeption 5s, interne Wege 10s, Arzt→Ausgang 15s, Rezeption→Ausgang 5s.
 7. Nach Simulationsende:
    - Diagramme werden erzeugt
    - Trace-Datei wird exportiert

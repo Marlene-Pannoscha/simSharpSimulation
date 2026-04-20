@@ -18,7 +18,7 @@ namespace simSharpSimulation
             foreach (string line in traceData)
             {
                 string[] parts = line.Split(';');
-                if (parts.Length != 3)
+                if (parts.Length < 3)
                     continue;
 
                 if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double zeit))
@@ -50,11 +50,13 @@ namespace simSharpSimulation
                     {
                         PatientId = g.Key,
                         HatTermin = g.Any(x => x.EventTyp == "hat_termin"),
-                        HatSchwesterVorbereitung = g.Any(x => x.EventTyp == "startet_vorbereitung_schwester" || x.EventTyp == "benoetigt_schwester_vorbereitung"),
+                        HatSchwesterVorbereitung = g.Any(x => x.EventTyp == "benoetigt_schwester_vorbereitung"),
                         Betritt = betritt,
-                        StartRezeption = FindeZeit(patientEvents, "startet_rezeption"),
-                        StartSchwester = FindeZeit(patientEvents, "startet_schwester_prozess"),
-                        StartArzt = FindeZeit(patientEvents, "startet_arzt_behandlung"),
+                        StartRezeption = FindeZeit(patientEvents, "betritt_rezeption"),
+                        StartSchwester = FindeZeit(patientEvents, "betritt_schwesterzimmer"),
+                        StartArzt = FindeZeit(patientEvents, "betritt_arztzimmer"),
+                        RueckwegZurRezeptionNachArzt = FindeZeit(patientEvents, "betritt_rezeption_nach_arzt")
+                            ?? FindeZeit(patientEvents, "geht_nach_arzt_zur_rezeption"),
                         Verlaesst = verlaesst
                     };
                 })
@@ -142,10 +144,15 @@ namespace simSharpSimulation
                     string? arztLabel = i == 0 ? "Arzt" : null;
                     plot.AddPoint(p.StartArzt.Value, y, color: Color.DarkGreen, size: 9, label: arztLabel);
                 }
+                if (p.RueckwegZurRezeptionNachArzt.HasValue)
+                {
+                    string? rueckwegLabel = i == 0 ? "Rückweg Rezeption" : null;
+                    plot.AddPoint(p.RueckwegZurRezeptionNachArzt.Value, y, color: Color.OrangeRed, size: 9, label: rueckwegLabel);
+                }
                 string? austrittLabel = i == 0 ? "Austritt" : null;
                 plot.AddPoint(p.Verlaesst!.Value, y, color: Color.Black, size: 10, label: austrittLabel);
 
-                string laneLabel = $"ID {p.PatientId} | {(p.HatTermin ? "mit Termin" : "ohne Termin")} | {(p.HatSchwesterVorbereitung ? "mit Schwester-Vorbereitung" : "ohne Schwester-Vorbereitung")}";
+                string laneLabel = $"ID {p.PatientId} | {(p.HatTermin ? "mit Termin" : "ohne Termin")} | {(p.HatSchwesterVorbereitung ? "mit Schwester-Vorbereitung" : "ohne Schwester-Vorbereitung")}{(p.RueckwegZurRezeptionNachArzt.HasValue ? " | mit Rezeption nach Arzt" : "")}";
                 plot.AddText(laneLabel, p.Verlaesst!.Value + 1.0, y, color: Color.Black);
             }
 
@@ -178,6 +185,7 @@ namespace simSharpSimulation
             public double? StartRezeption { get; set; }
             public double? StartSchwester { get; set; }
             public double? StartArzt { get; set; }
+            public double? RueckwegZurRezeptionNachArzt { get; set; }
             public double? Verlaesst { get; set; }
         }
     }

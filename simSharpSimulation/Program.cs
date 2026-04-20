@@ -106,5 +106,6 @@ namespace simSharpSimulation
                 Console.WriteLine($"{typ,-10} | {anzahl,8} | {anteil,10:F2} | {avgArztTyp,12:F2} | {avgSchwesterTyp,17:F2}");
             }
         }
+
     }
 }

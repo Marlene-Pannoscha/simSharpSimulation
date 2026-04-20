@@ -15,7 +15,7 @@ namespace simSharpSimulation
             foreach (string line in traceData)
             {
                 string[] parts = line.Split(';');
-                if (parts.Length != 3)
+                if (parts.Length < 3)
                     continue;
 
                 if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double zeit))
@@ -57,7 +57,8 @@ namespace simSharpSimulation
 
             for (int i = 0; i < patientEvents.Count; i++)
             {
-                string label = patientEvents[i].EventTyp.Replace('_', ' ');
+                double? naechsteZeit = i < patientEvents.Count - 1 ? patientEvents[i + 1].Zeit : null;
+                string label = FormatiereEventLabel(patientEvents[i].EventTyp, patientEvents[i].Zeit, naechsteZeit);
                 plot.AddText(label, x[i] + labelOffsetX, y[i], color: Color.Black);
             }
 
@@ -92,6 +93,20 @@ namespace simSharpSimulation
             string outputPath = ErzeugeOutputPfad("patienten_zeitachse.png");
             plot.SaveFig(outputPath);
             Console.WriteLine($"--- Diagramm 7 gespeichert: {outputPath} ---");
+        }
+
+        private static string FormatiereEventLabel(string eventTyp, double aktuelleZeit, double? naechsteZeit)
+        {
+            string basis = eventTyp.Replace('_', ' ');
+
+            if (!eventTyp.StartsWith("geht_", StringComparison.OrdinalIgnoreCase) || !naechsteZeit.HasValue)
+                return basis;
+
+            double sekunden = (naechsteZeit.Value - aktuelleZeit) * 60.0;
+            if (sekunden < 0)
+                return basis;
+
+            return $"{basis} ({sekunden:0.#}s)";
         }
     }
 }

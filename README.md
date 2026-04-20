@@ -44,5 +44,9 @@ dotnet run
 - **Patienten-IDs** sind pro Tag eindeutig, damit Trace- und Zeitachsen-Auswertungen stabil bleiben.
 - **Trace-Datei** wird als `klinik_trace.txt` im Projektordner gespeichert.
 - **Diagramme** werden in `simSharpSimulation/images/` gespeichert.
+- **Bewegungs-Events im Trace** folgen dem Muster:
+	- `geht_*` = Start einer Bewegung
+	- `betritt_*` = Ankunft am Ziel nach Bewegungszeit
+	- Zeiten: Eingang→Rezeption 5s, interne Wege 10s, Arzt→Ausgang 15s, Rezeption→Ausgang 5s
 
 
