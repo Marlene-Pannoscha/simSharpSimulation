@@ -7,6 +7,8 @@
 # Track only source files.
 !*.cs
 !.gitignore
+!.txt
+!.md
 
 # Never track generated build output, even if it contains generated .cs files.
 **/bin/**
