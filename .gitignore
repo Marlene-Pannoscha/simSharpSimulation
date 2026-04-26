@@ -1,3 +1,13 @@
-# Build output
-**/bin/
-**/obj/
+# Ignore everything by default.
+*
+
+# Keep directory traversal enabled so nested .cs files can be tracked.
+!*/
+
+# Track only source files.
+!*.cs
+!.gitignore
+
+# Never track generated build output, even if it contains generated .cs files.
+**/bin/**
+**/obj/**
