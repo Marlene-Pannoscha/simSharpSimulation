@@ -113,10 +113,9 @@ namespace simSharpSimulation
             // --- REZEPTION (RECEPTION) PHASE ---
             daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_rezeption", patientId);
             yield return env.Timeout(eingangZurRezeptionDauer);
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_rezeption", patientId);
             double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
 
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, rnd, daten))
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rnd, daten))
                 yield return ev;
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
@@ -285,8 +284,7 @@ namespace simSharpSimulation
             {
                 yield return env.Timeout(interneBewegungsdauer);
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "betritt_rezeption_nach_arzt", patientId);
-                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, rnd, daten))
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rnd, daten))
                     yield return ev;
 
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);

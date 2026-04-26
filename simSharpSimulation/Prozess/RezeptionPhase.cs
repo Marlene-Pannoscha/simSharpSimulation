@@ -1,6 +1,7 @@
 using SimSharp;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace simSharpSimulation
 {
@@ -30,6 +31,7 @@ namespace simSharpSimulation
             Resource rezeption,
             double ankunftszeit,
             bool hatTermin,
+            bool behandlungBereitsFertig,
             Random rnd,
             SimulationsDaten daten)
         {
@@ -38,6 +40,13 @@ namespace simSharpSimulation
 
             // Schritt R1: Patient stellt sich in die Warteschlange für die Rezeption.
             daten.LogEvent(nowMinutes, "betritt_rezeption_warteschlange", patientId);
+
+            bool rezeptionWarFrei = IstRezeptionFrei(rezeption);
+            daten.LogEvent(nowMinutes, rezeptionWarFrei ? "rezeption_frei" : "rezeption_nicht_frei", patientId);
+            if (!rezeptionWarFrei)
+            {
+                daten.LogEvent(nowMinutes, "wartet_in_rezeption_warteschlange", patientId);
+            }
 
             // Schritt R2: Einen Rezeptionisten anfordern.
             // 'using' stellt sicher, dass die Ressource (der Rezeptionist) nach der Nutzung
@@ -49,6 +58,12 @@ namespace simSharpSimulation
 
                 // Schritt R3: Rezeptionist ist frei, die Bedienung beginnt.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                if (!rezeptionWarFrei)
+                {
+                    daten.LogEvent(nowMinutes, "rezeption_frei", patientId);
+                }
+                daten.LogEvent(nowMinutes, "betritt_rezeption", patientId);
+                daten.LogEvent(nowMinutes, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
                 daten.LogEvent(nowMinutes, "startet_rezeption", patientId);
 
                 // Die Wartezeit an der Rezeption berechnen und für die Statistik speichern.
@@ -59,16 +74,31 @@ namespace simSharpSimulation
                 // Die Dauer wird zufällig aus einer Exponentialverteilung gezogen.
                 double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / RezeptionKonfiguration.MITTELREZEPTIONSZEIT);
                 daten.ErfasseRezeptionBehandlungszeit(dauer, hatTermin);
-                
+
                 // Die Simulation wird für die berechnete Dauer angehalten.
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));
 
                 // Schritt R5: Die Bedienung ist abgeschlossen.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
-                daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
+                if (behandlungBereitsFertig)
+                {
+                    daten.LogEvent(nowMinutes, "macht_folgetermin_aus_oder_rezept", patientId);
+                }
+                else
+                {
+                    daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
+                }
             }
             // Die Ressource wird hier durch 'using' automatisch freigegeben.
+        }
+
+        private static bool IstRezeptionFrei(Resource rezeption)
+        {
+            var usersProperty = rezeption.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
+            var usersCollection = usersProperty?.GetValue(rezeption) as IReadOnlyCollection<Request>;
+            int aktiveNutzer = usersCollection?.Count ?? 0;
+            return aktiveNutzer < RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN;
         }
     }
 }
