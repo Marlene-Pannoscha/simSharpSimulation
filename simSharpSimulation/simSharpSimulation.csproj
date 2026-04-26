@@ -15,4 +15,10 @@
     <PackageReference Include="SimSharp" Version="3.4.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Ressourcen\event-zustandsmapping.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -43,6 +43,7 @@ dotnet run
 	- `Gesamtprozesszeit`: Eintritt in die Klinik bis Verlassen der Klinik
 - **Patienten-IDs** sind pro Tag eindeutig, damit Trace- und Zeitachsen-Auswertungen stabil bleiben.
 - **Trace-Datei** wird als `klinik_trace.txt` im Projektordner gespeichert.
+- **Trace-Format**: `Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId`
 - **Diagramme** werden in `simSharpSimulation/images/` gespeichert.
 - **Bewegungs-Events im Trace** folgen dem Muster:
 	- `geht_*` = Start einer Bewegung
