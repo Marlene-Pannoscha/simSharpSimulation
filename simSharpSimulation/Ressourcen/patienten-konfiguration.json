@@ -1,0 +1,35 @@
+{
+  "AnzahlPatientenTag": 80,
+  "Erwartungswert": 180,
+  "Standardabweichung": 80,
+  "TerminWahrscheinlichkeit": 0.7,
+  "TerminVorbereitungWahrscheinlichkeit": 0.4,
+  "OhneTerminVorbereitungWahrscheinlichkeit": 0.8,
+  "MittlereWartezimmerDauerSchwester": 2,
+  "MittlereWartezimmerDauerArzt": 5,
+  "MitTerminWartezimmerFaktorSchwester": 0.6,
+  "OhneTerminWartezimmerFaktorSchwester": 2.5,
+  "MitTerminWartezimmerFaktorArzt": 0.4,
+  "OhneTerminWartezimmerFaktorArzt": 3,
+  "TypenVerteilung": [
+    {
+      "Typ": "Kurz",
+      "Wahrscheinlichkeit": 0.3,
+      "BehandlungszeitArzt": 3,
+      "BehandlungszeitSchwester": 2
+    },
+    {
+      "Typ": "Mittel",
+      "Wahrscheinlichkeit": 0.6,
+      "BehandlungszeitArzt": 7,
+      "BehandlungszeitSchwester": 5
+    },
+    {
+      "Typ": "Lang",
+      "Wahrscheinlichkeit": 0.1,
+      "BehandlungszeitArzt": 15,
+      "BehandlungszeitSchwester": 10
+    }
+  ],
+  "Beschreibung": "Patienten in der Klinik"
+}
