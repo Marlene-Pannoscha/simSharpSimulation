@@ -18,6 +18,7 @@ namespace simSharpSimulation
         static void Main(string[] args)
         {
             Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
+            KonfigurationJsonExport.LadeAlle();
 
             var daten = new SimulationsDaten();
             var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
