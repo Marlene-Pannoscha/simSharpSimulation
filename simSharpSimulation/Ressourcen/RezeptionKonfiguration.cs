@@ -2,8 +2,8 @@ namespace simSharpSimulation
 {
     internal sealed class RezeptionKonfiguration : PersonenKonfiguration
     {
-        public const int ANZAHL_REZEPTIONISTEN = 1;
-        public const double MITTELREZEPTIONSZEIT = 2.0; // durchschnittliche Dauer an der Rezeption in Minuten
+        public static int ANZAHL_REZEPTIONISTEN { get; internal set; } = 1;
+        public static double MITTELREZEPTIONSZEIT { get; internal set; } = 2.0; // durchschnittliche Dauer an der Rezeption in Minuten
 
         public override int Anzahl => ANZAHL_REZEPTIONISTEN;
         public override double MittlereServicezeit => MITTELREZEPTIONSZEIT;
