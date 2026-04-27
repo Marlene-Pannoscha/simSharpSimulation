@@ -48,7 +48,7 @@ namespace simSharpSimulation
             Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
             var traceWithHeader = daten.TraceData.ToList();
             // Nur noch Heading-Zeile (keine Kommentarzeilen mehr)
-            traceWithHeader.Insert(0, "Zeit;EventTyp;PatientId;ArztId;SchwesterId");
+            traceWithHeader.Insert(0, "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId");
             File.WriteAllLines("klinik_trace.txt", traceWithHeader);
             Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
             
