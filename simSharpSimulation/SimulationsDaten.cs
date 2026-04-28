@@ -1,27 +1,236 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 
 namespace simSharpSimulation
 {
     /// <summary>
-    /// Hält alle während der Simulation gesammelten Daten (Trace, Wartezeiten, Ankünfte).
+    /// HÃ¤lt alle wÃ¤hrend der Simulation gesammelten Daten (Trace, Wartezeiten, AnkÃ¼nfte).
     /// Diese Klasse entkoppelt Datenspeicherung von der eigentlichen Simulationslogik.
     /// </summary>
-    internal sealed class SimulationsDaten
+    public sealed class SimulationsDaten
     {
+        private const string ZustandUnveraendert = "UNVERAENDERT";
+
+        private static readonly Dictionary<string, (string Von, string Zu)> EventZustandsMapping =
+            ErstelleEventZustandsMapping();
+
+        // Rohdaten der Simulation
         public List<string> TraceData { get; } = new();
         public List<double> Wartezeiten { get; } = new();
+        public List<double> WartezeitenMitTermin { get; } = new();
+        public List<double> WartezeitenOhneTermin { get; } = new();
+        public Dictionary<PatientenTyp, List<double>> WartezeitenArztNachTyp { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
+
         public List<double> SchwesternWartezeiten { get; } = new();
+        public Dictionary<PatientenTyp, List<double>> WartezeitenSchwesterNachTyp { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
+        public List<double> SchwesternWartezeitenMitTermin { get; } = new();
+        public List<double> SchwesternWartezeitenOhneTermin { get; } = new();
+        public List<double> SchwesternBehandlungszeitenMitTermin { get; } = new();
+        public List<double> SchwesternBehandlungszeitenOhneTermin { get; } = new();
+
+        public List<double> RezeptionsWartezeiten { get; } = new();
+        public List<double> RezeptionsWartezeitenMitTermin { get; } = new();
+        public List<double> RezeptionsWartezeitenOhneTermin { get; } = new();
+        public List<double> RezeptionsBehandlungszeitenMitTermin { get; } = new();
+        public List<double> RezeptionsBehandlungszeitenOhneTermin { get; } = new();
+
+        public List<double> Gesamtprozesszeiten { get; } = new();
+        public List<double> GesamtprozesszeitenMitTermin { get; } = new();
+        public List<double> GesamtprozesszeitenOhneTermin { get; } = new();
         public List<double> EchteAnkunftszeiten { get; } = new();
 
+        public Dictionary<PatientenTyp, int> PatientenTypZaehler { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => 0);
+
+        public List<double> ArztBehandlungszeitenMitTermin { get; } = new();
+        public List<double> ArztBehandlungszeitenOhneTermin { get; } = new();
+        public Dictionary<PatientenTyp, List<double>> ArztBehandlungszeitenNachTyp { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
+        public Dictionary<PatientenTyp, List<double>> SchwesternBehandlungszeitenNachTyp { get; } =
+            Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
+
+        // Abgeleitete Kennzahlen
+        public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
+        public double DurchschnittlicheWartezeitArztMitTermin => MittelwertOder0(WartezeitenMitTermin);
+        public double DurchschnittlicheWartezeitArztOhneTermin => MittelwertOder0(WartezeitenOhneTermin);
+        public double DurchschnittlicheWartezeitSchwester => MittelwertOder0(SchwesternWartezeiten);
+        public double DurchschnittlicheWartezeitSchwesterMitTermin => MittelwertOder0(SchwesternWartezeitenMitTermin);
+        public double DurchschnittlicheWartezeitSchwesterOhneTermin => MittelwertOder0(SchwesternWartezeitenOhneTermin);
+        public double DurchschnittlicheBehandlungszeitSchwesterMitTermin => MittelwertOder0(SchwesternBehandlungszeitenMitTermin);
+        public double DurchschnittlicheBehandlungszeitSchwesterOhneTermin => MittelwertOder0(SchwesternBehandlungszeitenOhneTermin);
+        public double DurchschnittlicheWartezeitRezeption => MittelwertOder0(RezeptionsWartezeiten);
+        public double DurchschnittlicheWartezeitRezeptionMitTermin => MittelwertOder0(RezeptionsWartezeitenMitTermin);
+        public double DurchschnittlicheWartezeitRezeptionOhneTermin => MittelwertOder0(RezeptionsWartezeitenOhneTermin);
+        public double DurchschnittlicheBehandlungszeitRezeptionMitTermin => MittelwertOder0(RezeptionsBehandlungszeitenMitTermin);
+        public double DurchschnittlicheBehandlungszeitRezeptionOhneTermin => MittelwertOder0(RezeptionsBehandlungszeitenOhneTermin);
+        public double DurchschnittlicheBehandlungszeitArztMitTermin => MittelwertOder0(ArztBehandlungszeitenMitTermin);
+        public double DurchschnittlicheBehandlungszeitArztOhneTermin => MittelwertOder0(ArztBehandlungszeitenOhneTermin);
+        public double DurchschnittlicheGesamtprozesszeit => MittelwertOder0(Gesamtprozesszeiten);
+        public double DurchschnittlicheGesamtprozesszeitMitTermin => MittelwertOder0(GesamtprozesszeitenMitTermin);
+        public double DurchschnittlicheGesamtprozesszeitOhneTermin => MittelwertOder0(GesamtprozesszeitenOhneTermin);
+
         /// <summary>
-        /// Speichert ein Ereignis im Trace-Format: "Zeit;EventTyp;PatientId".
+        /// Speichert ein Ereignis im Trace-Format:
+        /// "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId".
         /// </summary>
-        public void LogEvent(double zeit, string eventTyp, int patientId)
+        public void LogEvent(double zeit, string eventTyp, int patientId, int? arztId = null, int? schwesterId = null)
         {
+            var (vonZustand, zuZustand) = ErmittleZustandswechsel(eventTyp);
             string timeStr = zeit.ToString("000.00", CultureInfo.InvariantCulture);
-            string logEntry = $"{timeStr};{eventTyp};{patientId}";
+            string arztStr = arztId.HasValue ? arztId.Value.ToString() : "";
+            string schwesterStr = schwesterId.HasValue ? schwesterId.Value.ToString() : "";
+            string logEntry = $"{timeStr};{eventTyp};{vonZustand};{zuZustand};{patientId};{arztStr};{schwesterStr}";
             TraceData.Add(logEntry);
+        }
+
+        public void ErfasseArztWartezeit(double wartezeitArzt, bool hatTermin, PatientenTyp patientenTyp)
+        {
+            Wartezeiten.Add(wartezeitArzt);
+            WartezeitenArztNachTyp[patientenTyp].Add(wartezeitArzt);
+            FuegeNachTerminHinzu(wartezeitArzt, hatTermin, WartezeitenMitTermin, WartezeitenOhneTermin);
+        }
+
+        public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
+        {
+            SchwesternWartezeiten.Add(wartezeitSchwester);
+            WartezeitenSchwesterNachTyp[patientenTyp].Add(wartezeitSchwester);
+            FuegeNachTerminHinzu(
+                wartezeitSchwester,
+                hatTermin,
+                SchwesternWartezeitenMitTermin,
+                SchwesternWartezeitenOhneTermin);
+        }
+
+        public void ErfasseSchwesterBehandlungszeit(double dauerSchwester, bool hatTermin, PatientenTyp patientenTyp)
+        {
+            SchwesternBehandlungszeitenNachTyp[patientenTyp].Add(dauerSchwester);
+            FuegeNachTerminHinzu(
+                dauerSchwester,
+                hatTermin,
+                SchwesternBehandlungszeitenMitTermin,
+                SchwesternBehandlungszeitenOhneTermin);
+        }
+
+        public void ErfasseRezeptionWartezeit(double wartezeitRezeption, bool hatTermin)
+        {
+            RezeptionsWartezeiten.Add(wartezeitRezeption);
+            FuegeNachTerminHinzu(
+                wartezeitRezeption,
+                hatTermin,
+                RezeptionsWartezeitenMitTermin,
+                RezeptionsWartezeitenOhneTermin);
+        }
+
+        public void ErfasseRezeptionBehandlungszeit(double dauerRezeption, bool hatTermin)
+        {
+            FuegeNachTerminHinzu(
+                dauerRezeption,
+                hatTermin,
+                RezeptionsBehandlungszeitenMitTermin,
+                RezeptionsBehandlungszeitenOhneTermin);
+        }
+
+        public void ErfasseArztBehandlungszeit(double dauerArzt, bool hatTermin, PatientenTyp patientenTyp)
+        {
+            ArztBehandlungszeitenNachTyp[patientenTyp].Add(dauerArzt);
+            FuegeNachTerminHinzu(
+                dauerArzt,
+                hatTermin,
+                ArztBehandlungszeitenMitTermin,
+                ArztBehandlungszeitenOhneTermin);
+        }
+
+        public void ErfasseGesamtprozesszeit(double gesamtprozesszeit, bool hatTermin)
+        {
+            Gesamtprozesszeiten.Add(gesamtprozesszeit);
+            FuegeNachTerminHinzu(
+                gesamtprozesszeit,
+                hatTermin,
+                GesamtprozesszeitenMitTermin,
+                GesamtprozesszeitenOhneTermin);
+        }
+
+        public void ErfassePatientenTyp(PatientenTyp typ)
+        {
+            PatientenTypZaehler[typ]++;
+        }
+
+        public double DurchschnittlicheArztWartezeitNachTyp(PatientenTyp typ)
+        {
+            return MittelwertOder0(WartezeitenArztNachTyp[typ]);
+        }
+
+        public double DurchschnittlicheSchwesterWartezeitNachTyp(PatientenTyp typ)
+        {
+            return MittelwertOder0(WartezeitenSchwesterNachTyp[typ]);
+        }
+
+        private static (string Von, string Zu) ErmittleZustandswechsel(string eventTyp)
+        {
+            if (EventZustandsMapping.TryGetValue(eventTyp, out var mapping))
+            {
+                return mapping;
+            }
+
+            return (ZustandUnveraendert, ZustandUnveraendert);
+        }
+
+        private static void FuegeNachTerminHinzu(
+            double wert,
+            bool hatTermin,
+            List<double> werteMitTermin,
+            List<double> werteOhneTermin)
+        {
+            if (hatTermin)
+            {
+                werteMitTermin.Add(wert);
+                return;
+            }
+
+            werteOhneTermin.Add(wert);
+        }
+
+        private static double MittelwertOder0(List<double> werte)
+        {
+            return werte.Count > 0 ? werte.Average() : 0;
+        }
+
+        private static Dictionary<string, (string Von, string Zu)> ErstelleEventZustandsMapping()
+        {
+            string dateiPfad = Path.Combine(AppContext.BaseDirectory, "Ressourcen", "event-zustandsmapping.json");
+
+            if (!File.Exists(dateiPfad))
+            {
+                throw new FileNotFoundException(
+                    $"Die Event-Mapping-Datei wurde nicht gefunden: {dateiPfad}",
+                    dateiPfad);
+            }
+
+            string json = File.ReadAllText(dateiPfad);
+            var jsonDaten = JsonSerializer.Deserialize<Dictionary<string, EventZustandsEintrag>>(json);
+
+            if (jsonDaten is null || jsonDaten.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Die Event-Mapping-Datei ist leer oder ungültig: {dateiPfad}");
+            }
+
+            return jsonDaten.ToDictionary(
+                eintrag => eintrag.Key,
+                eintrag => (eintrag.Value.Von, eintrag.Value.Zu),
+                StringComparer.Ordinal);
+        }
+
+        private sealed class EventZustandsEintrag
+        {
+            public string Von { get; set; } = string.Empty;
+            public string Zu { get; set; } = string.Empty;
         }
     }
 }

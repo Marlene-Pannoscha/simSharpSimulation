@@ -1,0 +1,49 @@
+{
+  "wartet_vor_oeffnung": { "von": "AUSSERHALB", "zu": "AUSSERHALB" },
+  "betritt_klinik": { "von": "AUSSERHALB", "zu": "IN_KLINIK" },
+  "geht_zur_rezeption": { "von": "IN_KLINIK", "zu": "WEG_ZUR_REZEPTION" },
+  "betritt_rezeption_warteschlange": { "von": "WEG_ZUR_REZEPTION", "zu": "WARTET_REZEPTION" },
+  "wartet_in_rezeption_warteschlange": { "von": "WARTET_REZEPTION", "zu": "WARTET_REZEPTION" },
+  "rezeption_frei": { "von": "WARTET_REZEPTION", "zu": "WARTET_REZEPTION" },
+  "rezeption_nicht_frei": { "von": "WARTET_REZEPTION", "zu": "WARTET_REZEPTION" },
+  "betritt_rezeption": { "von": "WARTET_REZEPTION", "zu": "IN_REZEPTION" },
+  "startet_rezeption": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
+  "beendet_rezeption": { "von": "IN_REZEPTION", "zu": "IN_KLINIK" },
+
+  "behandlung_nicht_fertig": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
+  "behandlung_bereits_fertig": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
+  "rezeption_hat_termin": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
+  "rezeption_ohne_termin": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
+  "macht_folgetermin_aus_oder_rezept": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
+
+  "hat_termin": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
+  "hat_keinen_termin": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
+  "benoetigt_schwester_vorbereitung": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
+  "keine_schwester_vorbereitung": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
+  "ueberspringt_schwester": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
+
+  "geht_zur_schwester": { "von": "IN_KLINIK", "zu": "WEG_ZUR_SCHWESTER" },
+  "betritt_schwester_warteschlange": { "von": "WEG_ZUR_SCHWESTER", "zu": "WARTET_SCHWESTER" },
+  "schwester_frei": { "von": "WARTET_SCHWESTER", "zu": "WARTET_SCHWESTER" },
+  "schwester_nicht_frei": { "von": "WARTET_SCHWESTER", "zu": "WARTET_SCHWESTER" },
+  "betritt_schwesterzimmer": { "von": "WEG_ZUR_SCHWESTER", "zu": "IN_SCHWESTER" },
+  "startet_schwester_prozess": { "von": "IN_SCHWESTER", "zu": "IN_SCHWESTER" },
+  "beendet_schwester_prozess": { "von": "IN_SCHWESTER", "zu": "IN_KLINIK" },
+
+  "geht_ins_wartezimmer": { "von": "IN_KLINIK", "zu": "WEG_ZUM_WARTEZIMMER_ARZT" },
+  "betritt_wartezimmer": { "von": "WEG_ZUM_WARTEZIMMER_ARZT", "zu": "IM_WARTEZIMMER_ARZT" },
+  "verlaesst_wartezimmer": { "von": "IM_WARTEZIMMER_ARZT", "zu": "IN_KLINIK" },
+  "geht_ins_wartezimmer_fuer_arzt": { "von": "IN_KLINIK", "zu": "WEG_ZUM_WARTEZIMMER_ARZT" },
+  "betritt_wartezimmer_fuer_arzt": { "von": "WEG_ZUM_WARTEZIMMER_ARZT", "zu": "IM_WARTEZIMMER_ARZT" },
+  "verlaesst_wartezimmer_fuer_arzt": { "von": "IM_WARTEZIMMER_ARZT", "zu": "WEG_ZUM_ARZT" },
+
+  "geht_zum_arzt": { "von": "IN_KLINIK", "zu": "WEG_ZUM_ARZT" },
+  "betritt_arztzimmer": { "von": "WEG_ZUM_ARZT", "zu": "WARTET_ARZT" },
+  "startet_arzt_behandlung": { "von": "WARTET_ARZT", "zu": "IN_ARZT" },
+  "beendet_arzt_behandlung": { "von": "IN_ARZT", "zu": "NACH_ARZT" },
+  "geht_nach_arzt_zur_rezeption": { "von": "NACH_ARZT", "zu": "WEG_ZUR_REZEPTION" },
+  "verlaesst_nach_arzt_ohne_rezeption": { "von": "NACH_ARZT", "zu": "WEG_ZUM_AUSGANG" },
+
+  "geht_zum_ausgang": { "von": "IN_KLINIK", "zu": "WEG_ZUM_AUSGANG" },
+  "verlaesst_klinik": { "von": "WEG_ZUM_AUSGANG", "zu": "AUSSERHALB" }
+}
