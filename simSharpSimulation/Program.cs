@@ -15,8 +15,16 @@ namespace simSharpSimulation
         - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
         */
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
+        [STAThread]
         static void Main(string[] args)
         {
+            if (args.Any(a => string.Equals(a, "--finanz-wpf", StringComparison.OrdinalIgnoreCase)))
+            {
+                KonfigurationJsonExport.LadeAlle();
+                FinanzFenster.StarteFenster();
+                return;
+            }
+
             Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
             KonfigurationJsonExport.LadeAlle();
 
@@ -106,6 +114,22 @@ namespace simSharpSimulation
                 double avgSchwesterTyp = daten.DurchschnittlicheSchwesterWartezeitNachTyp(typ);
                 Console.WriteLine($"{typ,-10} | {anzahl,8} | {anteil,10:F2} | {avgArztTyp,12:F2} | {avgSchwesterTyp,17:F2}");
             }
+
+            Console.WriteLine();
+            Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
+            int behandeltePatienten = daten.Gesamtprozesszeiten.Count;
+            int anzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE;
+            Tagesergebnis finanzen = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatienten);
+
+            Console.WriteLine($"Behandelte Patienten: {behandeltePatienten}");
+            Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
+            Console.WriteLine($"Umsatz: {finanzen.Umsatz:F2} €");
+            Console.WriteLine($"Arztlohn: {finanzen.Kosten.Arztlohn:F2} €");
+            Console.WriteLine($"Fixkosten: {finanzen.Kosten.Fixkosten:F2} €");
+            Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
+            Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
+            Console.WriteLine();
+            Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
         }
 
     }

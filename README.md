@@ -5,11 +5,12 @@
 Wechsle zuerst in den C#-Projektordner:
 
 ```powershell
-cd (c:\home\simSharpSimulation--deine Speicherordner)\simSharpSimulation
+cd c:\home\simSharpSimulation\simSharpSimulation
 ```
 
 ## Voraussetzungen
 
+- Windows (für den WPF-Fenstermodus)
 - .NET SDK (empfohlen: .NET 10)
 
 ## Pakete installieren (falls nötig)
@@ -30,8 +31,22 @@ dotnet build
 
 ## Programm ausführen
 
+### 1) Standard-Simulation (Konsole)
+
 ```powershell
 dotnet run
+```
+
+### 2) Finanz-WPF (extra Fenster)
+
+```powershell
+dotnet run -- --finanz-wpf
+```
+
+### Alternativ von außerhalb des Projektordners
+
+```powershell
+dotnet run --project c:\home\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --finanz-wpf
 ```
 
 ## Anmerkungen zum Gesamtprogramm
@@ -43,7 +58,8 @@ dotnet run
 	- `Gesamtprozesszeit`: Eintritt in die Klinik bis Verlassen der Klinik
 - **Patienten-IDs** sind pro Tag eindeutig, damit Trace- und Zeitachsen-Auswertungen stabil bleiben.
 - **Trace-Datei** wird als `klinik_trace.txt` im Projektordner gespeichert.
-- **Diagramme** werden in `simSharpSimulation/images/` gespeichert.
+- **Standard-Diagramme** werden in `simSharpSimulation/images/` gespeichert.
+- **Finanz-Diagramme** (WPF) werden in `simSharpSimulation/Kosten/images/` gespeichert.
 - **Bewegungs-Events im Trace** folgen dem Muster:
 	- `geht_*` = Start einer Bewegung
 	- `betritt_*` = Ankunft am Ziel nach Bewegungszeit
