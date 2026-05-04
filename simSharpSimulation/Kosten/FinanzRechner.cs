@@ -7,6 +7,7 @@ public static class FinanzRechner
 {
     public static double BerechneArztlohn(int anzahlAerzte, int behandeltePatienten)
     {
+        // Laedt die Finanzparameter vor jeder Berechnung neu aus der Konfiguration.
         KonfigurationJsonExport.LadeFinanzen();
 
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
@@ -45,6 +46,7 @@ public static class FinanzRechner
 
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
+        // Verteilt die Patienten anhand der konfigurierten Anteile moeglichst fair auf ganze Zahlen.
         Dictionary<string, int> verteilung = VerteileGanzzahlen(
             behandeltePatienten,
             new[]
@@ -62,6 +64,7 @@ public static class FinanzRechner
     {
         KonfigurationJsonExport.LadeFinanzen();
 
+        // Jeder Versicherungstyp bringt einen anderen Erlos pro Patient ein.
         double umsatzPrivat = versicherungen.PrivatPatienten * FinanzKonfiguration.EINNAHME_PRIVATPATIENT;
         double umsatzGesetzlich = versicherungen.GesetzlichPatienten * FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT;
 
@@ -76,6 +79,7 @@ public static class FinanzRechner
 
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
+        // Bildet aus Wahrscheinlichkeiten eine ganzzahlige Verteilung fuer kurze, mittlere und lange Behandlungen.
         Dictionary<PatientenTyp, int> verteilung = VerteileGanzzahlen(
             behandeltePatienten,
             PatientenKonfiguration.TYPEN_VERTEILUNG.Select(t => (t.Typ, t.Wahrscheinlichkeit)));
@@ -97,6 +101,7 @@ public static class FinanzRechner
     {
         KonfigurationJsonExport.LadeFinanzen();
 
+        // Fasst alle Kostenarten eines Praxistages zu einem Gesamtergebnis zusammen.
         double arztlohn = BerechneArztlohn(anzahlAerzte, behandeltePatienten);
         double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
         double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
@@ -121,6 +126,7 @@ public static class FinanzRechner
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
+        // Kombiniert Kosten, Versicherungsstruktur und Behandlungsmix zu einer kompakten Tagesauswertung.
         Tageskosten kosten = BerechneTageskosten(anzahlAerzte, behandeltePatienten);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
@@ -142,6 +148,7 @@ public static class FinanzRechner
         Dictionary<TKey, int> basis = new();
         List<(TKey Schluessel, double Restwert)> reste = new();
 
+        // Zuerst werden die ganzzahligen Basiswerte ueber Abrunden bestimmt.
         int summeBasis = 0;
         foreach ((TKey schluessel, double anteil) in anteileListe)
         {
@@ -152,6 +159,7 @@ public static class FinanzRechner
             summeBasis += ganzeZahl;
         }
 
+        // Verbleibende Elemente gehen an die groessten Nachkomma-Reste.
         int verbleibend = gesamt - summeBasis;
         foreach (var restEintrag in reste.OrderByDescending(e => e.Restwert).Take(verbleibend))
             basis[restEintrag.Schluessel]++;
@@ -180,6 +188,7 @@ public readonly record struct Versicherungsverteilung(
     int PrivatPatienten,
     int GesetzlichPatienten)
 {
+    // Hilfswert fuer Auswertungen, bei denen nur die Gesamtmenge relevant ist.
     public int GesamtPatienten => PrivatPatienten + GesetzlichPatienten;
 }
 
@@ -187,6 +196,7 @@ public readonly record struct Umsatzverteilung(
     double UmsatzPrivat,
     double UmsatzGesetzlich)
 {
+    // Summiert die Einnahmen beider Versicherungsgruppen.
     public double Gesamtumsatz => UmsatzPrivat + UmsatzGesetzlich;
 }
 
@@ -198,6 +208,7 @@ public readonly record struct Behandlungsmix(
     double MittelKosten,
     double LangKosten)
 {
+    // Dient fuer aggregierte Auswertungen ueber alle Behandlungsarten hinweg.
     public int GesamtPatienten => KurzPatienten + MittelPatienten + LangPatienten;
     public double Gesamtkosten => KurzKosten + MittelKosten + LangKosten;
 }

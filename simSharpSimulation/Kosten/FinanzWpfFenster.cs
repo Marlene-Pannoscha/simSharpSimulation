@@ -10,6 +10,7 @@ namespace simSharpSimulation;
 
 internal sealed class FinanzWpfFenster : Window
 {
+    // Diese Steuerelemente werden benoetigt, um Eingaben zu lesen und Ergebnisse anzuzeigen.
     private readonly TextBox aerzteTextBox;
     private readonly TextBox schwesternTextBox;
     private readonly ComboBox zeitraumComboBox;
@@ -22,6 +23,7 @@ internal sealed class FinanzWpfFenster : Window
 
     public FinanzWpfFenster()
     {
+        // Baut das komplette WPF-Fenster programmatisch ohne separate XAML-Datei auf.
         Title = "Arztpraxis Finanzsimulation (WPF)";
         Width = 1400;
         Height = 900;
@@ -115,6 +117,7 @@ internal sealed class FinanzWpfFenster : Window
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
+        // Links stehen Textauswertung und Kennzahlen, rechts die erzeugten Diagramme.
         ergebnisTextBox = new TextBox
         {
             IsReadOnly = true,
@@ -154,6 +157,7 @@ internal sealed class FinanzWpfFenster : Window
 
     public static void StarteFenster()
     {
+        // Startpunkt fuer den WPF-Modus der Finanzsimulation.
         Application app = new();
         app.Run(new FinanzWpfFenster());
     }
@@ -162,6 +166,7 @@ internal sealed class FinanzWpfFenster : Window
     {
         try
         {
+            // Eingaben werden zuerst validiert, bevor die Simulation und Diagrammerzeugung startet.
             if (!TryParseInt(aerzteTextBox.Text, 1, 50, out int anzahlAerzte, out string aerzteFehler))
                 throw new InvalidOperationException(aerzteFehler);
 
@@ -175,6 +180,7 @@ internal sealed class FinanzWpfFenster : Window
             (string finanzenPfad, string gewinnPfad) =
                 FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, anzahlSchwestern);
 
+            // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
             ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad);
             finanzenImage.Source = LadeBild(finanzenPfad);
             gewinnImage.Source = LadeBild(gewinnPfad);
@@ -189,6 +195,7 @@ internal sealed class FinanzWpfFenster : Window
 
     private static bool TryParseInt(string? input, int min, int max, out int value, out string error)
     {
+        // Zentralisierte Validierung fuer numerische Benutzereingaben im Formular.
         if (!int.TryParse(input, out value))
         {
             error = $"Bitte eine ganze Zahl zwischen {min} und {max} eingeben.";
@@ -207,6 +214,7 @@ internal sealed class FinanzWpfFenster : Window
 
     private static Border ErzeugeBildContainer(string titel, out Image image)
     {
+        // Kapselt die gemeinsame Darstellung fuer beide Diagrammbereiche.
         DockPanel panel = new();
 
         TextBlock header = new()
@@ -240,6 +248,7 @@ internal sealed class FinanzWpfFenster : Window
         Umsatzverteilung umsatzverteilung = ergebnis.UmsatzverteilungGesamt;
         Behandlungsmix behandlungsmix = ergebnis.BehandlungsmixGesamt;
 
+        // Der Bericht fasst die Simulation kompakt fuer die linke Textspalte zusammen.
         StringBuilder sb = new();
         sb.AppendLine("Ergebnis");
         sb.AppendLine(new string('=', 50));
@@ -281,6 +290,7 @@ internal sealed class FinanzWpfFenster : Window
         if (!File.Exists(dateiPfad))
             throw new FileNotFoundException($"Bild nicht gefunden: {dateiPfad}", dateiPfad);
 
+        // OnLoad loest die Datei direkt ein, damit sie danach nicht dauerhaft gesperrt bleibt.
         BitmapImage image = new();
         using FileStream stream = new(dateiPfad, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         image.BeginInit();

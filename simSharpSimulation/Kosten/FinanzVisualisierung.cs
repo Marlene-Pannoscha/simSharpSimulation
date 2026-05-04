@@ -8,6 +8,7 @@ namespace simSharpSimulation;
 
 internal static class FinanzVisualisierung
 {
+    // Deutsche Kultur fuer gut lesbare EUR- und Zahlenformate in UI und Exporten.
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");
 
     public static readonly string[] ZeitraumOptionen = { "Jahr", "Winter", "Fruehling", "Sommer", "Herbst" };
@@ -17,6 +18,7 @@ internal static class FinanzVisualisierung
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlSchwestern, 1);
 
+        // Im Jahresmodus werden Tageswerte spaeter zu Monatswerten verdichtet.
         string normalisierterZeitraum = NormalisiereZeitraum(zeitraum);
         bool aggregiereNachMonat = string.Equals(normalisierterZeitraum, "Jahr", StringComparison.OrdinalIgnoreCase);
 
@@ -36,6 +38,7 @@ internal static class FinanzVisualisierung
         int gesamteNachfrage = 0;
         int gesamtBehandelt = 0;
 
+        // Jeder Tag wird separat simuliert und danach je nach Zeitraum direkt gespeichert oder aggregiert.
         for (int index = 0; index < tage.Count; index++)
         {
             int tagImJahr = tage[index];
@@ -77,6 +80,7 @@ internal static class FinanzVisualisierung
 
         if (aggregiereNachMonat)
         {
+            // Fuer die Diagramme bleibt die Monatsreihenfolge auch dann stabil, wenn ein Monat leer ist.
             string[] monate =
             {
                 "Januar", "Februar", "Maerz", "April", "Mai", "Juni",
@@ -126,6 +130,7 @@ internal static class FinanzVisualisierung
 
     private static string NormalisiereZeitraum(string? zeitraum)
     {
+        // Faengt freie oder leere Eingaben robust ab und nutzt dann den Standardwert.
         if (string.IsNullOrWhiteSpace(zeitraum))
             return "Jahr";
 
@@ -188,6 +193,7 @@ internal static class FinanzVisualisierung
     private static int SimuliereTaeglicheNachfrage(int tagImJahr, Random rnd)
     {
         string saison = GetSeasonFromDay(tagImJahr);
+        // Saisonfaktoren verschieben die erwartete Nachfrage ueber das Jahr hinweg.
         double saisonfaktor = saison switch
         {
             "Winter" => 1.15,
@@ -200,6 +206,7 @@ internal static class FinanzVisualisierung
         double basisNachfrage = PatientenKonfiguration.ANZAHL_PATIENTEN_TAG;
         double mean = basisNachfrage * saisonfaktor;
         double std = Math.Max(3.0, mean * 0.15);
+        // Eine Normalverteilung erzeugt leichte Tagesschwankungen um den saisonalen Erwartungswert.
         int nachfrage = (int)Math.Round(Normal.Sample(rnd, mean, std));
         return Math.Max(0, nachfrage);
     }
@@ -210,6 +217,7 @@ internal static class FinanzVisualisierung
         int nachfrage,
         Random rnd)
     {
+        // Die Tageskapazitaet wird durch den engeren Engpass aus Arzt- und Schwesterzeit begrenzt.
         double arztKapazitaet = anzahlAerzte * (8.0 * 60.0 / Math.Max(ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT, 1.0));
         double schwesterKapazitaet = anzahlSchwestern * (8.0 * 60.0 / Math.Max(SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT, 1.0));
 
@@ -219,6 +227,7 @@ internal static class FinanzVisualisierung
 
         brauchtSchwesterWahrscheinlichkeit = Math.Max(brauchtSchwesterWahrscheinlichkeit, 0.001);
 
+        // Ein kleiner Tagesfaktor simuliert produktivere oder schwaechere Arbeitstage.
         double nurseAdjustedCapacity = schwesterKapazitaet / brauchtSchwesterWahrscheinlichkeit;
         double basisKapazitaet = Math.Min(arztKapazitaet, nurseAdjustedCapacity);
         double tagesfaktor = 0.90 + rnd.NextDouble() * 0.20;
@@ -233,6 +242,7 @@ internal static class FinanzVisualisierung
         int anzahlSchwestern,
         string outputPfad)
     {
+        // Das erste Diagramm stellt Umsatz und Kosten direkt gegenueber.
         Plot plot = new(1300, 600);
         double[] xs = Enumerable.Range(0, ergebnis.Tagespunkte.Count).Select(i => (double)i).ToArray();
         double[] umsatz = ergebnis.Tagespunkte.Select(p => p.Umsatz).ToArray();
@@ -262,6 +272,7 @@ internal static class FinanzVisualisierung
         int anzahlSchwestern,
         string outputPfad)
     {
+        // Positive und negative Gewinne werden getrennt eingefaerbt, damit Verlustphasen schneller auffallen.
         Plot plot = new(1300, 600);
         double[] xs = Enumerable.Range(0, ergebnis.GewinnVerlauf.Count).Select(i => (double)i).ToArray();
         double[] positive = ergebnis.GewinnVerlauf.Select(v => v > 0 ? v : 0).ToArray();
@@ -299,6 +310,7 @@ internal static class FinanzVisualisierung
     {
         string projektOrdner = ErmittleProjektRoot();
         string outputOrdner = Path.Combine(projektOrdner, "Kosten", "images");
+        // Der Zielordner wird bei Bedarf automatisch angelegt.
         Directory.CreateDirectory(outputOrdner);
         return outputOrdner;
     }
@@ -318,6 +330,7 @@ internal static class FinanzVisualisierung
 
     private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
     {
+        // Laeuft vom Startordner nach oben, bis die Projektdatei gefunden wird.
         DirectoryInfo? current = new(startPfad);
         while (current != null)
         {
@@ -337,6 +350,7 @@ internal static class FinanzVisualisierung
 
     private sealed class FinanzAggregat
     {
+        // Sammelobjekt fuer Tageswerte, die im Jahresmodus monatsweise zusammengefasst werden.
         public int BehandeltePatienten { get; private set; }
         public double Umsatz { get; private set; }
         public double Kosten { get; private set; }
@@ -352,6 +366,7 @@ internal static class FinanzVisualisierung
 
         public void Add(FinanzTagespunkt punkt)
         {
+            // Addiert alle relevanten Kennzahlen des Tages in das laufende Aggregat.
             BehandeltePatienten += punkt.BehandeltePatienten;
             Umsatz += punkt.Umsatz;
             Kosten += punkt.Kosten;
@@ -390,6 +405,7 @@ internal sealed record FinanzErgebnis(
     double DurchschnittlicherGewinnProEinheit,
     IReadOnlyDictionary<string, double> SaisonGewinn)
 {
+    // Bequeme Projektionen fuer UI und Berichte, damit dort keine Summenlogik dupliziert wird.
     public IReadOnlyList<string> Achsenwerte => Tagespunkte.Select(p => p.Label).ToList();
     public IReadOnlyList<int> BehandeltePatienten => Tagespunkte.Select(p => p.BehandeltePatienten).ToList();
     public IReadOnlyList<double> GewinnVerlauf => Tagespunkte.Select(p => p.Gewinn).ToList();
