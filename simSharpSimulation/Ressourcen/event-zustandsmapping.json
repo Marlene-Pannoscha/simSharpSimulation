@@ -39,6 +39,7 @@
 
   "geht_zum_arzt": { "von": "IN_KLINIK", "zu": "WEG_ZUM_ARZT" },
   "betritt_arztzimmer": { "von": "WEG_ZUM_ARZT", "zu": "WARTET_ARZT" },
+  "betritt_arzt_warteschlange": { "von": "WARTET_ARZT", "zu": "WARTET_ARZT" },
   "startet_arzt_behandlung": { "von": "WARTET_ARZT", "zu": "IN_ARZT" },
   "beendet_arzt_behandlung": { "von": "IN_ARZT", "zu": "NACH_ARZT" },
   "geht_nach_arzt_zur_rezeption": { "von": "NACH_ARZT", "zu": "WEG_ZUR_REZEPTION" },

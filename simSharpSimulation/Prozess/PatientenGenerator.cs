@@ -13,12 +13,12 @@ namespace simSharpSimulation
         public static IEnumerable<Event> Generiere(
             Simulation env,
             Resource rezeption,
-            List<PriorityResource> aerzte,
-            List<PriorityResource> schwestern,
+            BeweglicherMitarbeiterPool aerzte,
+            BeweglicherMitarbeiterPool schwestern,
             Random rnd,
             SimulationsDaten daten,
             int patientIdStart,
-            Func<Simulation, int, Resource, List<PriorityResource>, List<PriorityResource>, IEnumerable<Event>> patientFactory)
+            Func<Simulation, int, Resource, BeweglicherMitarbeiterPool, BeweglicherMitarbeiterPool, IEnumerable<Event>> patientFactory)
         {
             // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
             // drawIndex sorgt bei gleichen Zeiten für eine stabile (FIFO-)Reihenfolge.

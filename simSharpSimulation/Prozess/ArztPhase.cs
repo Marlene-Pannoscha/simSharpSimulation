@@ -36,8 +36,7 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeArzt(
             Simulation env,
             int patientId,
-            PriorityResource arzt,
-            int arztId,
+            BeweglicherMitarbeiterPool aerzte,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,
@@ -48,17 +47,18 @@ namespace simSharpSimulation
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
             // Schritt A1: Patient stellt sich in die Warteschlange für den Arzt.
-            //daten.LogEvent(nowMinutes, "betritt_arzt_warteschlange", patientId);
+            daten.LogEvent(nowMinutes, "betritt_arzt_warteschlange", patientId);
 
             // Schritt A2: Einen Arzt anfordern.
             // 'using' sorgt dafür, dass die Ressource (der Arzt) nach der Behandlung
             // automatisch wieder für den nächsten Patienten freigegeben wird.
-            using (var req = arzt.Request(priority: GetPriority(patientenTyp)))
+            using (var req = aerzte.FordereMitarbeiterAn(GetPriority(patientenTyp)))
             {
                 // Der Prozess pausiert hier (yield return), bis ein Arzt verfügbar ist.
                 yield return req;
 
                 // Schritt A3: Arzt ist frei, die Behandlung beginnt.
+                int arztId = aerzte.UebernehmeFreienMitarbeiter();
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "startet_arzt_behandlung", patientId, arztId: arztId);
 
@@ -84,6 +84,7 @@ namespace simSharpSimulation
                 // Schritt A5: Die Behandlung ist abgeschlossen.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
+                aerzte.GibMitarbeiterZurueck(arztId);
             }
             // Die Arzt-Ressource wird hier durch das 'using'-Statement automatisch freigegeben.
         }
