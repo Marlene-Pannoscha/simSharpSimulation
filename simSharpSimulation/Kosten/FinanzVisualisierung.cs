@@ -419,8 +419,8 @@ internal sealed record FinanzErgebnis(
             Tagespunkte.Sum(p => p.Versicherungen.GesetzlichPatienten));
     public Umsatzverteilung UmsatzverteilungGesamt =>
         new(
-            Tagespunkte.Sum(p => p.Versicherungen.PrivatPatienten * FinanzKonfiguration.EINNAHME_PRIVATPATIENT),
-            Tagespunkte.Sum(p => p.Versicherungen.GesetzlichPatienten * FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT));
+            Tagespunkte.Sum(p => p.Versicherungen.PrivatPatienten * KonfigurationJsonExport.Finanzen.Versicherung.EinnahmePrivatpatient),
+            Tagespunkte.Sum(p => p.Versicherungen.GesetzlichPatienten * KonfigurationJsonExport.Finanzen.Versicherung.EinnahmeGesetzlichPatient));
     public Behandlungsmix BehandlungsmixGesamt =>
         new(
             Tagespunkte.Sum(p => p.Behandlungsmix.KurzPatienten),

@@ -276,7 +276,7 @@ internal sealed class FinanzWpfFenster : Window
         sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, (int)Math.Round(ergebnis.Tagespunkte.Average(t => t.BehandeltePatienten))))}");
         sb.AppendLine($"Schwestern: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN))}");
         sb.AppendLine($"Rezeption: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN))}");
-        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(FinanzKonfiguration.MIETKOSTEN_PRO_TAG + FinanzKonfiguration.WEITERE_FIXKOSTEN_PRO_TAG)}");
+        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(KonfigurationJsonExport.Finanzen.Fixkosten.MietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
         sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");

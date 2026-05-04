@@ -5,45 +5,39 @@ namespace simSharpSimulation;
 /// </summary>
 public static class FinanzRechner
 {
+    private static FinanzKonfigurationJson Finanzen => KonfigurationJsonExport.Finanzen;
+    private static double AnteilGesetzlichVersichert => 1.0 - Finanzen.Versicherung.AnteilPrivatversichert;
+
     public static double BerechneArztlohn(int anzahlAerzte, int behandeltePatienten)
     {
-        // Laedt die Finanzparameter vor jeder Berechnung neu aus der Konfiguration.
-        KonfigurationJsonExport.LadeFinanzen();
-
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
-        double grundlohn = anzahlAerzte * FinanzKonfiguration.ARZT_LOHN_PRO_STUNDE * FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG;
-        double variablerAnteil = behandeltePatienten * FinanzKonfiguration.ARZT_LOHN_PRO_PATIENT;
+        double grundlohn = anzahlAerzte * Finanzen.Personal.ArztLohnProStunde * Finanzen.Personal.ArbeitsstundenProTag;
+        double variablerAnteil = behandeltePatienten * Finanzen.Personal.ArztLohnProPatient;
         return grundlohn + variablerAnteil;
     }
 
     public static double BerechneSchwesterlohn(int anzahlSchwestern)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlSchwestern, 0);
 
         return anzahlSchwestern
-            * FinanzKonfiguration.SCHWESTER_LOHN_PRO_STUNDE
-            * FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG;
+            * Finanzen.Personal.SchwesterLohnProStunde
+            * Finanzen.Personal.ArbeitsstundenProTag;
     }
 
     public static double BerechneRezeptionlohn(int anzahlRezeptionisten)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlRezeptionisten, 0);
 
         return anzahlRezeptionisten
-            * FinanzKonfiguration.REZEPTION_LOHN_PRO_STUNDE
-            * FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG;
+            * Finanzen.Personal.RezeptionLohnProStunde
+            * Finanzen.Personal.ArbeitsstundenProTag;
     }
 
     public static Versicherungsverteilung BerechneVersicherungsverteilung(int behandeltePatienten)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
         // Verteilt die Patienten anhand der konfigurierten Anteile moeglichst fair auf ganze Zahlen.
@@ -51,8 +45,8 @@ public static class FinanzRechner
             behandeltePatienten,
             new[]
             {
-                ("Privat", FinanzKonfiguration.ANTEIL_PRIVATVERSICHERT),
-                ("Gesetzlich", FinanzKonfiguration.ANTEIL_GESETZLICH_VERSICHERT)
+                ("Privat", Finanzen.Versicherung.AnteilPrivatversichert),
+                ("Gesetzlich", AnteilGesetzlichVersichert)
             });
 
         return new Versicherungsverteilung(
@@ -62,11 +56,9 @@ public static class FinanzRechner
 
     public static Umsatzverteilung BerechneUmsatzverteilung(Versicherungsverteilung versicherungen)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         // Jeder Versicherungstyp bringt einen anderen Erlos pro Patient ein.
-        double umsatzPrivat = versicherungen.PrivatPatienten * FinanzKonfiguration.EINNAHME_PRIVATPATIENT;
-        double umsatzGesetzlich = versicherungen.GesetzlichPatienten * FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT;
+        double umsatzPrivat = versicherungen.PrivatPatienten * Finanzen.Versicherung.EinnahmePrivatpatient;
+        double umsatzGesetzlich = versicherungen.GesetzlichPatienten * Finanzen.Versicherung.EinnahmeGesetzlichPatient;
 
         return new Umsatzverteilung(
             umsatzPrivat,
@@ -75,8 +67,6 @@ public static class FinanzRechner
 
     public static Behandlungsmix BerechneBehandlungsmix(int behandeltePatienten)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
         // Bildet aus Wahrscheinlichkeiten eine ganzzahlige Verteilung fuer kurze, mittlere und lange Behandlungen.
@@ -88,24 +78,27 @@ public static class FinanzRechner
         int mittelPatienten = verteilung.GetValueOrDefault(PatientenTyp.Mittel, 0);
         int langPatienten = verteilung.GetValueOrDefault(PatientenTyp.Lang, 0);
 
+        // Ermittle Behandlungskosten pro Typ aus der Patienten-Konfiguration
+        double kurzKostenPro = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Kurz).Behandlungskosten;
+        double mittelKostenPro = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Mittel).Behandlungskosten;
+        double langKostenPro = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Lang).Behandlungskosten;
+
         return new Behandlungsmix(
             kurzPatienten,
             mittelPatienten,
             langPatienten,
-            kurzPatienten * FinanzKonfiguration.BEHANDLUNGSKOSTEN_KURZ,
-            mittelPatienten * FinanzKonfiguration.BEHANDLUNGSKOSTEN_MITTEL,
-            langPatienten * FinanzKonfiguration.BEHANDLUNGSKOSTEN_LANG);
+            kurzPatienten * kurzKostenPro,
+            mittelPatienten * mittelKostenPro,
+            langPatienten * langKostenPro);
     }
 
     public static Tageskosten BerechneTageskosten(int anzahlAerzte, int behandeltePatienten)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         // Fasst alle Kostenarten eines Praxistages zu einem Gesamtergebnis zusammen.
         double arztlohn = BerechneArztlohn(anzahlAerzte, behandeltePatienten);
         double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
         double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
-        double fixkosten = FinanzKonfiguration.MIETKOSTEN_PRO_TAG + FinanzKonfiguration.WEITERE_FIXKOSTEN_PRO_TAG;
+        double fixkosten = Finanzen.Fixkosten.MietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
         Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
         double personalGesamt = arztlohn + schwesterlohn + rezeptionlohn;
         double gesamtkosten = personalGesamt + fixkosten + behandlungsmix.Gesamtkosten;
@@ -121,8 +114,6 @@ public static class FinanzRechner
 
     public static Tagesergebnis BerechneTagesergebnis(int anzahlAerzte, int behandeltePatienten)
     {
-        KonfigurationJsonExport.LadeFinanzen();
-
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 

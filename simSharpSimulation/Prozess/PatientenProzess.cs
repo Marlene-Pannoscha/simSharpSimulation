@@ -312,7 +312,7 @@ namespace simSharpSimulation
         {
             double rand = rnd.NextDouble();
             double cumulative = 0.0;
-            foreach (var (typ, wahrsch, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            foreach (var (typ, wahrsch, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
             {
                 cumulative += wahrsch;
                 if (rand <= cumulative)

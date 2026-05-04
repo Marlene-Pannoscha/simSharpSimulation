@@ -17,6 +17,8 @@ namespace simSharpSimulation
             Converters = { new JsonStringEnumConverter() }
         };
 
+        public static FinanzKonfigurationJson Finanzen { get; private set; } = new();
+
         public static void LadeAlle()
         {
             string zielOrdner = ErmittleRessourcenOrdner();
@@ -51,7 +53,7 @@ namespace simSharpSimulation
             PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.MitTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.OhneTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.TYPEN_VERTEILUNG = patienten.TypenVerteilung
-                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.BehandlungszeitSchwester))
+                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.BehandlungszeitSchwester, t.Behandlungskosten))
                 .ToArray();
 
             var simulation = LeseJson<SimulationKonfigurationJson>(Path.Combine(zielOrdner, "simulation-konfiguration.json"));
@@ -73,20 +75,7 @@ namespace simSharpSimulation
                 ExportiereAlle();
             }
 
-            var finanzen = LeseJson<FinanzKonfigurationJson>(Path.Combine(zielOrdner, "finanz-konfiguration.json"));
-            FinanzKonfiguration.ARZT_LOHN_PRO_PATIENT = finanzen.Personal.ArztLohnProPatient;
-            FinanzKonfiguration.ARZT_LOHN_PRO_STUNDE = finanzen.Personal.ArztLohnProStunde;
-            FinanzKonfiguration.SCHWESTER_LOHN_PRO_STUNDE = finanzen.Personal.SchwesterLohnProStunde;
-            FinanzKonfiguration.REZEPTION_LOHN_PRO_STUNDE = finanzen.Personal.RezeptionLohnProStunde;
-            FinanzKonfiguration.MIETKOSTEN_PRO_TAG = finanzen.Fixkosten.MietkostenProTag;
-            FinanzKonfiguration.WEITERE_FIXKOSTEN_PRO_TAG = finanzen.Fixkosten.WeitereFixkostenProTag;
-            FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG = finanzen.Personal.ArbeitsstundenProTag;
-            FinanzKonfiguration.ANTEIL_PRIVATVERSICHERT = finanzen.Versicherung.AnteilPrivatversichert;
-            FinanzKonfiguration.EINNAHME_PRIVATPATIENT = finanzen.Versicherung.EinnahmePrivatpatient;
-            FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT = finanzen.Versicherung.EinnahmeGesetzlichPatient;
-            FinanzKonfiguration.BEHANDLUNGSKOSTEN_KURZ = finanzen.Behandlungskosten.Kurz;
-            FinanzKonfiguration.BEHANDLUNGSKOSTEN_MITTEL = finanzen.Behandlungskosten.Mittel;
-            FinanzKonfiguration.BEHANDLUNGSKOSTEN_LANG = finanzen.Behandlungskosten.Lang;
+            Finanzen = LeseJson<FinanzKonfigurationJson>(Path.Combine(zielOrdner, "finanz-konfiguration.json"));
         }
 
         public static void ExportiereAlle()
@@ -134,7 +123,8 @@ namespace simSharpSimulation
                     Typ = t.Typ,
                     Wahrscheinlichkeit = t.Wahrscheinlichkeit,
                     BehandlungszeitArzt = t.BehandlungszeitArzt,
-                    BehandlungszeitSchwester = t.BehandlungszeitSchwester
+                    BehandlungszeitSchwester = t.BehandlungszeitSchwester,
+                    Behandlungskosten = t.Behandlungskosten
                 }).ToList(),
                 Beschreibung = new PatientenKonfiguration().Beschreibung
             });
@@ -151,31 +141,10 @@ namespace simSharpSimulation
 
             SchreibeJson(Path.Combine(zielOrdner, "finanz-konfiguration.json"), new FinanzKonfigurationJson
             {
-                Personal = new PersonalKostenJson
-                {
-                    ArztLohnProPatient = FinanzKonfiguration.ARZT_LOHN_PRO_PATIENT,
-                    ArztLohnProStunde = FinanzKonfiguration.ARZT_LOHN_PRO_STUNDE,
-                    SchwesterLohnProStunde = FinanzKonfiguration.SCHWESTER_LOHN_PRO_STUNDE,
-                    RezeptionLohnProStunde = FinanzKonfiguration.REZEPTION_LOHN_PRO_STUNDE,
-                    ArbeitsstundenProTag = FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG
-                },
-                Fixkosten = new FixkostenJson
-                {
-                    MietkostenProTag = FinanzKonfiguration.MIETKOSTEN_PRO_TAG,
-                    WeitereFixkostenProTag = FinanzKonfiguration.WEITERE_FIXKOSTEN_PRO_TAG
-                },
-                Versicherung = new VersicherungsKostenJson
-                {
-                    AnteilPrivatversichert = FinanzKonfiguration.ANTEIL_PRIVATVERSICHERT,
-                    EinnahmePrivatpatient = FinanzKonfiguration.EINNAHME_PRIVATPATIENT,
-                    EinnahmeGesetzlichPatient = FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT
-                },
-                Behandlungskosten = new BehandlungskostenJson
-                {
-                    Kurz = FinanzKonfiguration.BEHANDLUNGSKOSTEN_KURZ,
-                    Mittel = FinanzKonfiguration.BEHANDLUNGSKOSTEN_MITTEL,
-                    Lang = FinanzKonfiguration.BEHANDLUNGSKOSTEN_LANG
-                }
+                Personal = new PersonalKostenJson(),
+                Fixkosten = new FixkostenJson(),
+                Versicherung = new VersicherungsKostenJson(),
+                Behandlungskosten = new BehandlungskostenJson()
             });
         }
 
@@ -260,6 +229,7 @@ namespace simSharpSimulation
         public double Wahrscheinlichkeit { get; set; }
         public double BehandlungszeitArzt { get; set; }
         public double BehandlungszeitSchwester { get; set; }
+        public double Behandlungskosten { get; set; }
     }
 
     internal sealed class SimulationKonfigurationJson
@@ -282,30 +252,30 @@ namespace simSharpSimulation
 
     internal sealed class PersonalKostenJson
     {
-        public double ArztLohnProPatient { get; set; }
-        public double ArztLohnProStunde { get; set; }
-        public double SchwesterLohnProStunde { get; set; }
-        public double RezeptionLohnProStunde { get; set; }
-        public int ArbeitsstundenProTag { get; set; }
+        public double ArztLohnProPatient { get; set; } = 30.0;
+        public double ArztLohnProStunde { get; set; } = 85.0;
+        public double SchwesterLohnProStunde { get; set; } = 32.0;
+        public double RezeptionLohnProStunde { get; set; } = 24.0;
+        public int ArbeitsstundenProTag { get; set; } = 8;
     }
 
     internal sealed class FixkostenJson
     {
-        public double MietkostenProTag { get; set; }
-        public double WeitereFixkostenProTag { get; set; }
+        public double MietkostenProTag { get; set; } = 350.0;
+        public double WeitereFixkostenProTag { get; set; } = 450.0;
     }
 
     internal sealed class VersicherungsKostenJson
     {
-        public double AnteilPrivatversichert { get; set; }
-        public double EinnahmePrivatpatient { get; set; }
-        public double EinnahmeGesetzlichPatient { get; set; }
+        public double AnteilPrivatversichert { get; set; } = 0.2;
+        public double EinnahmePrivatpatient { get; set; } = 150.0;
+        public double EinnahmeGesetzlichPatient { get; set; } = 90.0;
     }
 
     internal sealed class BehandlungskostenJson
     {
-        public double Kurz { get; set; }
-        public double Mittel { get; set; }
-        public double Lang { get; set; }
+        public double Kurz { get; set; } = 18.0;
+        public double Mittel { get; set; } = 35.0;
+        public double Lang { get; set; } = 60.0;
     }
 }
