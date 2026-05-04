@@ -1,3 +1,4 @@
 # Never track generated build output, even if it contains generated .cs files.
 **/bin/**
 **/obj/**
+**/.dotnet/**

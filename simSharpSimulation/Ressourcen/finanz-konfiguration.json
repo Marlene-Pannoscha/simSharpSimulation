@@ -1,12 +1,14 @@
 {
   "Personal": {
     "ArztLohnProPatient": 30.0,
-    "ArztLohnProStunde": 50.0,
+    "ArztLohnProStunde": 85.0,
+    "SchwesterLohnProStunde": 32.0,
+    "RezeptionLohnProStunde": 24.0,
     "ArbeitsstundenProTag": 8
   },
   "Fixkosten": {
-    "MietkostenProTag": 90.0,
-    "WeitereFixkostenProTag": 200.0
+    "MietkostenProTag": 350.0,
+    "WeitereFixkostenProTag": 450.0
   },
   "Versicherung": {
     "AnteilPrivatversichert": 0.2,
@@ -14,8 +16,8 @@
     "EinnahmeGesetzlichPatient": 90.0
   },
   "Behandlungskosten": {
-    "Kurz": 10.0,
-    "Mittel": 20.0,
-    "Lang": 30.0
+    "Kurz": 18.0,
+    "Mittel": 35.0,
+    "Lang": 60.0
   }
 }

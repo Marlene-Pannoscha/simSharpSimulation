@@ -61,6 +61,21 @@ namespace simSharpSimulation
             SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN = simulation.BewegungszeitInnerhalbKlinikSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitArztZumAusgangSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitRezeptionZumAusgangSekunden;
+
+            var finanzen = LeseJson<FinanzKonfigurationJson>(Path.Combine(zielOrdner, "finanz-konfiguration.json"));
+            FinanzKonfiguration.ARZT_LOHN_PRO_PATIENT = finanzen.Personal.ArztLohnProPatient;
+            FinanzKonfiguration.ARZT_LOHN_PRO_STUNDE = finanzen.Personal.ArztLohnProStunde;
+            FinanzKonfiguration.SCHWESTER_LOHN_PRO_STUNDE = finanzen.Personal.SchwesterLohnProStunde;
+            FinanzKonfiguration.REZEPTION_LOHN_PRO_STUNDE = finanzen.Personal.RezeptionLohnProStunde;
+            FinanzKonfiguration.MIETKOSTEN_PRO_TAG = finanzen.Fixkosten.MietkostenProTag;
+            FinanzKonfiguration.WEITERE_FIXKOSTEN_PRO_TAG = finanzen.Fixkosten.WeitereFixkostenProTag;
+            FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG = finanzen.Personal.ArbeitsstundenProTag;
+            FinanzKonfiguration.ANTEIL_PRIVATVERSICHERT = finanzen.Versicherung.AnteilPrivatversichert;
+            FinanzKonfiguration.EINNAHME_PRIVATPATIENT = finanzen.Versicherung.EinnahmePrivatpatient;
+            FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT = finanzen.Versicherung.EinnahmeGesetzlichPatient;
+            FinanzKonfiguration.BEHANDLUNGSKOSTEN_KURZ = finanzen.Behandlungskosten.Kurz;
+            FinanzKonfiguration.BEHANDLUNGSKOSTEN_MITTEL = finanzen.Behandlungskosten.Mittel;
+            FinanzKonfiguration.BEHANDLUNGSKOSTEN_LANG = finanzen.Behandlungskosten.Lang;
         }
 
         public static void ExportiereAlle()
@@ -122,6 +137,35 @@ namespace simSharpSimulation
                 BewegungszeitArztZumAusgangSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN,
                 BewegungszeitRezeptionZumAusgangSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN
             });
+
+            SchreibeJson(Path.Combine(zielOrdner, "finanz-konfiguration.json"), new FinanzKonfigurationJson
+            {
+                Personal = new PersonalKostenJson
+                {
+                    ArztLohnProPatient = FinanzKonfiguration.ARZT_LOHN_PRO_PATIENT,
+                    ArztLohnProStunde = FinanzKonfiguration.ARZT_LOHN_PRO_STUNDE,
+                    SchwesterLohnProStunde = FinanzKonfiguration.SCHWESTER_LOHN_PRO_STUNDE,
+                    RezeptionLohnProStunde = FinanzKonfiguration.REZEPTION_LOHN_PRO_STUNDE,
+                    ArbeitsstundenProTag = FinanzKonfiguration.ARBEITSSTUNDEN_PRO_TAG
+                },
+                Fixkosten = new FixkostenJson
+                {
+                    MietkostenProTag = FinanzKonfiguration.MIETKOSTEN_PRO_TAG,
+                    WeitereFixkostenProTag = FinanzKonfiguration.WEITERE_FIXKOSTEN_PRO_TAG
+                },
+                Versicherung = new VersicherungsKostenJson
+                {
+                    AnteilPrivatversichert = FinanzKonfiguration.ANTEIL_PRIVATVERSICHERT,
+                    EinnahmePrivatpatient = FinanzKonfiguration.EINNAHME_PRIVATPATIENT,
+                    EinnahmeGesetzlichPatient = FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT
+                },
+                Behandlungskosten = new BehandlungskostenJson
+                {
+                    Kurz = FinanzKonfiguration.BEHANDLUNGSKOSTEN_KURZ,
+                    Mittel = FinanzKonfiguration.BEHANDLUNGSKOSTEN_MITTEL,
+                    Lang = FinanzKonfiguration.BEHANDLUNGSKOSTEN_LANG
+                }
+            });
         }
 
         private static T LeseJson<T>(string pfad)
@@ -143,7 +187,8 @@ namespace simSharpSimulation
                 && File.Exists(Path.Combine(ordner, "schwester-konfiguration.json"))
                 && File.Exists(Path.Combine(ordner, "rezeption-konfiguration.json"))
                 && File.Exists(Path.Combine(ordner, "patienten-konfiguration.json"))
-                && File.Exists(Path.Combine(ordner, "simulation-konfiguration.json"));
+                && File.Exists(Path.Combine(ordner, "simulation-konfiguration.json"))
+                && File.Exists(Path.Combine(ordner, "finanz-konfiguration.json"));
         }
 
         private static string ErmittleRessourcenOrdner()
@@ -214,5 +259,42 @@ namespace simSharpSimulation
         public int BewegungszeitInnerhalbKlinikSekunden { get; set; }
         public int BewegungszeitArztZumAusgangSekunden { get; set; }
         public int BewegungszeitRezeptionZumAusgangSekunden { get; set; }
+    }
+
+    internal sealed class FinanzKonfigurationJson
+    {
+        public PersonalKostenJson Personal { get; set; } = new();
+        public FixkostenJson Fixkosten { get; set; } = new();
+        public VersicherungsKostenJson Versicherung { get; set; } = new();
+        public BehandlungskostenJson Behandlungskosten { get; set; } = new();
+    }
+
+    internal sealed class PersonalKostenJson
+    {
+        public double ArztLohnProPatient { get; set; }
+        public double ArztLohnProStunde { get; set; }
+        public double SchwesterLohnProStunde { get; set; }
+        public double RezeptionLohnProStunde { get; set; }
+        public int ArbeitsstundenProTag { get; set; }
+    }
+
+    internal sealed class FixkostenJson
+    {
+        public double MietkostenProTag { get; set; }
+        public double WeitereFixkostenProTag { get; set; }
+    }
+
+    internal sealed class VersicherungsKostenJson
+    {
+        public double AnteilPrivatversichert { get; set; }
+        public double EinnahmePrivatpatient { get; set; }
+        public double EinnahmeGesetzlichPatient { get; set; }
+    }
+
+    internal sealed class BehandlungskostenJson
+    {
+        public double Kurz { get; set; }
+        public double Mittel { get; set; }
+        public double Lang { get; set; }
     }
 }

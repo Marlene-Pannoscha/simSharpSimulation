@@ -21,7 +21,7 @@ namespace simSharpSimulation
             if (args.Any(a => string.Equals(a, "--finanz-wpf", StringComparison.OrdinalIgnoreCase)))
             {
                 KonfigurationJsonExport.LadeAlle();
-                FinanzFenster.StarteFenster();
+                FinanzWpfFenster.StarteFenster();
                 return;
             }
 
@@ -125,7 +125,10 @@ namespace simSharpSimulation
             Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
             Console.WriteLine($"Umsatz: {finanzen.Umsatz:F2} €");
             Console.WriteLine($"Arztlohn: {finanzen.Kosten.Arztlohn:F2} €");
+            Console.WriteLine($"Schwesterlohn: {finanzen.Kosten.Schwesterlohn:F2} €");
+            Console.WriteLine($"Rezeptionlohn: {finanzen.Kosten.Rezeptionlohn:F2} €");
             Console.WriteLine($"Fixkosten: {finanzen.Kosten.Fixkosten:F2} €");
+            Console.WriteLine($"Behandlungskosten: {finanzen.Kosten.Behandlungskosten:F2} €");
             Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
             Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
             Console.WriteLine();
