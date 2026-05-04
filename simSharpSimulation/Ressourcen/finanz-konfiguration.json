@@ -1,0 +1,21 @@
+{
+  "Personal": {
+    "ArztLohnProPatient": 30.0,
+    "ArztLohnProStunde": 50.0,
+    "ArbeitsstundenProTag": 8
+  },
+  "Fixkosten": {
+    "MietkostenProTag": 90.0,
+    "WeitereFixkostenProTag": 200.0
+  },
+  "Versicherung": {
+    "AnteilPrivatversichert": 0.2,
+    "EinnahmePrivatpatient": 150.0,
+    "EinnahmeGesetzlichPatient": 90.0
+  },
+  "Behandlungskosten": {
+    "Kurz": 10.0,
+    "Mittel": 20.0,
+    "Lang": 30.0
+  }
+}
