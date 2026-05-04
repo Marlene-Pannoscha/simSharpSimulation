@@ -62,6 +62,17 @@ namespace simSharpSimulation
             SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitArztZumAusgangSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitRezeptionZumAusgangSekunden;
 
+            LadeFinanzen();
+        }
+
+        public static void LadeFinanzen()
+        {
+            string zielOrdner = ErmittleRessourcenOrdner();
+            if (!AlleKonfigurationsdateienVorhanden(zielOrdner))
+            {
+                ExportiereAlle();
+            }
+
             var finanzen = LeseJson<FinanzKonfigurationJson>(Path.Combine(zielOrdner, "finanz-konfiguration.json"));
             FinanzKonfiguration.ARZT_LOHN_PRO_PATIENT = finanzen.Personal.ArztLohnProPatient;
             FinanzKonfiguration.ARZT_LOHN_PRO_STUNDE = finanzen.Personal.ArztLohnProStunde;

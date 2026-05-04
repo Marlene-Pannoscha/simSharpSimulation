@@ -14,6 +14,8 @@ namespace simSharpSimulation
         - SimulationsDaten.cs sammelt alle Wartezeiten und Ereignisse.
         - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
         */
+        private const int SimulierteArbeitstage = 5;
+
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
         [STAThread]
         static void Main(string[] args)
@@ -117,11 +119,14 @@ namespace simSharpSimulation
 
             Console.WriteLine();
             Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
-            int behandeltePatienten = daten.Gesamtprozesszeiten.Count;
+            int behandeltePatientenGesamt = daten.Gesamtprozesszeiten.Count;
+            int behandeltePatientenProTag = (int)Math.Round(behandeltePatientenGesamt / (double)SimulierteArbeitstage);
             int anzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE;
-            Tagesergebnis finanzen = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatienten);
+            Tagesergebnis finanzen = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatientenProTag);
 
-            Console.WriteLine($"Behandelte Patienten: {behandeltePatienten}");
+            Console.WriteLine($"Simulierte Arbeitstage: {SimulierteArbeitstage}");
+            Console.WriteLine($"Behandelte Patienten gesamt (Woche): {behandeltePatientenGesamt}");
+            Console.WriteLine($"Behandelte Patienten pro Tag: {behandeltePatientenProTag}");
             Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
             Console.WriteLine($"Umsatz: {finanzen.Umsatz:F2} €");
             Console.WriteLine($"Arztlohn: {finanzen.Kosten.Arztlohn:F2} €");

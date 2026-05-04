@@ -7,6 +7,8 @@ public static class FinanzRechner
 {
     public static double BerechneArztlohn(int anzahlAerzte, int behandeltePatienten)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
@@ -17,6 +19,8 @@ public static class FinanzRechner
 
     public static double BerechneSchwesterlohn(int anzahlSchwestern)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlSchwestern, 0);
 
         return anzahlSchwestern
@@ -26,6 +30,8 @@ public static class FinanzRechner
 
     public static double BerechneRezeptionlohn(int anzahlRezeptionisten)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlRezeptionisten, 0);
 
         return anzahlRezeptionisten
@@ -35,6 +41,8 @@ public static class FinanzRechner
 
     public static Versicherungsverteilung BerechneVersicherungsverteilung(int behandeltePatienten)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
         Dictionary<string, int> verteilung = VerteileGanzzahlen(
@@ -52,6 +60,8 @@ public static class FinanzRechner
 
     public static Umsatzverteilung BerechneUmsatzverteilung(Versicherungsverteilung versicherungen)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         double umsatzPrivat = versicherungen.PrivatPatienten * FinanzKonfiguration.EINNAHME_PRIVATPATIENT;
         double umsatzGesetzlich = versicherungen.GesetzlichPatienten * FinanzKonfiguration.EINNAHME_GESETZLICH_PATIENT;
 
@@ -62,6 +72,8 @@ public static class FinanzRechner
 
     public static Behandlungsmix BerechneBehandlungsmix(int behandeltePatienten)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
         Dictionary<PatientenTyp, int> verteilung = VerteileGanzzahlen(
@@ -83,6 +95,8 @@ public static class FinanzRechner
 
     public static Tageskosten BerechneTageskosten(int anzahlAerzte, int behandeltePatienten)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         double arztlohn = BerechneArztlohn(anzahlAerzte, behandeltePatienten);
         double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
         double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
@@ -102,6 +116,8 @@ public static class FinanzRechner
 
     public static Tagesergebnis BerechneTagesergebnis(int anzahlAerzte, int behandeltePatienten)
     {
+        KonfigurationJsonExport.LadeFinanzen();
+
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
