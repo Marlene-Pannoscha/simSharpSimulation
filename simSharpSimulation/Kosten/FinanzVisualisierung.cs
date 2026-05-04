@@ -257,10 +257,10 @@ internal static class FinanzVisualisierung
         kostenLinie.Label = "Kosten";
 
         plot.XTicks(xs, ergebnis.Achsenwerte.ToArray());
-        plot.XAxis.TickLabelStyle(rotation: ergebnis.Achsenwerte.Count > 20 ? 45 : 0);
-        plot.YLabel("EUR");
-        plot.XLabel(string.Equals(ergebnis.Zeitraum, "Jahr", StringComparison.OrdinalIgnoreCase) ? "Monat" : "Tag");
-        plot.Title($"Umsatz und Kosten - Aerzte: {anzahlAerzte}, Schwestern: {anzahlSchwestern} - {ergebnis.Zeitraum}");
+        plot.XAxis.TickLabelStyle(fontSize: 14, rotation: ergebnis.Achsenwerte.Count > 20 ? 45 : 0);
+        plot.XAxis.LabelStyle(fontSize: 16);
+        plot.YAxis.LabelStyle(fontSize: 16);
+        plot.Title($"Umsatz und Kosten - Aerzte: {anzahlAerzte}, Schwestern: {anzahlSchwestern} - {ergebnis.Zeitraum}", size: 18);
         plot.Legend(location: Alignment.UpperRight);
         plot.Grid(enable: true, lineStyle: LineStyle.Dot);
         plot.SaveFig(outputPfad);
@@ -292,15 +292,15 @@ internal static class FinanzVisualisierung
         nullLinie.LineStyle = LineStyle.Dash;
 
         plot.XTicks(xs, ergebnis.Achsenwerte.ToArray());
-        plot.XAxis.TickLabelStyle(rotation: ergebnis.Achsenwerte.Count > 20 ? 45 : 0);
-        plot.YLabel("Gewinn in EUR");
-        plot.XLabel(string.Equals(ergebnis.Zeitraum, "Jahr", StringComparison.OrdinalIgnoreCase) ? "Monat" : "Tag");
+        plot.XAxis.TickLabelStyle(fontSize: 14, rotation: ergebnis.Achsenwerte.Count > 20 ? 45 : 0);
+        plot.XAxis.LabelStyle(fontSize: 16);
+        plot.YAxis.LabelStyle(fontSize: 16);
 
         string titel = string.Equals(ergebnis.Zeitraum, "Jahr", StringComparison.OrdinalIgnoreCase)
             ? "Gewinn pro Monat"
             : "Gewinn pro Tag";
 
-        plot.Title($"{titel} - Aerzte: {anzahlAerzte}, Schwestern: {anzahlSchwestern} - {ergebnis.Zeitraum}");
+        plot.Title($"{titel} - Aerzte: {anzahlAerzte}, Schwestern: {anzahlSchwestern} - {ergebnis.Zeitraum}", size: 18);
         plot.Legend(location: Alignment.UpperRight);
         plot.Grid(enable: true, lineStyle: LineStyle.Dot);
         plot.SaveFig(outputPfad);

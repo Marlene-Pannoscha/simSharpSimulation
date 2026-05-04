@@ -19,6 +19,9 @@ namespace simSharpSimulation
 
         public static FinanzKonfigurationJson Finanzen { get; private set; } = new();
 
+        // Hilfszugang: berechnete Mietkosten pro Tag (Anzahl * Kosten pro Behandlungsraum).
+        public static double MietkostenProTag => Finanzen.Fixkosten.MietkostenProBehandlungsraumProTag * Math.Max(Finanzen.Fixkosten.AnzahlBehandlungsraeume, 0);
+
         public static void LadeAlle()
         {
             string zielOrdner = ErmittleRessourcenOrdner();
@@ -261,7 +264,8 @@ namespace simSharpSimulation
 
     internal sealed class FixkostenJson
     {
-        public double MietkostenProTag { get; set; } = 350.0;
+        public double MietkostenProBehandlungsraumProTag { get; set; } = 50.0;
+        public int AnzahlBehandlungsraeume { get; set; } = 5;
         public double WeitereFixkostenProTag { get; set; } = 450.0;
     }
 

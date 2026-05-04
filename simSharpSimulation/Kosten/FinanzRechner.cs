@@ -79,17 +79,17 @@ public static class FinanzRechner
         int langPatienten = verteilung.GetValueOrDefault(PatientenTyp.Lang, 0);
 
         // Ermittle Behandlungskosten pro Typ aus der Patienten-Konfiguration
-        double kurzKostenPro = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Kurz).Behandlungskosten;
-        double mittelKostenPro = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Mittel).Behandlungskosten;
-        double langKostenPro = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Lang).Behandlungskosten;
+        double TypKurzKosten = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Kurz).Behandlungskosten;
+        double TypMittelKosten = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Mittel).Behandlungskosten;
+        double TypLangKosten = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Lang).Behandlungskosten;
 
         return new Behandlungsmix(
             kurzPatienten,
             mittelPatienten,
             langPatienten,
-            kurzPatienten * kurzKostenPro,
-            mittelPatienten * mittelKostenPro,
-            langPatienten * langKostenPro);
+            kurzPatienten * TypKurzKosten,
+            mittelPatienten * TypMittelKosten,
+            langPatienten * TypLangKosten);
     }
 
     public static Tageskosten BerechneTageskosten(int anzahlAerzte, int behandeltePatienten)
@@ -98,7 +98,8 @@ public static class FinanzRechner
         double arztlohn = BerechneArztlohn(anzahlAerzte, behandeltePatienten);
         double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
         double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
-        double fixkosten = Finanzen.Fixkosten.MietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
+        double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
+        double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
         Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
         double personalGesamt = arztlohn + schwesterlohn + rezeptionlohn;
         double gesamtkosten = personalGesamt + fixkosten + behandlungsmix.Gesamtkosten;

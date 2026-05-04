@@ -13,6 +13,8 @@ internal sealed class FinanzWpfFenster : Window
     // Diese Steuerelemente werden benoetigt, um Eingaben zu lesen und Ergebnisse anzuzeigen.
     private readonly TextBox aerzteTextBox;
     private readonly TextBox schwesternTextBox;
+    private readonly TextBox rezeptionTextBox;
+    private readonly TextBox behandlungsraeumeTextBox;
     private readonly ComboBox zeitraumComboBox;
     private readonly TextBox ergebnisTextBox;
     private readonly Image finanzenImage;
@@ -41,6 +43,14 @@ internal sealed class FinanzWpfFenster : Window
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        // Rezeption
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        // Behandlungsraeume
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
@@ -73,8 +83,34 @@ internal sealed class FinanzWpfFenster : Window
         Grid.SetColumn(schwesternTextBox, 4);
         eingabeGrid.Children.Add(schwesternTextBox);
 
+        // Rezeption
+        Label rezeptionLabel = new() { Content = "Anzahl Rezeption:", VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(rezeptionLabel, 6);
+        eingabeGrid.Children.Add(rezeptionLabel);
+
+        rezeptionTextBox = new TextBox
+        {
+            Text = RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN.ToString(CultureInfo.InvariantCulture),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(rezeptionTextBox, 7);
+        eingabeGrid.Children.Add(rezeptionTextBox);
+
+        // Behandlungsraeume
+        Label behandlungsLabel = new() { Content = "Anzahl Behandlungszimmer:", VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(behandlungsLabel, 9);
+        eingabeGrid.Children.Add(behandlungsLabel);
+
+        behandlungsraeumeTextBox = new TextBox
+        {
+            Text = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeume.ToString(CultureInfo.InvariantCulture),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(behandlungsraeumeTextBox, 10);
+        eingabeGrid.Children.Add(behandlungsraeumeTextBox);
+
         Label zeitraumLabel = new() { Content = "Zeitraum:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(zeitraumLabel, 6);
+        Grid.SetColumn(zeitraumLabel, 12);
         eingabeGrid.Children.Add(zeitraumLabel);
 
         zeitraumComboBox = new ComboBox
@@ -84,7 +120,7 @@ internal sealed class FinanzWpfFenster : Window
             VerticalContentAlignment = VerticalAlignment.Center,
             IsEditable = false
         };
-        Grid.SetColumn(zeitraumComboBox, 7);
+        Grid.SetColumn(zeitraumComboBox, 13);
         eingabeGrid.Children.Add(zeitraumComboBox);
 
         Button startenButton = new()
@@ -96,7 +132,7 @@ internal sealed class FinanzWpfFenster : Window
             FontWeight = FontWeights.SemiBold
         };
         startenButton.Click += SimulationStarten_Click;
-        Grid.SetColumn(startenButton, 9);
+        Grid.SetColumn(startenButton, 15);
         eingabeGrid.Children.Add(startenButton);
 
         Grid.SetRow(eingabeGrid, 0);
@@ -173,6 +209,17 @@ internal sealed class FinanzWpfFenster : Window
             if (!TryParseInt(schwesternTextBox.Text, 1, 80, out int anzahlSchwestern, out string schwesternFehler))
                 throw new InvalidOperationException(schwesternFehler);
 
+            // Rezeption und Anzahl Behandlungszimmer aus UI einlesen
+            if (!TryParseInt(rezeptionTextBox.Text, 0, 80, out int anzahlRezeptionisten, out string rezeptionFehler))
+                throw new InvalidOperationException(rezeptionFehler);
+
+            if (!TryParseInt(behandlungsraeumeTextBox.Text, 1, 100, out int anzahlBehandlungsraeume, out string raeumeFehler))
+                throw new InvalidOperationException(raeumeFehler);
+
+            // Setze globale Konfigurationen, damit Simulation und Auswertung die Werte verwenden
+            RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = anzahlRezeptionisten;
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeume = anzahlBehandlungsraeume;
+
             string zeitraum = zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
 
             statusTextBlock.Text = "Simulation laeuft...";
@@ -221,6 +268,7 @@ internal sealed class FinanzWpfFenster : Window
         {
             Text = titel,
             FontWeight = FontWeights.SemiBold,
+            FontSize = 18,
             Margin = new Thickness(8, 6, 8, 4)
         };
         DockPanel.SetDock(header, Dock.Top);
@@ -276,7 +324,8 @@ internal sealed class FinanzWpfFenster : Window
         sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, (int)Math.Round(ergebnis.Tagespunkte.Average(t => t.BehandeltePatienten))))}");
         sb.AppendLine($"Schwestern: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN))}");
         sb.AppendLine($"Rezeption: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN))}");
-        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(KonfigurationJsonExport.Finanzen.Fixkosten.MietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
+        double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
+        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(mietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
         sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");
