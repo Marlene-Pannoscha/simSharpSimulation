@@ -37,8 +37,7 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeSchwester(
             Simulation env,
             int patientId,
-            PriorityResource schwester,
-            int schwesterId,
+            BeweglicherMitarbeiterPool schwestern,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,
@@ -60,11 +59,12 @@ namespace simSharpSimulation
             // Schritt S2: Eine Schwester anfordern.
             // 'using' stellt sicher, dass die Ressource am Ende wieder freigegeben wird.
             // Der Prozess pausiert hier (yield return req), bis eine Schwester frei ist.
-            using (var req = schwester.Request(priority: GetPriority(patientenTyp)))
+            using (var req = schwestern.FordereMitarbeiterAn(GetPriority(patientenTyp)))
             {
                 yield return req; // Warten, bis die Schwester-Ressource verfügbar ist.
 
                 // Schritt S3: Schwester ist frei, der Prozess wird fortgesetzt.
+                int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
 
@@ -87,6 +87,7 @@ namespace simSharpSimulation
                 // Die Ressource wird durch das 'using'-Statement automatisch freigegeben.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
+                schwestern.GibMitarbeiterZurueck(schwesterId);
             }
         }
     }
