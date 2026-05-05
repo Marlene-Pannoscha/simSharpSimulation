@@ -1,7 +1,6 @@
 using SimSharp;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace simSharpSimulation
 {
@@ -51,7 +50,10 @@ namespace simSharpSimulation
             // Schritt R2: Einen Rezeptionisten anfordern.
             // 'using' stellt sicher, dass die Ressource (der Rezeptionist) nach der Nutzung
             // automatisch wieder für den nächsten Patienten freigegeben wird.
-            using (var req = rezeption.Request())
+            // SimSharp.Resource verarbeitet Requests FIFO: Ist die Rezeption frei, wird dieser
+            // Patient sofort bedient. Ist sie nicht frei, bleibt der Patientenprozess passiv,
+            // bis die Rezeption beim Freigeben automatisch den naechsten wartenden Patienten holt.
+            using (var req = FordereRezeptionistenAn(rezeption))
             {
                 // Der Prozess pausiert hier, bis ein Rezeptionist frei ist.
                 yield return req;
@@ -93,12 +95,14 @@ namespace simSharpSimulation
             // Die Ressource wird hier durch 'using' automatisch freigegeben.
         }
 
+        private static Request FordereRezeptionistenAn(Resource rezeption)
+        {
+            return rezeption.Request();
+        }
+
         private static bool IstRezeptionFrei(Resource rezeption)
         {
-            var usersProperty = rezeption.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
-            var usersCollection = usersProperty?.GetValue(rezeption) as IReadOnlyCollection<Request>;
-            int aktiveNutzer = usersCollection?.Count ?? 0;
-            return aktiveNutzer < RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN;
+            return rezeption.Remaining > 0;
         }
     }
 }
