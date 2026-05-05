@@ -203,14 +203,7 @@ namespace simSharpSimulation
 
         private static Dictionary<string, (string Von, string Zu)> ErstelleEventZustandsMapping()
         {
-            string dateiPfad = Path.Combine(AppContext.BaseDirectory, "Ressourcen", "event-zustandsmapping.json");
-
-            if (!File.Exists(dateiPfad))
-            {
-                throw new FileNotFoundException(
-                    $"Die Event-Mapping-Datei wurde nicht gefunden: {dateiPfad}",
-                    dateiPfad);
-            }
+            string dateiPfad = ErmittleRessourcenDateiPfad("event-zustandsmapping.json");
 
             string json = File.ReadAllText(dateiPfad);
             var jsonDaten = JsonSerializer.Deserialize<Dictionary<string, EventZustandsEintrag>>(json);
@@ -225,6 +218,50 @@ namespace simSharpSimulation
                 eintrag => eintrag.Key,
                 eintrag => (eintrag.Value.Von, eintrag.Value.Zu),
                 StringComparer.Ordinal);
+        }
+
+        private static string ErmittleRessourcenDateiPfad(string dateiname)
+        {
+            string[] kandidaten =
+            {
+                Path.Combine(AppContext.BaseDirectory, "Ressourcen", dateiname),
+                Path.Combine(Directory.GetCurrentDirectory(), "Ressourcen", dateiname),
+                Path.Combine(Directory.GetCurrentDirectory(), "simSharpSimulation", "Ressourcen", dateiname)
+            };
+
+            foreach (string kandidat in kandidaten)
+            {
+                if (File.Exists(kandidat))
+                    return kandidat;
+            }
+
+            string? projektOrdner = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj")
+                ?? FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
+
+            if (!string.IsNullOrEmpty(projektOrdner))
+            {
+                string pfadImProjekt = Path.Combine(projektOrdner, "Ressourcen", dateiname);
+                if (File.Exists(pfadImProjekt))
+                    return pfadImProjekt;
+            }
+
+            throw new FileNotFoundException(
+                $"Die Ressourcen-Datei wurde nicht gefunden: {dateiname}",
+                dateiname);
+        }
+
+        private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
+        {
+            DirectoryInfo? current = new(startPfad);
+            while (current != null)
+            {
+                if (File.Exists(Path.Combine(current.FullName, dateiname)))
+                    return current.FullName;
+
+                current = current.Parent;
+            }
+
+            return null;
         }
 
         private sealed class EventZustandsEintrag

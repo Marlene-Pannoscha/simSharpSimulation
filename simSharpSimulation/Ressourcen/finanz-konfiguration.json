@@ -1,0 +1,19 @@
+{
+  "Personal": {
+    "ArztLohnProPatient": 30.0,
+    "ArztLohnProStunde": 85.0,
+    "SchwesterLohnProStunde": 32.0,
+    "RezeptionLohnProStunde": 24.0,
+    "ArbeitsstundenProTag": 8
+  },
+  "Fixkosten": {
+    "MietkostenProBehandlungsraumProTag": 50.0,
+    "AnzahlBehandlungsraeume": 5,
+    "WeitereFixkostenProTag": 450.0
+  },
+  "Versicherung": {
+    "AnteilPrivatversichert": 0.2,
+    "EinnahmePrivatpatient": 150.0,
+    "EinnahmeGesetzlichPatient": 90.0
+  }
+}

@@ -16,19 +16,22 @@
       "Typ": "Kurz",
       "Wahrscheinlichkeit": 0.3,
       "BehandlungszeitArzt": 3,
-      "BehandlungszeitSchwester": 2
+      "BehandlungszeitSchwester": 2,
+      "Behandlungskosten": 18.0
     },
     {
       "Typ": "Mittel",
       "Wahrscheinlichkeit": 0.6,
       "BehandlungszeitArzt": 7,
-      "BehandlungszeitSchwester": 5
+      "BehandlungszeitSchwester": 5,
+      "Behandlungskosten": 35.0
     },
     {
       "Typ": "Lang",
       "Wahrscheinlichkeit": 0.1,
       "BehandlungszeitArzt": 15,
-      "BehandlungszeitSchwester": 10
+      "BehandlungszeitSchwester": 10,
+      "Behandlungskosten": 60.0
     }
   ],
   "Beschreibung": "Patienten in der Klinik"

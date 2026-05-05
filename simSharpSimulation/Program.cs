@@ -14,9 +14,19 @@ namespace simSharpSimulation
         - SimulationsDaten.cs sammelt alle Wartezeiten und Ereignisse.
         - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
         */
+        private const int SimulierteArbeitstage = 5;
+
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
+        [STAThread]
         static void Main(string[] args)
         {
+            if (args.Any(a => string.Equals(a, "--finanz-wpf", StringComparison.OrdinalIgnoreCase)))
+            {
+                KonfigurationJsonExport.LadeAlle();
+                FinanzWpfFenster.StarteFenster();
+                return;
+            }
+
             Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
             KonfigurationJsonExport.LadeAlle();
 
@@ -106,6 +116,28 @@ namespace simSharpSimulation
                 double avgSchwesterTyp = daten.DurchschnittlicheSchwesterWartezeitNachTyp(typ);
                 Console.WriteLine($"{typ,-10} | {anzahl,8} | {anteil,10:F2} | {avgArztTyp,12:F2} | {avgSchwesterTyp,17:F2}");
             }
+
+            Console.WriteLine();
+            Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
+            int behandeltePatientenGesamt = daten.Gesamtprozesszeiten.Count;
+            int behandeltePatientenProTag = (int)Math.Round(behandeltePatientenGesamt / (double)SimulierteArbeitstage);
+            int anzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE;
+            Tagesergebnis finanzen = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatientenProTag);
+
+            Console.WriteLine($"Simulierte Arbeitstage: {SimulierteArbeitstage}");
+            Console.WriteLine($"Behandelte Patienten gesamt (Woche): {behandeltePatientenGesamt}");
+            Console.WriteLine($"Behandelte Patienten pro Tag: {behandeltePatientenProTag}");
+            Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
+            Console.WriteLine($"Umsatz: {finanzen.Umsatz:F2} €");
+            Console.WriteLine($"Arztlohn: {finanzen.Kosten.Arztlohn:F2} €");
+            Console.WriteLine($"Schwesterlohn: {finanzen.Kosten.Schwesterlohn:F2} €");
+            Console.WriteLine($"Rezeptionlohn: {finanzen.Kosten.Rezeptionlohn:F2} €");
+            Console.WriteLine($"Fixkosten: {finanzen.Kosten.Fixkosten:F2} €");
+            Console.WriteLine($"Behandlungskosten: {finanzen.Kosten.Behandlungskosten:F2} €");
+            Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
+            Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
+            Console.WriteLine();
+            Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
         }
 
     }
