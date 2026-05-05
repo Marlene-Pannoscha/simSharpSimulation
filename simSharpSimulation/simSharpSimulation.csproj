@@ -17,9 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Ressourcen\*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Content Include="Ressourcen\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

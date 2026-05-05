@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using SimSharp;
 
 // Ein 'namespace' (Namensraum) ist wie ein Ordner für Klassen, um den Code zu organisieren und Namenskonflikte zu vermeiden.
@@ -42,16 +41,8 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
-                var aerzte = new List<PriorityResource>();
-                for (int i = 0; i < ArztKonfiguration.ANZAHL_AERZTE; i++)
-                {
-                    aerzte.Add(new PriorityResource(env, capacity: 1));
-                }
-                var schwestern = new List<PriorityResource>();
-                for (int i = 0; i < SchwesterKonfiguration.ANZAHL_SCHWESTERN; i++)
-                {
-                    schwestern.Add(new PriorityResource(env, capacity: 1));
-                }
+                var aerzte = new BeweglicherMitarbeiterPool(env, ArztKonfiguration.ANZAHL_AERZTE);
+                var schwestern = new BeweglicherMitarbeiterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
@@ -72,24 +63,17 @@ namespace simSharpSimulation
         Prozesslogik eines einzelnen Patienten in der Klinik.
         /// Ablauf: Ankunft -> Rezeption -> (Wartezimmer) -> Schwester -> Arzt -> Abgang
         Hinweis zum Realitätsmodell:
-        - Es gibt KEINE harte technische Priorität in den Schwester/Arzt-Queues.
+        - Schwester/Arzt nutzen gemeinsame Pools und priorisieren nach Patientenbedarf.
         - Terminpatienten warten im Schnitt kürzer über kürzere Wartezimmerdauer.
         - Patienten ohne Termin warten im Schnitt länger, laufen aber parallel weiter.
         */
-        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, List<PriorityResource> schwestern, List<PriorityResource> aerzte)
+        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, BeweglicherMitarbeiterPool schwestern, BeweglicherMitarbeiterPool aerzte)
         {
             TimeSpan eingangZurRezeptionDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN);
             TimeSpan interneBewegungsdauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN);
             TimeSpan arztZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN);
             TimeSpan rezeptionZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN);
 
-            // Hilfsmethode zum Auswählen einer Ressource
-            (T res, int id) WaehleRessource<T>(List<T> ressourcen)
-            {
-                // Wähle zufällig eine Ressource
-                int index = rnd.Next(ressourcen.Count);
-                return (ressourcen[index], index + 1); // IDs starten bei 1
-            }
             // Phase P-B: Individueller Patientenablauf.
             // Schritt P4.1: Aktuelle Simulationszeit in Minuten holen.
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
@@ -135,8 +119,7 @@ namespace simSharpSimulation
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
                     // Schritt P4.8A: Prüfen, ob sofort eine Schwester frei ist.
-                    int users = ErmittleAktiveNutzer(schwestern);
-                    if (users < SchwesterKonfiguration.ANZAHL_SCHWESTERN)
+                    if (schwestern.IstFrei)
                     {
                         // Schritt P4.9A: Schwester ist frei -> direkt ins Schwesterzimmer.
                         direktZurSchwester = true;
@@ -182,8 +165,7 @@ namespace simSharpSimulation
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
 
                     // Prüfen, ob eine Schwester frei ist.
-                    int users = ErmittleAktiveNutzer(schwestern);
-                    if (users < SchwesterKonfiguration.ANZAHL_SCHWESTERN)
+                    if (schwestern.IstFrei)
                     {
                         // Schwester ist frei -> direkt ins Schwesterzimmer.
                         direktZurSchwester = true;
@@ -225,13 +207,11 @@ namespace simSharpSimulation
                 yield return env.Timeout(interneBewegungsdauer);
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_schwesterzimmer", patientId);
 
-                var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
                     env,
                     patientId,
-                    schwesterRes,
-                    schwesterId,
+                    schwestern,
                     patientenTyp,
                     ankunftszeit,
                     hatTermin,
@@ -271,8 +251,7 @@ namespace simSharpSimulation
             yield return env.Timeout(interneBewegungsdauer);
             daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_arztzimmer", patientId);
 
-            var (arztRes, arztId) = WaehleRessource(aerzte);
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, rnd, daten))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, rnd, daten))
                 yield return ev;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
@@ -319,16 +298,6 @@ namespace simSharpSimulation
                     return typ;
             }
             return PatientenTyp.Mittel; // Fallback
-        }
-
-        // Schritt P9: Interne Hilfsmethode, um aktuelle Belegung der Ressource zu prüfen.
-        private static int ErmittleAktiveNutzer<T>(List<T> ressourcen)
-        {
-            return ressourcen.Sum(r => {
-                var usersProperty = r?.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
-                var usersCollection = usersProperty?.GetValue(r) as IReadOnlyCollection<Request>;
-                return usersCollection?.Count ?? 0;
-            });
         }
 
     }
