@@ -247,7 +247,7 @@ namespace simSharpSimulation
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "ueberspringt_schwester", patientId);
             }
 
-            // Schritt P4.11: Wartezeit auf den Arzt.
+            // Schritt P4.11: Wartevorgang für den Arzt.
             // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
             daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_fuer_arzt", patientId);
 
@@ -262,17 +262,10 @@ namespace simSharpSimulation
                 rnd, 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * wartezeitFaktor));
             yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauerArzt));
 
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
-
-
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_arzt", patientId);
-            yield return env.Timeout(interneBewegungsdauer);
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_arztzimmer", patientId);
-
             var (arztRes, arztId) = WaehleRessource(aerzte);
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, rnd, daten))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, rnd, daten))
                 yield return ev;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
