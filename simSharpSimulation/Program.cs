@@ -44,6 +44,7 @@ namespace simSharpSimulation
                 daten.WartezeitenOhneTermin,
                 daten.SchwesternWartezeiten,
                 daten.Gesamtprozesszeiten,
+                daten.HitMissProTag,
                 daten.TraceData,
                 daten.ArztBehandlungszeitenNachTyp,
                 daten.SchwesternBehandlungszeitenNachTyp,
@@ -87,6 +88,9 @@ namespace simSharpSimulation
             Console.WriteLine($"Durchschnittliche Wartezeit (Rezeption): {avgRezeptionsWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
+            Console.WriteLine($"Nicht behandelte Patienten gesamt: {daten.AnzahlNichtBehandeltArztGesamt}");
+            Console.WriteLine($"  davon Arzt-Wartezeit > 40 Min.: {daten.AnzahlNichtBehandeltArztWartezeit}");
+            Console.WriteLine($"  davon nach 8 Stunden Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend}");
             Console.WriteLine($"Durchschnittliche Gesamtprozesszeit: {avgGesamtprozesszeit:F2} Minuten");
 
             Console.WriteLine();

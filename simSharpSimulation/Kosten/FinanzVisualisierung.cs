@@ -126,6 +126,19 @@ internal static class FinanzVisualisierung
         return (finanzenPfad, gewinnPfad);
     }
 
+    public static (int AnzahlHit, int AnzahlMiss, string DiagrammPfad) ErzeugeHitMissDiagramm(FinanzErgebnis ergebnis)
+    {
+        string outputOrdner = ErzeugeKostenImageOrdner();
+        string zeitraumSlug = SanitizeDateiname(ergebnis.Zeitraum.ToLowerInvariant());
+        string hitMissPfad = Path.Combine(outputOrdner, $"behandelte_patienten_{zeitraumSlug}.png");
+
+        int anzahlHit = ergebnis.GesamtBehandelt;
+        int anzahlMiss = ergebnis.GesamtNichtBehandelt;
+
+        ErzeugeHitMissDiagrammIntern(anzahlHit, anzahlMiss, ergebnis.Zeitraum, hitMissPfad);
+        return (anzahlHit, anzahlMiss, hitMissPfad);
+    }
+
     public static string FormatEuro(double wert) => string.Format(DeCulture, "{0:N2} EUR", wert);
 
     private static string NormalisiereZeitraum(string? zeitraum)
@@ -303,6 +316,38 @@ internal static class FinanzVisualisierung
         plot.Title($"{titel} - Aerzte: {anzahlAerzte}, Schwestern: {anzahlSchwestern} - {ergebnis.Zeitraum}", size: 18);
         plot.Legend(location: Alignment.UpperRight);
         plot.Grid(enable: true, lineStyle: LineStyle.Dot);
+        plot.SaveFig(outputPfad);
+    }
+
+    private static void ErzeugeHitMissDiagrammIntern(
+        int anzahlHit,
+        int anzahlMiss,
+        string zeitraum,
+        string outputPfad)
+    {
+        Plot plot = new(1000, 600);
+        double[] positionen = { 0, 1 };
+        string[] beschriftungen = { "Hit", "Miss" };
+
+        var hitBalken = plot.AddBar(new[] { (double)anzahlHit }, new[] { 0.0 });
+        hitBalken.FillColor = Color.SeaGreen;
+        hitBalken.BorderColor = Color.Black;
+        hitBalken.ShowValuesAboveBars = true;
+        hitBalken.ValueFormatter = value => value.ToString("N0", DeCulture);
+
+        var missBalken = plot.AddBar(new[] { (double)anzahlMiss }, new[] { 1.0 });
+        missBalken.FillColor = Color.IndianRed;
+        missBalken.BorderColor = Color.Black;
+        missBalken.ShowValuesAboveBars = true;
+        missBalken.ValueFormatter = value => value.ToString("N0", DeCulture);
+
+        plot.XTicks(positionen, beschriftungen);
+        plot.XAxis.TickLabelStyle(fontSize: 16);
+        plot.YAxis.TickLabelFormat("N0", dateTimeFormat: false);
+        plot.YAxis.Label("Patienten");
+        plot.Title($"Hit/Miss Analyse - {zeitraum}", size: 18);
+        plot.Grid(enable: true, lineStyle: LineStyle.Dot);
+        plot.SetAxisLimits(yMin: 0);
         plot.SaveFig(outputPfad);
     }
 

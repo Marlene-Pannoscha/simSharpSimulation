@@ -35,6 +35,7 @@ namespace simSharpSimulation
             // Wir simulieren eine Arbeitswoche: 5 Tage (Montag bis Freitag).
             // Der 3. Januar 2000 war ein Montag.
             DateTime startDatum = new DateTime(2000, 1, 3);
+            TimeSpan maximaleTagesdauer = BerechneMaximaleTagesdauer();
 
             for (int tag = 0; tag < 5; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
             {
@@ -61,10 +62,18 @@ namespace simSharpSimulation
                 int patientIdStart = (tag * 10_000) + 1;
                 env.Process(PatientenGenerator.Generiere(env, rezeption, aerzte, schwestern, rnd, daten, patientIdStart, Patient));
 
-                // Schritt P2.2: Tages-Simulation bis zur konfigurierten Dauer ausführen.
-                // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
-                env.Run(TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER));
+                // Schritt P2.2: Tages-Simulation ausführen.
+                // Die Ankünfte enden nach SIMULATIONSDAUER, aber einzelne Prozesse können
+                // noch nachlaufen. Ein fester Nachlaufpuffer verhindert, dass der Tag bei
+                // offenen Warteschlangen oder extrem langen Zufallsdauern unbegrenzt läuft.
+                env.Run(maximaleTagesdauer);
             }
+        }
+
+        private static TimeSpan BerechneMaximaleTagesdauer()
+        {
+            const double nachlaufPufferMinuten = 180.0;
+            return TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER + nachlaufPufferMinuten);
         }
 
         /*Schritt P4: Der Weg des Patienten

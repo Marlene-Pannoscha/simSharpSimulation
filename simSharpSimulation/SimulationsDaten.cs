@@ -54,6 +54,15 @@ namespace simSharpSimulation
             Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
         public Dictionary<PatientenTyp, List<double>> SchwesternBehandlungszeitenNachTyp { get; } =
             Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
+        private readonly SortedDictionary<DateTime, TagesHitMissZaehler> hitMissProTag = new();
+
+        public int AnzahlBehandeltHit { get; private set; }
+        public int AnzahlAbgebrochenMiss { get; private set; }
+
+        public int AnzahlNichtBehandeltArztWartezeit { get; private set; }
+        public int AnzahlNichtBehandeltArztFeierabend { get; private set; }
+        public int AnzahlNichtBehandeltArztGesamt =>
+            AnzahlNichtBehandeltArztWartezeit + AnzahlNichtBehandeltArztFeierabend;
 
         // Abgeleitete Kennzahlen
         public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
@@ -74,6 +83,12 @@ namespace simSharpSimulation
         public double DurchschnittlicheGesamtprozesszeit => MittelwertOder0(Gesamtprozesszeiten);
         public double DurchschnittlicheGesamtprozesszeitMitTermin => MittelwertOder0(GesamtprozesszeitenMitTermin);
         public double DurchschnittlicheGesamtprozesszeitOhneTermin => MittelwertOder0(GesamtprozesszeitenOhneTermin);
+        internal IReadOnlyList<TagesHitMissPunkt> HitMissProTag => hitMissProTag
+            .Select(eintrag => new TagesHitMissPunkt(
+                eintrag.Key.ToString("ddd dd.MM", CultureInfo.GetCultureInfo("de-DE")),
+                eintrag.Value.Hit,
+                eintrag.Value.Miss))
+            .ToList();
 
         /// <summary>
         /// Speichert ein Ereignis im Trace-Format:
@@ -94,6 +109,26 @@ namespace simSharpSimulation
             Wartezeiten.Add(wartezeitArzt);
             WartezeitenArztNachTyp[patientenTyp].Add(wartezeitArzt);
             FuegeNachTerminHinzu(wartezeitArzt, hatTermin, WartezeitenMitTermin, WartezeitenOhneTermin);
+        }
+
+        public void ErfasseArztAbbruchWartezeit(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlNichtBehandeltArztWartezeit++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+        }
+
+        public void ErfasseArztAbbruchFeierabend(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlNichtBehandeltArztFeierabend++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+        }
+
+        public void ErfasseArztBehandlungBegonnen(DateTime tag)
+        {
+            AnzahlBehandeltHit++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Hit++;
         }
 
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
@@ -264,10 +299,30 @@ namespace simSharpSimulation
             return null;
         }
 
+        private TagesHitMissZaehler ErmittleOderErzeugeTagesHitMiss(DateTime tag)
+        {
+            DateTime datum = tag.Date;
+            if (!hitMissProTag.TryGetValue(datum, out TagesHitMissZaehler? zaehler))
+            {
+                zaehler = new TagesHitMissZaehler();
+                hitMissProTag[datum] = zaehler;
+            }
+
+            return zaehler;
+        }
+
         private sealed class EventZustandsEintrag
         {
             public string Von { get; set; } = string.Empty;
             public string Zu { get; set; } = string.Empty;
         }
+
+        private sealed class TagesHitMissZaehler
+        {
+            public int Hit { get; set; }
+            public int Miss { get; set; }
+        }
     }
+
+    internal readonly record struct TagesHitMissPunkt(string Label, int Hit, int Miss);
 }

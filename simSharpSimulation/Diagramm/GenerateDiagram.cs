@@ -30,6 +30,7 @@ namespace simSharpSimulation
             IReadOnlyList<double> wartezeitenOhneTermin,
             IReadOnlyList<double> schwesternWartezeiten,
             IReadOnlyList<double> gesamtprozesszeiten,
+            IReadOnlyList<TagesHitMissPunkt> hitMissProTag,
             IReadOnlyList<string> traceData,
             IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp,
             IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp,
@@ -77,6 +78,8 @@ namespace simSharpSimulation
             ErzeugeSchwesterBehandlungszeitenJeTyp(schwesternBehandlungszeitenNachTyp);
             // [Diagramm 11] Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin
             ErzeugeWartezeitenTheorieExponentialDiagramm(wartezeitenMitTermin, wartezeitenOhneTermin);
+            // [Diagramm 12] Hit/Miss pro Tag
+            ErzeugeHitMissProTagDiagramm(hitMissProTag);
         }
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)
