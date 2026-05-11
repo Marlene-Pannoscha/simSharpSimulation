@@ -50,8 +50,9 @@ namespace simSharpSimulation
             double[] x = patientEvents.Select(e => e.Zeit).ToArray();
             double[] y = Enumerable.Range(0, patientEvents.Count).Select(i => (double)i).ToArray();
             const double labelOffsetX = 1.5;
+            const float eventTextGroesse = 16f;
 
-            var plot = new ScottPlot.Plot(1400, 800);
+            var plot = new ScottPlot.Plot(1800, 900);
             var timelineScatter = plot.AddScatter(x, y, color: Color.DarkSlateBlue, lineWidth: 2, markerSize: 8, label: $"Patient {zielPatientId.Value}");
             timelineScatter.MarkerShape = ScottPlot.MarkerShape.filledCircle;
 
@@ -59,7 +60,7 @@ namespace simSharpSimulation
             {
                 double? naechsteZeit = i < patientEvents.Count - 1 ? patientEvents[i + 1].Zeit : null;
                 string label = FormatiereEventLabel(patientEvents[i].EventTyp, patientEvents[i].Zeit, naechsteZeit);
-                plot.AddText(label, x[i] + labelOffsetX, y[i], color: Color.Black);
+                plot.AddText(label, x[i] + labelOffsetX, y[i], eventTextGroesse, Color.Black);
             }
 
             double minZeit = x.Min();
@@ -74,8 +75,8 @@ namespace simSharpSimulation
             // Kompakter rechter Puffer:
             // - genug Platz für den längsten Text
             // - deutlich weniger Leerraum als zuvor
-            double textPuffer = 1.5 + (maxLabelLaenge * 0.22);
-            double rechterPuffer = Math.Max(4.0, Math.Min(textPuffer, 10.0));
+            double textPuffer = 3.0 + (maxLabelLaenge * 0.42);
+            double rechterPuffer = Math.Max(10.0, textPuffer);
 
             // Explizite Achsenlimits verhindern, dass der letzte Prozess-Text rechts abgeschnitten wird.
             plot.SetAxisLimits(
