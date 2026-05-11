@@ -9,7 +9,7 @@ namespace simSharpSimulation
 
     internal sealed class PatientenKonfiguration : PersonenKonfiguration
     {
-        public static int ANZAHL_PATIENTEN_TAG { get; internal set; } = 100;
+        public static int ANZAHL_PATIENTEN_TAG { get; internal set; } = 95;
         public static double ERWARTUNGSWERT { get; internal set; } = 180.0;
         public static double STANDARDABWEICHUNG { get; internal set; } = 80.0;
         public static double TERMIN_WAHRSCHEINLICHKEIT { get; internal set; } = 0.7;
