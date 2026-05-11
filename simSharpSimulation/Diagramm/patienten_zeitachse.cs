@@ -15,12 +15,12 @@ namespace simSharpSimulation
             foreach (string line in traceData)
             {
                 string[] parts = line.Split(';');
-                if (parts.Length < 3)
+                if (parts.Length < 5)
                     continue;
 
                 if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double zeit))
                     continue;
-                if (!int.TryParse(parts[2], out int patientId))
+                if (!int.TryParse(parts[4], out int patientId))
                     continue;
 
                 events.Add((zeit, parts[1], patientId));
