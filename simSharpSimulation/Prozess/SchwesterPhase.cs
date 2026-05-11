@@ -37,7 +37,7 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeSchwester(
             Simulation env,
             int patientId,
-            BeweglicherMitarbeiterPool schwestern,
+            BeweglicherSchwesterPool schwestern,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,
