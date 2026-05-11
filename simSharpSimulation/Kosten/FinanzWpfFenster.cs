@@ -414,14 +414,14 @@ internal sealed class FinanzWpfFenster : Window
         sb.AppendLine("Hit/Miss Analyse");
         sb.AppendLine(new string('=', 50));
         sb.AppendLine($"Gesamtnachfrage: {gesamt.ToString("N0", DeCulture)}");
-        sb.AppendLine($"Behandelt (Hit): {anzahlHit.ToString("N0", DeCulture)}");
-        sb.AppendLine($"Nicht behandelt (Miss): {anzahlMiss.ToString("N0", DeCulture)}");
+        sb.AppendLine($"Behandelt (Hit): {anzahlHit.ToString("N0", DeCulture)} ({hitQuote.ToString("N2", DeCulture)} %)");
+        sb.AppendLine($"Nicht behandelt (Miss): {anzahlMiss.ToString("N0", DeCulture)} ({missQuote.ToString("N2", DeCulture)} %)");
         sb.AppendLine($"Hit-Quote: {hitQuote.ToString("N2", DeCulture)} %");
         sb.AppendLine($"Miss-Quote: {missQuote.ToString("N2", DeCulture)} %");
         sb.AppendLine();
         sb.AppendLine("Interpretation");
-        sb.AppendLine($"Von {gesamt.ToString("N0", DeCulture)} angefragten Patienten konnten {anzahlHit.ToString("N0", DeCulture)} versorgt werden.");
-        sb.AppendLine($"{anzahlMiss.ToString("N0", DeCulture)} Patienten konnten wegen begrenzter Tageskapazitaet nicht behandelt werden.");
+        sb.AppendLine($"Von {gesamt.ToString("N0", DeCulture)} angefragten Patienten konnten {anzahlHit.ToString("N0", DeCulture)} ({hitQuote.ToString("N2", DeCulture)} %) versorgt werden.");
+        sb.AppendLine($"{anzahlMiss.ToString("N0", DeCulture)} Patienten ({missQuote.ToString("N2", DeCulture)} %) konnten wegen begrenzter Tageskapazitaet nicht behandelt werden.");
         sb.AppendLine();
         sb.AppendLine("Datei");
         sb.AppendLine($"- Hit/Miss: {hitMissPfad}");
