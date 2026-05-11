@@ -93,11 +93,22 @@ namespace simSharpSimulation
             TimeSpan rezeptionZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN);
 
             // Hilfsmethode zum Auswählen einer Ressource
-            (T res, int id) WaehleRessource<T>(List<T> ressourcen)
+            (PriorityResource res, int id) WaehleRessource(List<PriorityResource> ressourcen)
             {
-                // Wähle zufällig eine Ressource
+                // Freie Ressourcen werden bevorzugt, sonst wartet der Patient bei einer zufaelligen Ressource.
+                var freieRessourcen = ressourcen
+                    .Select((res, index) => (res, index))
+                    .Where(eintrag => eintrag.res.Remaining > 0)
+                    .ToList();
+
+                if (freieRessourcen.Count > 0)
+                {
+                    var eintrag = freieRessourcen[rnd.Next(freieRessourcen.Count)];
+                    return (eintrag.res, eintrag.index + 1);
+                }
+
                 int index = rnd.Next(ressourcen.Count);
-                return (ressourcen[index], index + 1); // IDs starten bei 1
+                return (ressourcen[index], index + 1);
             }
             // Phase P-B: Individueller Patientenablauf.
             // Schritt P4.1: Aktuelle Simulationszeit in Minuten holen.
@@ -124,8 +135,12 @@ namespace simSharpSimulation
             yield return env.Timeout(eingangZurRezeptionDauer);
             double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
 
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rnd, daten))
+            var ersteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, eingangZurRezeptionDauer, rnd, daten, ersteRezeptionErgebnis))
                 yield return ev;
+
+            if (ersteRezeptionErgebnis.PatientHatKlinikVerlassen)
+                yield break;
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
             bool brauchtVorbereitung = false;
@@ -167,9 +182,7 @@ namespace simSharpSimulation
                                 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
-                        // Schritt P4.11B: Wartezimmer verlassen.
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                        // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
                 }
                 else
@@ -214,8 +227,7 @@ namespace simSharpSimulation
                             1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                        // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
                 }
                 else
@@ -230,11 +242,8 @@ namespace simSharpSimulation
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
             if (!ueberspringeSchwester)
             {
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_schwester", patientId);
-                yield return env.Timeout(interneBewegungsdauer);
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_schwesterzimmer", patientId);
-
                 var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
+                var schwesterErgebnis = new BehandlungsPhaseErgebnis();
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
                     env,
@@ -246,9 +255,14 @@ namespace simSharpSimulation
                     hatTermin,
                     direktZurSchwester,
                     pruefeVorbereitungNachZimmer: false,
+                    interneBewegungsdauer,
                     rnd,
-                    daten))
+                    daten,
+                    schwesterErgebnis))
                     yield return ev;
+
+                if (schwesterErgebnis.PatientHatKlinikVerlassen)
+                    yield break;
             }
             else
             {
@@ -274,8 +288,12 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var (arztRes, arztId) = WaehleRessource(aerzte);
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, rnd, daten))
+            var arztErgebnis = new BehandlungsPhaseErgebnis();
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, rnd, daten, arztErgebnis))
                 yield return ev;
+
+            if (arztErgebnis.PatientHatKlinikVerlassen)
+                yield break;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
             bool gehtNachArztZurRezeption = rnd.NextDouble() < 0.6;
@@ -286,8 +304,12 @@ namespace simSharpSimulation
             {
                 yield return env.Timeout(interneBewegungsdauer);
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rnd, daten))
+                var zweiteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, interneBewegungsdauer, rnd, daten, zweiteRezeptionErgebnis))
                     yield return ev;
+
+                if (zweiteRezeptionErgebnis.PatientHatKlinikVerlassen)
+                    yield break;
 
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
                 yield return env.Timeout(rezeptionZumAusgangDauer);

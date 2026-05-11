@@ -63,6 +63,14 @@ namespace simSharpSimulation
         public int AnzahlNichtBehandeltArztFeierabend { get; private set; }
         public int AnzahlNichtBehandeltArztGesamt =>
             AnzahlNichtBehandeltArztWartezeit + AnzahlNichtBehandeltArztFeierabend;
+        public int AnzahlNichtBehandeltSchwesterWartezeit { get; private set; }
+        public int AnzahlNichtBehandeltSchwesterFeierabend { get; private set; }
+        public int AnzahlNichtBehandeltSchwesterGesamt =>
+            AnzahlNichtBehandeltSchwesterWartezeit + AnzahlNichtBehandeltSchwesterFeierabend;
+        public int AnzahlNichtBehandeltRezeptionWartezeit { get; private set; }
+        public int AnzahlNichtBehandeltRezeptionFeierabend { get; private set; }
+        public int AnzahlNichtBehandeltRezeptionGesamt =>
+            AnzahlNichtBehandeltRezeptionWartezeit + AnzahlNichtBehandeltRezeptionFeierabend;
 
         // Abgeleitete Kennzahlen
         public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
@@ -129,6 +137,34 @@ namespace simSharpSimulation
         {
             AnzahlBehandeltHit++;
             ErmittleOderErzeugeTagesHitMiss(tag).Hit++;
+        }
+
+        public void ErfasseSchwesterAbbruchWartezeit(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlNichtBehandeltSchwesterWartezeit++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+        }
+
+        public void ErfasseSchwesterAbbruchFeierabend(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlNichtBehandeltSchwesterFeierabend++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+        }
+
+        public void ErfasseRezeptionAbbruchWartezeit(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlNichtBehandeltRezeptionWartezeit++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+        }
+
+        public void ErfasseRezeptionAbbruchFeierabend(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlNichtBehandeltRezeptionFeierabend++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)

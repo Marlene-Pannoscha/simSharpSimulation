@@ -46,7 +46,8 @@ namespace simSharpSimulation
             bool hatTermin,
             TimeSpan interneBewegungsdauer,
             Random rnd,
-            SimulationsDaten daten)
+            SimulationsDaten daten,
+            BehandlungsPhaseErgebnis ergebnis)
         {
             // Aktuelle Simulationszeit fuer das Logging holen.
             double limitMinuten = 55.0;
@@ -57,7 +58,7 @@ namespace simSharpSimulation
             // fuer diesen Tag ueberhaupt noch offen ist.
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true))
+                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -78,7 +79,7 @@ namespace simSharpSimulation
                 if (restMinuten <= 0)
                 {
                     bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -95,7 +96,7 @@ namespace simSharpSimulation
                 if (!arztVerfuegbar.IsProcessed)
                 {
                     bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -113,7 +114,7 @@ namespace simSharpSimulation
                 // wird der Patient noch vor Betreten des Arztzimmers abgewiesen.
                 if (nowMinutes > schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -162,7 +163,8 @@ namespace simSharpSimulation
             int patientId,
             int arztId,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend)
+            bool wegenFeierabend,
+            BehandlungsPhaseErgebnis ergebnis)
         {
             // Diese Hilfsmethode haelt den Abbruchpfad an einer Stelle zusammen,
             // damit Wartezeit- und Feierabend-Abbrueche identisch behandelt werden.
@@ -184,6 +186,7 @@ namespace simSharpSimulation
 
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            ergebnis.MarkiereKlinikVerlassen();
         }
     }
 }

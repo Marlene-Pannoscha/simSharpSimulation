@@ -88,9 +88,13 @@ namespace simSharpSimulation
             Console.WriteLine($"Durchschnittliche Wartezeit (Rezeption): {avgRezeptionsWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
-            Console.WriteLine($"Nicht behandelte Patienten gesamt: {daten.AnzahlNichtBehandeltArztGesamt}");
-            Console.WriteLine($"  davon Arzt-Wartezeit > 40 Min.: {daten.AnzahlNichtBehandeltArztWartezeit}");
-            Console.WriteLine($"  davon nach 8 Stunden Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend}");
+            Console.WriteLine($"Nicht behandelte Patienten gesamt: {daten.AnzahlNichtBehandeltRezeptionGesamt + daten.AnzahlNichtBehandeltSchwesterGesamt + daten.AnzahlNichtBehandeltArztGesamt}");
+            Console.WriteLine($"  davon Rezeption-Wartezeit > 55 Min.: {daten.AnzahlNichtBehandeltRezeptionWartezeit}");
+            Console.WriteLine($"  davon Rezeption-Schichtende: {daten.AnzahlNichtBehandeltRezeptionFeierabend}");
+            Console.WriteLine($"  davon Schwester-Wartezeit > 55 Min.: {daten.AnzahlNichtBehandeltSchwesterWartezeit}");
+            Console.WriteLine($"  davon Schwester-Schichtende: {daten.AnzahlNichtBehandeltSchwesterFeierabend}");
+            Console.WriteLine($"  davon Arzt-Wartezeit > 55 Min.: {daten.AnzahlNichtBehandeltArztWartezeit}");
+            Console.WriteLine($"  davon Arzt-Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend}");
             Console.WriteLine($"Durchschnittliche Gesamtprozesszeit: {avgGesamtprozesszeit:F2} Minuten");
 
             Console.WriteLine();

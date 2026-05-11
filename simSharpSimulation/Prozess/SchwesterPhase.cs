@@ -5,9 +5,9 @@ using System.Collections.Generic;
 namespace simSharpSimulation
 {
     /*
-     * Diese Klasse kapselt die Logik für die "Schwester-Phase" im Simulationsprozess.
-     * Sie wird als statische Klasse implementiert, da sie keine eigenen Zustandsdaten hält,
-     * sondern alle benötigten Informationen als Parameter erhält.
+     * Diese Klasse kapselt die Logik fuer die Schwester-Phase im Simulationsprozess.
+     * Die Warteschlange ist analog zur Arzt-Phase aufgebaut:
+     * warten auf freie Ressource oder Abbruch wegen Wartezeit/Feierabend.
      */
     public static class SchwesterPhase
     {
@@ -21,19 +21,7 @@ namespace simSharpSimulation
                 _ => 1
             };
         }
-        /*
-         * Beschreibt den Prozess, den ein Patient bei der Krankenschwester durchläuft.
-         *
-         * env: Die Simulationsumgebung (Uhr, Ereignis-Scheduler).
-         * patientId: Die eindeutige ID des Patienten.
-         * schwester: Die Schwester-Ressource, die belegt werden muss.
-         * ankunftszeit: Der Zeitpunkt, an dem der Patient die Klinik betreten hat (für Wartezeitberechnung).
-         * direktZurSchwester: Gibt an, ob der Patient das Wartezimmer übersprungen hat.
-         * pruefeVorbereitungNachZimmer: Steuert, ob eine zufällige Vorbereitung stattfinden soll.
-         * rnd: Der Zufallsgenerator für stochastische Dauern.
-         * daten: Das Objekt zum Sammeln und Speichern von Simulationsdaten.
-         * returns: Eine Sequenz von Simulationsereignissen.
-         */
+
         public static IEnumerable<Event> DurchlaufeSchwester(
             Simulation env,
             int patientId,
@@ -44,50 +32,124 @@ namespace simSharpSimulation
             bool hatTermin,
             bool direktZurSchwester,
             bool pruefeVorbereitungNachZimmer,
+            TimeSpan interneBewegungsdauer,
             Random rnd,
-            SimulationsDaten daten)
+            SimulationsDaten daten,
+            BehandlungsPhaseErgebnis ergebnis)
         {
-            // Aktuelle Simulationszeit für das Logging holen.
+            double limitMinuten = 55.0;
+            double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
-            // Schritt S1: Wenn der Patient nicht direkt zur Schwester konnte,
-            // wird geloggt, dass er die Warteschlange für die Schwester betritt.
             if (!direktZurSchwester)
             {
                 daten.LogEvent(nowMinutes, "betritt_schwester_warteschlange", patientId);
             }
 
-            // Schritt S2: Eine Schwester anfordern.
-            // 'using' stellt sicher, dass die Ressource am Ende wieder freigegeben wird.
-            // Der Prozess pausiert hier (yield return req), bis eine Schwester frei ist.
-            using (var req = schwester.Request(priority: GetPriority(patientenTyp)))
+            if (nowMinutes >= schichtEndeMinuten)
             {
-                yield return req; // Warten, bis die Schwester-Ressource verfügbar ist.
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    yield return ev;
+                yield break;
+            }
 
-                // Schritt S3: Schwester ist frei, der Prozess wird fortgesetzt.
+            double deadlineMinuten = Math.Min(schichtEndeMinuten, nowMinutes + limitMinuten);
+
+            while (schwester.Remaining <= 0)
+            {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                double restMinuten = deadlineMinuten - nowMinutes;
+
+                if (restMinuten <= 0)
+                {
+                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+
+                Event schwesterVerfuegbar = schwester.WhenAny();
+                Event timeout = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return schwesterVerfuegbar | timeout;
+
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                if (!schwesterVerfuegbar.IsProcessed)
+                {
+                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+            }
+
+            using (Request req = schwester.Request(priority: GetPriority(patientenTyp)))
+            {
+                yield return req;
+
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                if (nowMinutes > schichtEndeMinuten)
+                {
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+
+                if (!direktZurSchwester)
+                {
+                    daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                }
+
+                daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
+                yield return env.Timeout(interneBewegungsdauer);
+
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                daten.LogEvent(nowMinutes, "betritt_schwesterzimmer", patientId);
                 daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
 
-                // Die Wartezeit auf die Schwester berechnen und speichern.
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
                 daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
 
-                // Schritt S5: Die eigentliche Behandlung/Interaktion mit der Schwester.
-                // Dauer der Behandlung basiert auf dem Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitSchwester;
-                
-                double sigma = 0.35; // Etwas geringere Streuung bei standardisierten Schwester-Aufgaben
+
+                double sigma = 0.35;
                 double mu = Math.Log(mittlereDauer) - 0.5 * Math.Pow(sigma, 2);
                 double dauerBehandlung = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
                 daten.ErfasseSchwesterBehandlungszeit(dauerBehandlung, hatTermin, patientenTyp);
-                yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung)); // Prozess für die Dauer anhalten.
+                yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung));
 
-                // Schritt S6: Der gesamte Schwester-Prozess ist beendet.
-                // Die Ressource wird durch das 'using'-Statement automatisch freigegeben.
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
             }
+        }
+
+        private static IEnumerable<Event> BrichSchwesterWartenAb(
+            Simulation env,
+            SimulationsDaten daten,
+            int patientId,
+            int schwesterId,
+            TimeSpan interneBewegungsdauer,
+            bool wegenFeierabend,
+            BehandlungsPhaseErgebnis ergebnis)
+        {
+            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            if (wegenFeierabend)
+            {
+                daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
+                daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
+            }
+            else
+            {
+                daten.ErfasseSchwesterAbbruchWartezeit(env.StartDate);
+                daten.LogEvent(nowMinutes, "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_schwester", patientId, schwesterId: schwesterId);
+            }
+
+            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
+            yield return env.Timeout(interneBewegungsdauer);
+
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            ergebnis.MarkiereKlinikVerlassen();
         }
     }
 }
