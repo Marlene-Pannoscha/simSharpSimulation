@@ -37,7 +37,7 @@ namespace simSharpSimulation
             DateTime startDatum = new DateTime(2000, 1, 3);
             TimeSpan maximaleTagesdauer = BerechneMaximaleTagesdauer();
 
-            for (int tag = 0; tag < 5; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
+            for (int tag = 0; tag < Program.SimulierteArbeitstage; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
             {
                 // Schritt P2.1: Für jeden Tag eine neue Simulationsumgebung erzeugen.
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.

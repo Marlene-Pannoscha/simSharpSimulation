@@ -24,7 +24,7 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
-            double limitMinuten = 55.0;
+            double limitMinuten = 15.0;
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
