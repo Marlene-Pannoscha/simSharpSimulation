@@ -2,4 +2,4 @@
 **/bin/**
 **/obj/**
 **/.dotnet/**
-klinik_trace.txt
+**/klinik_trace.txt/**
