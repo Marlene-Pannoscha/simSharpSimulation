@@ -60,8 +60,8 @@ namespace simSharpSimulation
                 .FirstOrDefault(priorisierteMissEvents.Contains) ?? "miss";
 
             string missGrund = missEventTyp == "bricht_ab_wegen_feierabend_arzt"
-                ? "Abbruch wegen Feierabend"
-                : "Abbruch wegen zu langer Wartezeit";
+                ? "   Abbruch wegen Feierabend"
+                : "   Abbruch wegen zu langer Wartezeit";
 
             Color linienFarbe = missEventTyp == "bricht_ab_wegen_feierabend_arzt"
                 ? Color.DarkOrange
@@ -70,14 +70,16 @@ namespace simSharpSimulation
             double[] x = patientEvents.Select(e => e.Zeit).ToArray();
             double[] y = Enumerable.Range(0, patientEvents.Count).Select(i => (double)i).ToArray();
             const double labelOffsetX = 1.5;
+            const float eventTextGroesse = 18f;
+            const float hinweisTextGroesse = 20f;
 
-            var plot = new ScottPlot.Plot(1400, 800);
+            var plot = new ScottPlot.Plot(1800, 1000);
             var timelineScatter = plot.AddScatter(
                 x,
                 y,
                 color: linienFarbe,
-                lineWidth: 2,
-                markerSize: 8,
+                lineWidth: 3,
+                markerSize: 10,
                 label: $"Miss-Patient {zielPatientId.Value}");
             timelineScatter.MarkerShape = ScottPlot.MarkerShape.filledCircle;
 
@@ -85,20 +87,22 @@ namespace simSharpSimulation
             {
                 double? naechsteZeit = i < patientEvents.Count - 1 ? patientEvents[i + 1].Zeit : null;
                 string label = FormatiereEventLabel(patientEvents[i].EventTyp, patientEvents[i].Zeit, naechsteZeit);
-                plot.AddText(label, x[i] + labelOffsetX, y[i], color: Color.Black);
+                plot.AddText(label, x[i] + labelOffsetX, y[i], eventTextGroesse, Color.Black);
             }
 
             double minZeit = x.Min();
             double maxZeit = x.Max();
             double zeitSpanne = Math.Max(maxZeit - minZeit, 1.0);
             double linkerPuffer = Math.Max(1.0, zeitSpanne * 0.05);
+            double hinweisOffsetX = Math.Max(2.5, zeitSpanne * 0.06);
             int maxLabelLaenge = patientEvents
                 .Select(e => e.EventTyp.Replace('_', ' ').Length)
                 .DefaultIfEmpty(0)
                 .Max();
 
-            double textPuffer = 1.5 + (maxLabelLaenge * 0.22);
-            double rechterPuffer = Math.Max(4.0, Math.Min(textPuffer, 12.0));
+            int maxTextLaenge = Math.Max(maxLabelLaenge, missGrund.Length);
+            double textPuffer = 4.0 + (maxTextLaenge * 0.45);
+            double rechterPuffer = Math.Max(12.0, textPuffer);
 
             plot.SetAxisLimits(
                 xMin: minZeit - linkerPuffer,
@@ -111,7 +115,7 @@ namespace simSharpSimulation
             plot.YLabel("Prozessschritt (chronologisch)");
             plot.Legend(location: ScottPlot.Alignment.UpperLeft);
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
-            plot.AddText(missGrund, minZeit, patientEvents.Count - 0.2, color: linienFarbe);
+            plot.AddText(missGrund, minZeit + hinweisOffsetX, patientEvents.Count - 0.2, hinweisTextGroesse, linienFarbe);
 
             string outputPath = ErzeugeOutputPfad("miss_patienten_zeitachse.png");
             plot.SaveFig(outputPath);
