@@ -80,6 +80,8 @@ namespace simSharpSimulation
             ErzeugeWartezeitenTheorieExponentialDiagramm(wartezeitenMitTermin, wartezeitenOhneTermin);
             // [Diagramm 12] Hit/Miss pro Tag
             ErzeugeHitMissProTagDiagramm(hitMissProTag);
+            // [Diagramm 13] Zeitachse eines Miss-Patienten (Wartezeit/Feierabend)
+            ErzeugeMissPatientenZeitachsenDiagramm(traceData);
         }
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)

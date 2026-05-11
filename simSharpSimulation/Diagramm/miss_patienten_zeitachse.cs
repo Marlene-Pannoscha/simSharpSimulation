@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 
 namespace simSharpSimulation
 {
-    // Dateirolle: Diagramm 7 - Zeitachse eines einzelnen Patienten aus den Trace-Ereignissen.
+    // Dateirolle: Diagramm 13 - Zeitachse eines besonderen Miss-Patienten
+    // (Abbruch wegen zu langer Wartezeit oder ausserhalb der Arbeitszeit).
     internal static partial class GenerateDiagramme
     {
-        // Diagramm 7
-        private static void ErzeugePatientenZeitachsenDiagramm(IReadOnlyList<string> traceData)
+        // Diagramm 13
+        private static void ErzeugeMissPatientenZeitachsenDiagramm(IReadOnlyList<string> traceData)
         {
             var events = new List<(double Zeit, string EventTyp, int PatientId)>();
             foreach (string line in traceData)
@@ -18,7 +20,7 @@ namespace simSharpSimulation
                 if (parts.Length < 5)
                     continue;
 
-                if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double zeit))
+                if (!double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double zeit))
                     continue;
                 if (!int.TryParse(parts[4], out int patientId))
                     continue;
@@ -29,11 +31,17 @@ namespace simSharpSimulation
             if (events.Count == 0)
                 return;
 
-            int? zielPatientId = events
-                .GroupBy(e => e.PatientId)
-                .OrderBy(g => g.Key)
-                .Where(g => g.Any(x => x.EventTyp == "betritt_klinik") && g.Any(x => x.EventTyp == "verlaesst_klinik"))
-                .Select(g => (int?)g.Key)
+            string[] priorisierteMissEvents =
+            {
+                "bricht_ab_und_verlaesst_klinik_wegen_wartezeit",
+                "bricht_ab_wegen_feierabend_arzt"
+            };
+
+            int? zielPatientId = priorisierteMissEvents
+                .SelectMany(eventTyp => events
+                    .Where(e => e.EventTyp == eventTyp)
+                    .OrderBy(e => e.Zeit)
+                    .Select(e => (int?)e.PatientId))
                 .FirstOrDefault();
 
             if (zielPatientId is null)
@@ -47,12 +55,30 @@ namespace simSharpSimulation
             if (patientEvents.Count == 0)
                 return;
 
+            string missEventTyp = patientEvents
+                .Select(e => e.EventTyp)
+                .FirstOrDefault(priorisierteMissEvents.Contains) ?? "miss";
+
+            string missGrund = missEventTyp == "bricht_ab_wegen_feierabend_arzt"
+                ? "Abbruch wegen Feierabend"
+                : "Abbruch wegen zu langer Wartezeit";
+
+            Color linienFarbe = missEventTyp == "bricht_ab_wegen_feierabend_arzt"
+                ? Color.DarkOrange
+                : Color.Crimson;
+
             double[] x = patientEvents.Select(e => e.Zeit).ToArray();
             double[] y = Enumerable.Range(0, patientEvents.Count).Select(i => (double)i).ToArray();
             const double labelOffsetX = 1.5;
 
             var plot = new ScottPlot.Plot(1400, 800);
-            var timelineScatter = plot.AddScatter(x, y, color: Color.DarkSlateBlue, lineWidth: 2, markerSize: 8, label: $"Patient {zielPatientId.Value}");
+            var timelineScatter = plot.AddScatter(
+                x,
+                y,
+                color: linienFarbe,
+                lineWidth: 2,
+                markerSize: 8,
+                label: $"Miss-Patient {zielPatientId.Value}");
             timelineScatter.MarkerShape = ScottPlot.MarkerShape.filledCircle;
 
             for (int i = 0; i < patientEvents.Count; i++)
@@ -71,42 +97,25 @@ namespace simSharpSimulation
                 .DefaultIfEmpty(0)
                 .Max();
 
-            // Kompakter rechter Puffer:
-            // - genug Platz für den längsten Text
-            // - deutlich weniger Leerraum als zuvor
             double textPuffer = 1.5 + (maxLabelLaenge * 0.22);
-            double rechterPuffer = Math.Max(4.0, Math.Min(textPuffer, 10.0));
+            double rechterPuffer = Math.Max(4.0, Math.Min(textPuffer, 12.0));
 
-            // Explizite Achsenlimits verhindern, dass der letzte Prozess-Text rechts abgeschnitten wird.
             plot.SetAxisLimits(
                 xMin: minZeit - linkerPuffer,
                 xMax: maxZeit + rechterPuffer + labelOffsetX,
                 yMin: -0.8,
                 yMax: patientEvents.Count - 1 + 0.8);
 
-            plot.Title($"Zeitachse eines Patienten (ID: {zielPatientId.Value})");
+            plot.Title($"Zeitachse eines Miss-Patienten (ID: {zielPatientId.Value})");
             plot.XLabel("Zeit in Minuten seit Tagesbeginn");
             plot.YLabel("Prozessschritt (chronologisch)");
             plot.Legend(location: ScottPlot.Alignment.UpperLeft);
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
+            plot.AddText(missGrund, minZeit, patientEvents.Count - 0.2, color: linienFarbe);
 
-            string outputPath = ErzeugeOutputPfad("patienten_zeitachse.png");
+            string outputPath = ErzeugeOutputPfad("miss_patienten_zeitachse.png");
             plot.SaveFig(outputPath);
-            Console.WriteLine($"--- Diagramm 7 gespeichert: {outputPath} ---");
-        }
-
-        private static string FormatiereEventLabel(string eventTyp, double aktuelleZeit, double? naechsteZeit)
-        {
-            string basis = eventTyp.Replace('_', ' ');
-
-            if (!eventTyp.StartsWith("geht_", StringComparison.OrdinalIgnoreCase) || !naechsteZeit.HasValue)
-                return basis;
-
-            double sekunden = (naechsteZeit.Value - aktuelleZeit) * 60.0;
-            if (sekunden < 0)
-                return basis;
-
-            return $"{basis} ({sekunden:0.#}s)";
+            Console.WriteLine($"--- Diagramm 13 gespeichert: {outputPath} ---");
         }
     }
 }
