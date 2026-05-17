@@ -142,11 +142,15 @@ namespace simSharpSimulation
                 // Behandlungsdauer nach Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
+                double variationskoeffizient = typInfo.VariationskoeffizientArzt;
 
                 // Log-Normalverteilung fuer realistischere Zeiten:
                 // viele Werte liegen nahe am Mittelwert, einige dauern deutlich laenger.
-                double sigma = 0.4;
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Pow(sigma, 2);
+                // Umrechnung von Mittelwert und Variationskoeffizient in die Parameter mu und sigma der Lognormalverteilung
+                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
+                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
+
                 double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
                 daten.ErfasseArztBehandlungszeit(dauer, hatTermin, patientenTyp);
 

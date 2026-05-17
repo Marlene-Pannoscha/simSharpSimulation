@@ -111,9 +111,12 @@ namespace simSharpSimulation
 
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitSchwester;
+                double variationskoeffizient = typInfo.VariationskoeffizientSchwester;
 
-                double sigma = 0.35;
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Pow(sigma, 2);
+                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
+                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
+
                 double dauerBehandlung = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
                 daten.ErfasseSchwesterBehandlungszeit(dauerBehandlung, hatTermin, patientenTyp);
                 yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung));
