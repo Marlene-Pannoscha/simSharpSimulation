@@ -8,13 +8,16 @@ using System.Windows.Media.Imaging;
 
 namespace simSharpSimulation;
 
-internal sealed class FinanzWpfFenster : Window
+internal sealed partial class FinanzWpfFenster : Window
 {
     // Diese Steuerelemente werden benoetigt, um Eingaben zu lesen und Ergebnisse anzuzeigen.
     private readonly TextBox aerzteTextBox;
     private readonly TextBox schwesternTextBox;
     private readonly TextBox rezeptionTextBox;
-    private readonly TextBox behandlungsraeumeTextBox;
+    private readonly TextBox behandlungsraeumeSchwesterTextBox;
+    private readonly TextBox behandlungsflaecheSchwesterTextBox;
+    private readonly TextBox behandlungsraeumeArztTextBox;
+    private readonly TextBox behandlungsflaecheArztTextBox;
     private readonly ComboBox zeitraumComboBox;
     private TextBox ergebnisTextBox = null!;
     private Image finanzenImage = null!;
@@ -44,28 +47,24 @@ internal sealed class FinanzWpfFenster : Window
         root.Margin = new Thickness(12);
 
         Grid eingabeGrid = new();
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        // Rezeption
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        // Behandlungsraeume
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        eingabeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        eingabeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        eingabeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        // Zeile 1: Personal
+        Grid personalGrid = new();
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
 
         Label aerzteLabel = new() { Content = "Anzahl Aerzte:", VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(aerzteLabel, 0);
-        eingabeGrid.Children.Add(aerzteLabel);
+        personalGrid.Children.Add(aerzteLabel);
 
         aerzteTextBox = new TextBox
         {
@@ -73,11 +72,11 @@ internal sealed class FinanzWpfFenster : Window
             VerticalContentAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(aerzteTextBox, 1);
-        eingabeGrid.Children.Add(aerzteTextBox);
+        personalGrid.Children.Add(aerzteTextBox);
 
         Label schwesternLabel = new() { Content = "Anzahl Schwestern:", VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(schwesternLabel, 3);
-        eingabeGrid.Children.Add(schwesternLabel);
+        personalGrid.Children.Add(schwesternLabel);
 
         schwesternTextBox = new TextBox
         {
@@ -85,12 +84,11 @@ internal sealed class FinanzWpfFenster : Window
             VerticalContentAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(schwesternTextBox, 4);
-        eingabeGrid.Children.Add(schwesternTextBox);
+        personalGrid.Children.Add(schwesternTextBox);
 
-        // Rezeption
         Label rezeptionLabel = new() { Content = "Anzahl Rezeption:", VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(rezeptionLabel, 6);
-        eingabeGrid.Children.Add(rezeptionLabel);
+        personalGrid.Children.Add(rezeptionLabel);
 
         rezeptionTextBox = new TextBox
         {
@@ -98,24 +96,84 @@ internal sealed class FinanzWpfFenster : Window
             VerticalContentAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(rezeptionTextBox, 7);
-        eingabeGrid.Children.Add(rezeptionTextBox);
+        personalGrid.Children.Add(rezeptionTextBox);
+        Grid.SetRow(personalGrid, 0);
+        eingabeGrid.Children.Add(personalGrid);
 
-        // Behandlungsraeume
-        Label behandlungsLabel = new() { Content = "Anzahl Behandlungszimmer:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(behandlungsLabel, 9);
-        eingabeGrid.Children.Add(behandlungsLabel);
+        // Zeile 2: Behandlungsraeume
+        Grid raeumeGrid = new();
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
 
-        behandlungsraeumeTextBox = new TextBox
+        Label behandlungsSchwesterLabel = new() { Content = "Zimmer Schwester:", VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(behandlungsSchwesterLabel, 0);
+        raeumeGrid.Children.Add(behandlungsSchwesterLabel);
+
+        behandlungsraeumeSchwesterTextBox = new TextBox
         {
-            Text = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeume.ToString(CultureInfo.InvariantCulture),
+            Text = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture),
             VerticalContentAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(behandlungsraeumeTextBox, 10);
-        eingabeGrid.Children.Add(behandlungsraeumeTextBox);
+        Grid.SetColumn(behandlungsraeumeSchwesterTextBox, 1);
+        raeumeGrid.Children.Add(behandlungsraeumeSchwesterTextBox);
+
+        Label behandlungsSchwesterFlaecheLabel = new() { Content = "Schwester-Zimmer Fläche m²:", VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(behandlungsSchwesterFlaecheLabel, 3);
+        raeumeGrid.Children.Add(behandlungsSchwesterFlaecheLabel);
+
+        behandlungsflaecheSchwesterTextBox = new TextBox
+        {
+            Text = KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(behandlungsflaecheSchwesterTextBox, 4);
+        raeumeGrid.Children.Add(behandlungsflaecheSchwesterTextBox);
+
+        Label behandlungsArztLabel = new() { Content = "Zimmer Arzt:", VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(behandlungsArztLabel, 6);
+        raeumeGrid.Children.Add(behandlungsArztLabel);
+
+        behandlungsraeumeArztTextBox = new TextBox
+        {
+            Text = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(behandlungsraeumeArztTextBox, 7);
+        raeumeGrid.Children.Add(behandlungsraeumeArztTextBox);
+
+        Label behandlungsArztFlaecheLabel = new() { Content = "Arzt-Zimmer Fläche m²:", VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(behandlungsArztFlaecheLabel, 9);
+        raeumeGrid.Children.Add(behandlungsArztFlaecheLabel);
+
+        behandlungsflaecheArztTextBox = new TextBox
+        {
+            Text = KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(behandlungsflaecheArztTextBox, 10);
+        raeumeGrid.Children.Add(behandlungsflaecheArztTextBox);
+        Grid.SetRow(raeumeGrid, 1);
+        eingabeGrid.Children.Add(raeumeGrid);
+
+        // Zeile 3: Zeitraum + Start
+        Grid aktionenGrid = new();
+        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
+        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         Label zeitraumLabel = new() { Content = "Zeitraum:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(zeitraumLabel, 12);
-        eingabeGrid.Children.Add(zeitraumLabel);
+        Grid.SetColumn(zeitraumLabel, 0);
+        aktionenGrid.Children.Add(zeitraumLabel);
 
         zeitraumComboBox = new ComboBox
         {
@@ -124,8 +182,8 @@ internal sealed class FinanzWpfFenster : Window
             VerticalContentAlignment = VerticalAlignment.Center,
             IsEditable = false
         };
-        Grid.SetColumn(zeitraumComboBox, 13);
-        eingabeGrid.Children.Add(zeitraumComboBox);
+        Grid.SetColumn(zeitraumComboBox, 1);
+        aktionenGrid.Children.Add(zeitraumComboBox);
 
         Button startenButton = new()
         {
@@ -136,8 +194,10 @@ internal sealed class FinanzWpfFenster : Window
             FontWeight = FontWeights.SemiBold
         };
         startenButton.Click += SimulationStarten_Click;
-        Grid.SetColumn(startenButton, 15);
-        eingabeGrid.Children.Add(startenButton);
+        Grid.SetColumn(startenButton, 3);
+        aktionenGrid.Children.Add(startenButton);
+        Grid.SetRow(aktionenGrid, 2);
+        eingabeGrid.Children.Add(aktionenGrid);
 
         Grid.SetRow(eingabeGrid, 0);
         root.Children.Add(eingabeGrid);
@@ -176,87 +236,30 @@ internal sealed class FinanzWpfFenster : Window
         Content = root;
     }
 
-    private Grid ErstelleFinanzenTab()
-    {
-        Grid inhaltGrid = new();
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-        // Links stehen Textauswertung und Kennzahlen, rechts die erzeugten Diagramme.
-        ergebnisTextBox = new TextBox
-        {
-            IsReadOnly = true,
-            TextWrapping = TextWrapping.Wrap,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 13,
-            Padding = new Thickness(8)
-        };
-        Grid.SetColumn(ergebnisTextBox, 0);
-        Grid.SetRow(ergebnisTextBox, 0);
-        inhaltGrid.Children.Add(ergebnisTextBox);
-
-        Grid bilderGrid = new();
-        bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
-        bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-        Border finanzenBorder = ErzeugeBildContainer("Umsatz und Kosten", out finanzenImage);
-        Grid.SetRow(finanzenBorder, 0);
-        bilderGrid.Children.Add(finanzenBorder);
-
-        Border gewinnBorder = ErzeugeBildContainer("Gewinn", out gewinnImage);
-        Grid.SetRow(gewinnBorder, 2);
-        bilderGrid.Children.Add(gewinnBorder);
-
-        Grid.SetColumn(bilderGrid, 2);
-        Grid.SetRow(bilderGrid, 0);
-        inhaltGrid.Children.Add(bilderGrid);
-
-        return inhaltGrid;
-    }
-
-    private Grid ErstelleHitMissTab()
-    {
-        Grid inhaltGrid = new();
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-        // Links: Hit/Miss Statistik
-        hitMissErgebnisTextBox = new TextBox
-        {
-            IsReadOnly = true,
-            TextWrapping = TextWrapping.Wrap,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 13,
-            Padding = new Thickness(8)
-        };
-        Grid.SetColumn(hitMissErgebnisTextBox, 0);
-        Grid.SetRow(hitMissErgebnisTextBox, 0);
-        inhaltGrid.Children.Add(hitMissErgebnisTextBox);
-
-        // Rechts: Hit/Miss Diagramm
-        Border diagrammBorder = ErzeugeBildContainer("Hit vs Miss Verteilung", out hitMissImage);
-        Grid.SetColumn(diagrammBorder, 2);
-        Grid.SetRow(diagrammBorder, 0);
-        inhaltGrid.Children.Add(diagrammBorder);
-
-        return inhaltGrid;
-    }
-    
-
     public static void StarteFenster()
     {
         // Startpunkt fuer den WPF-Modus der Finanzsimulation.
-        Application app = new();
-        app.Run(new FinanzWpfFenster());
+        try
+        {
+            Console.WriteLine("--- Starte WPF-Finanzsimulation ---");
+            Application app = new();
+            app.DispatcherUnhandledException += (s, e) =>
+            {
+                Console.WriteLine($"Fehler in WPF-Dispatcher: {e.Exception}");
+                e.Handled = false;
+            };
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                Console.WriteLine($"Unerwarteter Fehler: {e.ExceptionObject}");
+            };
+            app.Run(new FinanzWpfFenster());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fehler beim Starten des WPF-Fensters: {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            throw;
+        }
     }
 
     private void SimulationStarten_Click(object sender, RoutedEventArgs e)
@@ -270,16 +273,31 @@ internal sealed class FinanzWpfFenster : Window
             if (!TryParseInt(schwesternTextBox.Text, 1, 80, out int anzahlSchwestern, out string schwesternFehler))
                 throw new InvalidOperationException(schwesternFehler);
 
-            // Rezeption und Anzahl Behandlungszimmer aus UI einlesen
+            // Rezeption und Verteilung der Behandlungszimmer aus UI einlesen
             if (!TryParseInt(rezeptionTextBox.Text, 0, 80, out int anzahlRezeptionisten, out string rezeptionFehler))
                 throw new InvalidOperationException(rezeptionFehler);
 
-            if (!TryParseInt(behandlungsraeumeTextBox.Text, 1, 100, out int anzahlBehandlungsraeume, out string raeumeFehler))
-                throw new InvalidOperationException(raeumeFehler);
+            if (!TryParseInt(behandlungsraeumeSchwesterTextBox.Text, 0, 100, out int anzahlSchwesterZimmer, out string schwesterZimmerFehler))
+                throw new InvalidOperationException(schwesterZimmerFehler);
+
+            if (!TryParseDouble(behandlungsflaecheSchwesterTextBox.Text, 1.0, 1000.0, out double flaecheSchwester, out string schwesterFlaecheFehler))
+                throw new InvalidOperationException(schwesterFlaecheFehler);
+
+            if (!TryParseInt(behandlungsraeumeArztTextBox.Text, 0, 100, out int anzahlArztZimmer, out string arztZimmerFehler))
+                throw new InvalidOperationException(arztZimmerFehler);
+
+            if (!TryParseDouble(behandlungsflaecheArztTextBox.Text, 1.0, 1000.0, out double flaecheArzt, out string arztFlaecheFehler))
+                throw new InvalidOperationException(arztFlaecheFehler);
+
+            if (anzahlSchwesterZimmer + anzahlArztZimmer <= 0)
+                throw new InvalidOperationException("Bitte mindestens ein Behandlungszimmer insgesamt angeben.");
 
             // Setze globale Konfigurationen, damit Simulation und Auswertung die Werte verwenden
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = anzahlRezeptionisten;
-            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeume = anzahlBehandlungsraeume;
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester = anzahlSchwesterZimmer;
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter = flaecheSchwester;
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt = anzahlArztZimmer;
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter = flaecheArzt;
 
             string zeitraum = zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
 
@@ -329,6 +347,25 @@ internal sealed class FinanzWpfFenster : Window
         return true;
     }
 
+    private static bool TryParseDouble(string? input, double min, double max, out double value, out string error)
+    {
+        if (!double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out value) &&
+            !double.TryParse(input, NumberStyles.Float, DeCulture, out value))
+        {
+            error = $"Bitte eine Zahl zwischen {min.ToString(DeCulture)} und {max.ToString(DeCulture)} eingeben.";
+            return false;
+        }
+
+        if (value < min || value > max)
+        {
+            error = $"Wert ausserhalb des Bereichs: erlaubt ist {min.ToString(DeCulture)} bis {max.ToString(DeCulture)}.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
+
     private static Border ErzeugeBildContainer(string titel, out Image image)
     {
         // Kapselt die gemeinsame Darstellung fuer beide Diagrammbereiche.
@@ -360,74 +397,6 @@ internal sealed class FinanzWpfFenster : Window
         };
     }
 
-    private static string ErzeugeErgebnisText(FinanzErgebnis ergebnis, string finanzenPfad, string gewinnPfad)
-    {
-        Versicherungsverteilung versicherungen = ergebnis.VersicherungenGesamt;
-        Umsatzverteilung umsatzverteilung = ergebnis.UmsatzverteilungGesamt;
-        Behandlungsmix behandlungsmix = ergebnis.BehandlungsmixGesamt;
-
-        // Der Bericht fasst die Simulation kompakt fuer die linke Textspalte zusammen.
-        StringBuilder sb = new();
-        sb.AppendLine("Ergebnis");
-        sb.AppendLine(new string('=', 50));
-        sb.AppendLine($"Zeitraum: {ergebnis.Zeitraum}");
-        sb.AppendLine($"Simulierte Tage: {ergebnis.SimulierteTage}");
-        sb.AppendLine($"Gesamtumsatz: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtUmsatz)}");
-        sb.AppendLine($"Gesamtkosten: {FinanzVisualisierung.FormatEuro(ergebnis.Gesamtkosten)}");
-        sb.AppendLine($"Gesamtgewinn: {FinanzVisualisierung.FormatEuro(ergebnis.Gesamtgewinn)}");
-        sb.AppendLine($"Durchschnitt Umsatz pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherUmsatzProTag)}");
-        sb.AppendLine($"Durchschnitt Kosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicheKostenProTag)}");
-        sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
-        sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.Tagespunkte.Average(t => t.BehandeltePatienten).ToString("N1", DeCulture)}");
-        sb.AppendLine();
-        sb.AppendLine("Versicherung");
-        sb.AppendLine($"Privat (20 %): {versicherungen.PrivatPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzPrivat)}");
-        sb.AppendLine($"Gesetzlich (80 %): {versicherungen.GesetzlichPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzGesetzlich)}");
-        sb.AppendLine();
-        sb.AppendLine("Behandlungsdauer");
-        sb.AppendLine($"Kurz: {behandlungsmix.KurzPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.KurzKosten)}");
-        sb.AppendLine($"Mittel: {behandlungsmix.MittelPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.MittelKosten)}");
-        sb.AppendLine($"Lang: {behandlungsmix.LangPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.LangKosten)}");
-        sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FinanzVisualisierung.FormatEuro(behandlungsmix.Gesamtkosten)}");
-        sb.AppendLine();
-        sb.AppendLine("Kostenstruktur pro Tag");
-        sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, (int)Math.Round(ergebnis.Tagespunkte.Average(t => t.BehandeltePatienten))))}");
-        sb.AppendLine($"Schwestern: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN))}");
-        sb.AppendLine($"Rezeption: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN))}");
-        double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
-        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(mietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
-        sb.AppendLine();
-        sb.AppendLine("Dateien");
-        sb.AppendLine($"- Finanzen: {finanzenPfad}");
-        sb.AppendLine($"- Gewinn: {gewinnPfad}");
-
-        return sb.ToString();
-    }
-
-    private static string ErzeugeHitMissErgebnisText(int anzahlHit, int anzahlMiss, string hitMissPfad)
-    {
-        int gesamt = anzahlHit + anzahlMiss;
-        double hitQuote = gesamt > 0 ? (anzahlHit / (double)gesamt) * 100.0 : 0.0;
-        double missQuote = gesamt > 0 ? (anzahlMiss / (double)gesamt) * 100.0 : 0.0;
-
-        StringBuilder sb = new();
-        sb.AppendLine("Hit/Miss Analyse");
-        sb.AppendLine(new string('=', 50));
-        sb.AppendLine($"Gesamtnachfrage: {gesamt.ToString("N0", DeCulture)}");
-        sb.AppendLine($"Behandelt (Hit): {anzahlHit.ToString("N0", DeCulture)} ({hitQuote.ToString("N2", DeCulture)} %)");
-        sb.AppendLine($"Nicht behandelt (Miss): {anzahlMiss.ToString("N0", DeCulture)} ({missQuote.ToString("N2", DeCulture)} %)");
-        sb.AppendLine($"Hit-Quote: {hitQuote.ToString("N2", DeCulture)} %");
-        sb.AppendLine($"Miss-Quote: {missQuote.ToString("N2", DeCulture)} %");
-        sb.AppendLine();
-        sb.AppendLine("Interpretation");
-        sb.AppendLine($"Von {gesamt.ToString("N0", DeCulture)} angefragten Patienten konnten {anzahlHit.ToString("N0", DeCulture)} ({hitQuote.ToString("N2", DeCulture)} %) versorgt werden.");
-        sb.AppendLine($"{anzahlMiss.ToString("N0", DeCulture)} Patienten ({missQuote.ToString("N2", DeCulture)} %) konnten wegen begrenzter Tageskapazitaet nicht behandelt werden.");
-        sb.AppendLine();
-        sb.AppendLine("Datei");
-        sb.AppendLine($"- Hit/Miss: {hitMissPfad}");
-
-        return sb.ToString();
-    }
 
     private static BitmapImage LadeBild(string dateiPfad)
     {

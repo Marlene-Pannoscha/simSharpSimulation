@@ -59,18 +59,12 @@ namespace simSharpSimulation
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
 
-        public int AnzahlNichtBehandeltArztWartezeit { get; private set; }
         public int AnzahlNichtBehandeltArztFeierabend { get; private set; }
-        public int AnzahlNichtBehandeltArztGesamt =>
-            AnzahlNichtBehandeltArztWartezeit + AnzahlNichtBehandeltArztFeierabend;
-        public int AnzahlNichtBehandeltSchwesterWartezeit { get; private set; }
+        public int AnzahlNichtBehandeltArztGesamt => AnzahlNichtBehandeltArztFeierabend;
         public int AnzahlNichtBehandeltSchwesterFeierabend { get; private set; }
-        public int AnzahlNichtBehandeltSchwesterGesamt =>
-            AnzahlNichtBehandeltSchwesterWartezeit + AnzahlNichtBehandeltSchwesterFeierabend;
-        public int AnzahlNichtBehandeltRezeptionWartezeit { get; private set; }
+        public int AnzahlNichtBehandeltSchwesterGesamt => AnzahlNichtBehandeltSchwesterFeierabend;
         public int AnzahlNichtBehandeltRezeptionFeierabend { get; private set; }
-        public int AnzahlNichtBehandeltRezeptionGesamt =>
-            AnzahlNichtBehandeltRezeptionWartezeit + AnzahlNichtBehandeltRezeptionFeierabend;
+        public int AnzahlNichtBehandeltRezeptionGesamt => AnzahlNichtBehandeltRezeptionFeierabend;
 
         // Abgeleitete Kennzahlen
         public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
@@ -122,7 +116,6 @@ namespace simSharpSimulation
         public void ErfasseArztAbbruchWartezeit(DateTime tag)
         {
             AnzahlAbgebrochenMiss++;
-            AnzahlNichtBehandeltArztWartezeit++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
@@ -142,7 +135,6 @@ namespace simSharpSimulation
         public void ErfasseSchwesterAbbruchWartezeit(DateTime tag)
         {
             AnzahlAbgebrochenMiss++;
-            AnzahlNichtBehandeltSchwesterWartezeit++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
@@ -156,7 +148,6 @@ namespace simSharpSimulation
         public void ErfasseRezeptionAbbruchWartezeit(DateTime tag)
         {
             AnzahlAbgebrochenMiss++;
-            AnzahlNichtBehandeltRezeptionWartezeit++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 

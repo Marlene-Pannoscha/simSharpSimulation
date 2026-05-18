@@ -11,15 +11,18 @@ namespace simSharpSimulation
         // Diagramm: Schwester-Behandlungszeiten je Patiententyp
         private static void ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(
             IReadOnlyList<double> behandlungszeiten,
-            PatientenTyp typ,
-            double mittlereBehandlungszeit,
-            double sigma = 0.35)
+            PatientenTyp typ)
         {
             if (behandlungszeiten == null || behandlungszeiten.Count == 0)
                 return;
 
-            double mu = Math.Log(mittlereBehandlungszeit) - 0.5 * Math.Pow(sigma, 2);
-            double maxZeit = Math.Max(behandlungszeiten.Max(), mittlereBehandlungszeit * 3.0);
+            var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == typ);
+            double erwartungswert = typInfo.BehandlungszeitSchwester;
+            double variationskoeffizient = typInfo.VariationskoeffizientSchwester;
+            double sigma = Math.Sqrt(Math.Log(1 + Math.Pow(variationskoeffizient, 2)));
+
+            double mu = Math.Log(erwartungswert) - 0.5 * Math.Pow(sigma, 2);
+            double maxZeit = Math.Max(behandlungszeiten.Max(), erwartungswert * 3.0);
             maxZeit = Math.Max(maxZeit, 1.0);
             double minZeit = 1e-6;
 

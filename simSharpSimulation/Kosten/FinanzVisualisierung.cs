@@ -209,9 +209,9 @@ internal static class FinanzVisualisierung
         // Saisonfaktoren verschieben die erwartete Nachfrage ueber das Jahr hinweg.
         double saisonfaktor = saison switch
         {
-            "Winter" => 1.15,
+            "Winter" => 1.20,
             "Fruehling" => 1.00,
-            "Sommer" => 0.90,
+            "Sommer" => 0.80,
             "Herbst" => 1.05,
             _ => 1.0,
         };
@@ -231,8 +231,13 @@ internal static class FinanzVisualisierung
         Random rnd)
     {
         // Die Tageskapazitaet wird durch den engeren Engpass aus Arzt- und Schwesterzeit begrenzt.
-        double arztKapazitaet = anzahlAerzte * (8.0 * 60.0 / Math.Max(ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT, 1.0));
-        double schwesterKapazitaet = anzahlSchwestern * (8.0 * 60.0 / Math.Max(SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT, 1.0));
+        double erwartungswertArzt = PatientenKonfiguration.TYPEN_VERTEILUNG
+            .Sum(t => t.Wahrscheinlichkeit * t.BehandlungszeitArzt);
+        double erwartungswertSchwester = PatientenKonfiguration.TYPEN_VERTEILUNG
+            .Sum(t => t.Wahrscheinlichkeit * t.BehandlungszeitSchwester);
+
+        double arztKapazitaet = anzahlAerzte * (8.0 * 60.0 / Math.Max(erwartungswertArzt, 1.0));
+        double schwesterKapazitaet = anzahlSchwestern * (8.0 * 60.0 / Math.Max(erwartungswertSchwester, 1.0));
 
         double brauchtSchwesterWahrscheinlichkeit =
             (PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT * PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT) +

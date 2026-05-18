@@ -24,7 +24,6 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
-            double limitMinuten = 15.0;
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
@@ -44,30 +43,25 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            double deadlineMinuten = Math.Min(schichtEndeMinuten, nowMinutes + limitMinuten);
-
             while (rezeption.Remaining <= 0)
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double restMinuten = deadlineMinuten - nowMinutes;
-
+                double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
 
                 Event rezeptionVerfuegbar = rezeption.WhenAny();
-                Event timeout = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return rezeptionVerfuegbar | timeout;
+                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return rezeptionVerfuegbar | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!rezeptionVerfuegbar.IsProcessed)
                 {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -124,16 +118,9 @@ namespace simSharpSimulation
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            if (wegenFeierabend)
-            {
-                daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_rezeption", patientId);
-            }
-            else
-            {
-                daten.ErfasseRezeptionAbbruchWartezeit(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_rezeption", patientId);
-            }
+            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
+            daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
+            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_rezeption", patientId);
 
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(interneBewegungsdauer);

@@ -19,8 +19,8 @@ namespace simSharpSimulation
 
         public static FinanzKonfigurationJson Finanzen { get; private set; } = new();
 
-        // Hilfszugang: berechnete Mietkosten pro Tag (Anzahl * Kosten pro Behandlungsraum).
-        public static double MietkostenProTag => Finanzen.Fixkosten.MietkostenProBehandlungsraumProTag * Math.Max(Finanzen.Fixkosten.AnzahlBehandlungsraeume, 0);
+        // Hilfszugang: berechnete Mietkosten pro Tag auf Basis der Raumflaechen.
+        public static double MietkostenProTag => Finanzen.Fixkosten.BerechneMietkostenProTag();
 
         public static void LadeAlle()
         {
@@ -32,11 +32,9 @@ namespace simSharpSimulation
 
             var arzt = LeseJson<ArztKonfigurationJson>(Path.Combine(zielOrdner, "arzt-konfiguration.json"));
             ArztKonfiguration.ANZAHL_AERZTE = arzt.AnzahlAerzte;
-            ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT = arzt.MittlereBehandlungszeit;
 
             var schwester = LeseJson<SchwesterKonfigurationJson>(Path.Combine(zielOrdner, "schwester-konfiguration.json"));
             SchwesterKonfiguration.ANZAHL_SCHWESTERN = schwester.AnzahlSchwestern;
-            SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT = schwester.MittlereSchwesterZeit;
 
             var rezeption = LeseJson<RezeptionKonfigurationJson>(Path.Combine(zielOrdner, "rezeption-konfiguration.json"));
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = rezeption.AnzahlRezeptionisten;
@@ -89,14 +87,12 @@ namespace simSharpSimulation
             SchreibeJson(Path.Combine(zielOrdner, "arzt-konfiguration.json"), new ArztKonfigurationJson
             {
                 AnzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE,
-                MittlereBehandlungszeit = ArztKonfiguration.MITTLERE_BEHANDLUNGSZEIT,
                 Beschreibung = new ArztKonfiguration().Beschreibung
             });
 
             SchreibeJson(Path.Combine(zielOrdner, "schwester-konfiguration.json"), new SchwesterKonfigurationJson
             {
                 AnzahlSchwestern = SchwesterKonfiguration.ANZAHL_SCHWESTERN,
-                MittlereSchwesterZeit = SchwesterKonfiguration.MITTLERE_SCHWESTER_ZEIT,
                 Beschreibung = new SchwesterKonfiguration().Beschreibung
             });
 
@@ -192,14 +188,12 @@ namespace simSharpSimulation
     internal sealed class ArztKonfigurationJson
     {
         public int AnzahlAerzte { get; set; }
-        public double MittlereBehandlungszeit { get; set; }
         public string Beschreibung { get; set; } = string.Empty;
     }
 
     internal sealed class SchwesterKonfigurationJson
     {
         public int AnzahlSchwestern { get; set; }
-        public double MittlereSchwesterZeit { get; set; }
         public string Beschreibung { get; set; } = string.Empty;
     }
 
@@ -268,9 +262,24 @@ namespace simSharpSimulation
 
     internal sealed class FixkostenJson
     {
-        public double MietkostenProBehandlungsraumProTag { get; set; } = 50.0;
-        public int AnzahlBehandlungsraeume { get; set; } = 5;
+        public double MietkostenProQuadratmeterProTag { get; set; } = 8.5;
+        public int AnzahlBehandlungsraeumeSchwester { get; set; } = 3;
+        public double FlaecheBehandlungsraumSchwesterQuadratmeter { get; set; } = 12.0;
+        public int AnzahlBehandlungsraeumeArzt { get; set; } = 2;
+        public double FlaecheBehandlungsraumArztQuadratmeter { get; set; } = 18.0;
+
+        [JsonIgnore]
+        public int AnzahlBehandlungsraeumeGesamt => AnzahlBehandlungsraeumeSchwester + AnzahlBehandlungsraeumeArzt;
+
         public double WeitereFixkostenProTag { get; set; } = 450.0;
+
+        public double BerechneMietkostenProTag()
+        {
+            double flaecheGesamt = (AnzahlBehandlungsraeumeSchwester * FlaecheBehandlungsraumSchwesterQuadratmeter)
+                + (AnzahlBehandlungsraeumeArzt * FlaecheBehandlungsraumArztQuadratmeter);
+
+            return MietkostenProQuadratmeterProTag * Math.Max(flaecheGesamt, 0.0);
+        }
     }
 
     internal sealed class VersicherungsKostenJson

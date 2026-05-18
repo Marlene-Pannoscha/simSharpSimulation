@@ -90,7 +90,7 @@ namespace simSharpSimulation
             {
                 if (!arztBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
                     continue;
-                ErzeugeArztBehandlungszeitenPdfCdfDiagramm(werte, typ, behandlungszeitArzt);
+                ErzeugeArztBehandlungszeitenPdfCdfDiagramm(werte, typ);
             }
         }
 
@@ -100,7 +100,7 @@ namespace simSharpSimulation
             {
                 if (!schwesternBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
                     continue;
-                ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(werte, typ, behandlungszeitSchwester);
+                ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(werte, typ);
             }
         }
 
