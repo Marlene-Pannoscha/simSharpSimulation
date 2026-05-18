@@ -8,7 +8,7 @@ namespace simSharpSimulation
     /*
      * Diese Klasse kapselt die Logik fuer die Rezeptions-Phase.
      * Die Warteschlange ist analog zu Arzt und Schwester begrenzt:
-     * warten auf freie Ressource oder Abbruch wegen Wartezeit/Feierabend.
+     * warten auf freie Ressource oder Verschiebung ueber die Schlussplanung.
      */
     public static class RezeptionPhase
     {
@@ -38,7 +38,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -46,10 +46,18 @@ namespace simSharpSimulation
             while (rezeption.Remaining <= 0)
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeRezeption(env, rezeption, hatTermin);
+                if (prognose.MussVerschobenWerden)
+                {
+                    foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -61,7 +69,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!rezeptionVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -74,7 +82,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (nowMinutes > schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -109,18 +117,20 @@ namespace simSharpSimulation
             }
         }
 
-        private static IEnumerable<Event> BrichRezeptionWartenAb(
+        private static IEnumerable<Event> VerschiebeWegenRezeptionAufFolgetag(
             Simulation env,
             SimulationsDaten daten,
             int patientId,
+            bool hatTermin,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
-            daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
-            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_rezeption", patientId);
+            daten.ErfasseRezeptionVerschobenSchlussplanung(env.StartDate);
+            string eventTyp = hatTermin
+                ? "erhaelt_festen_termin_am_naechsten_vormittag_rezeption"
+                : "wird_auf_naechsten_tag_verschoben_rezeption";
+            daten.LogEvent(nowMinutes, eventTyp, patientId);
 
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(interneBewegungsdauer);

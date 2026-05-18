@@ -65,6 +65,13 @@ namespace simSharpSimulation
             SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitArztZumAusgangSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitRezeptionZumAusgangSekunden;
 
+            var schlussplanung = LeseJson<SchlussplanungKonfigurationJson>(Path.Combine(zielOrdner, "schlussplanung-konfiguration.json"));
+            SchlussplanungKonfiguration.AKTIVIERT = schlussplanung.Aktiviert;
+            SchlussplanungKonfiguration.PROGNOSEFENSTER_MINUTEN_VOR_SCHLUSS = schlussplanung.PrognosefensterMinutenVorSchluss;
+            SchlussplanungKonfiguration.SICHERHEITSFAKTOR = schlussplanung.Sicherheitsfaktor;
+            SchlussplanungKonfiguration.VORMITTAGS_TERMIN_STUNDE = schlussplanung.VormittagsTerminStunde;
+            SchlussplanungKonfiguration.VORMITTAGS_TERMIN_MINUTE = schlussplanung.VormittagsTerminMinute;
+
             LadeFinanzen();
         }
 
@@ -140,6 +147,15 @@ namespace simSharpSimulation
                 BewegungszeitRezeptionZumAusgangSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN
             });
 
+            SchreibeJson(Path.Combine(zielOrdner, "schlussplanung-konfiguration.json"), new SchlussplanungKonfigurationJson
+            {
+                Aktiviert = SchlussplanungKonfiguration.AKTIVIERT,
+                PrognosefensterMinutenVorSchluss = SchlussplanungKonfiguration.PROGNOSEFENSTER_MINUTEN_VOR_SCHLUSS,
+                Sicherheitsfaktor = SchlussplanungKonfiguration.SICHERHEITSFAKTOR,
+                VormittagsTerminStunde = SchlussplanungKonfiguration.VORMITTAGS_TERMIN_STUNDE,
+                VormittagsTerminMinute = SchlussplanungKonfiguration.VORMITTAGS_TERMIN_MINUTE
+            });
+
             SchreibeJson(Path.Combine(zielOrdner, "finanz-konfiguration.json"), new FinanzKonfigurationJson
             {
                 Personal = new PersonalKostenJson(),
@@ -169,6 +185,7 @@ namespace simSharpSimulation
                 && File.Exists(Path.Combine(ordner, "rezeption-konfiguration.json"))
                 && File.Exists(Path.Combine(ordner, "patienten-konfiguration.json"))
                 && File.Exists(Path.Combine(ordner, "simulation-konfiguration.json"))
+                && File.Exists(Path.Combine(ordner, "schlussplanung-konfiguration.json"))
                 && File.Exists(Path.Combine(ordner, "finanz-konfiguration.json"));
         }
 
@@ -249,6 +266,15 @@ namespace simSharpSimulation
         public FixkostenJson Fixkosten { get; set; } = new();
         public VersicherungsKostenJson Versicherung { get; set; } = new();
         public BehandlungskostenJson Behandlungskosten { get; set; } = new();
+    }
+
+    internal sealed class SchlussplanungKonfigurationJson
+    {
+        public bool Aktiviert { get; set; }
+        public double PrognosefensterMinutenVorSchluss { get; set; }
+        public double Sicherheitsfaktor { get; set; }
+        public int VormittagsTerminStunde { get; set; }
+        public int VormittagsTerminMinute { get; set; }
     }
 
     internal sealed class PersonalKostenJson

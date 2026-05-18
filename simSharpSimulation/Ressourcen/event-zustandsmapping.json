@@ -16,7 +16,8 @@
   "rezeption_ohne_termin": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
   "macht_folgetermin_aus_oder_rezept": { "von": "IN_REZEPTION", "zu": "IN_REZEPTION" },
   "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_rezeption": { "von": "WARTET_REZEPTION", "zu": "IN_KLINIK" },
-  "bricht_ab_wegen_feierabend_rezeption": { "von": "WARTET_REZEPTION", "zu": "IN_KLINIK" },
+  "wird_auf_naechsten_tag_verschoben_rezeption": { "von": "WARTET_REZEPTION", "zu": "IN_KLINIK" },
+  "erhaelt_festen_termin_am_naechsten_vormittag_rezeption": { "von": "WARTET_REZEPTION", "zu": "IN_KLINIK" },
 
   "hat_termin": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
   "hat_keinen_termin": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
@@ -32,7 +33,8 @@
   "startet_schwester_prozess": { "von": "IN_SCHWESTER", "zu": "IN_SCHWESTER" },
   "beendet_schwester_prozess": { "von": "IN_SCHWESTER", "zu": "IN_KLINIK" },
   "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_schwester": { "von": "WARTET_SCHWESTER", "zu": "IN_KLINIK" },
-  "bricht_ab_wegen_feierabend_schwester": { "von": "WARTET_SCHWESTER", "zu": "IN_KLINIK" },
+  "wird_auf_naechsten_tag_verschoben_schwester": { "von": "WARTET_SCHWESTER", "zu": "IN_KLINIK" },
+  "erhaelt_festen_termin_am_naechsten_vormittag_schwester": { "von": "WARTET_SCHWESTER", "zu": "IN_KLINIK" },
 
   "geht_ins_wartezimmer": { "von": "IN_KLINIK", "zu": "WEG_ZUM_WARTEZIMMER_ARZT" },
   "betritt_wartezimmer": { "von": "WEG_ZUM_WARTEZIMMER_ARZT", "zu": "IM_WARTEZIMMER_ARZT" },
@@ -41,7 +43,8 @@
   "betritt_wartezimmer_fuer_arzt": { "von": "WEG_ZUM_WARTEZIMMER_ARZT", "zu": "IM_WARTEZIMMER_ARZT" },
   "verlaesst_wartezimmer_fuer_arzt": { "von": "IM_WARTEZIMMER_ARZT", "zu": "WEG_ZUM_ARZT" },
   "bricht_ab_und_verlaesst_klinik_wegen_wartezeit": { "von": "IM_WARTEZIMMER_ARZT", "zu": "IN_KLINIK" },
-  "bricht_ab_wegen_feierabend_arzt": { "von": "IM_WARTEZIMMER_ARZT", "zu": "IN_KLINIK" },
+  "wird_auf_naechsten_tag_verschoben_arzt": { "von": "IM_WARTEZIMMER_ARZT", "zu": "IN_KLINIK" },
+  "erhaelt_festen_termin_am_naechsten_vormittag_arzt": { "von": "IM_WARTEZIMMER_ARZT", "zu": "IN_KLINIK" },
 
   "geht_zum_arzt": { "von": "IN_KLINIK", "zu": "WEG_ZUM_ARZT" },
   "betritt_arztzimmer": { "von": "WEG_ZUM_ARZT", "zu": "WARTET_ARZT" },

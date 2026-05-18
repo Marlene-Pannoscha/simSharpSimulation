@@ -89,9 +89,9 @@ namespace simSharpSimulation
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
             Console.WriteLine($"Nicht behandelte Patienten gesamt: {daten.AnzahlNichtBehandeltRezeptionGesamt + daten.AnzahlNichtBehandeltSchwesterGesamt + daten.AnzahlNichtBehandeltArztGesamt}");
-            Console.WriteLine($"  davon Rezeption-Schichtende: {daten.AnzahlNichtBehandeltRezeptionFeierabend}");
-            Console.WriteLine($"  davon Schwester-Schichtende: {daten.AnzahlNichtBehandeltSchwesterFeierabend}");
-            Console.WriteLine($"  davon Arzt-Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend}");
+            Console.WriteLine($"  davon Rezeption verschoben: {daten.AnzahlVerschobenRezeptionSchlussplanung}");
+            Console.WriteLine($"  davon Schwester verschoben: {daten.AnzahlVerschobenSchwesterSchlussplanung}");
+            Console.WriteLine($"  davon Arzt verschoben: {daten.AnzahlVerschobenArztSchlussplanung}");
             Console.WriteLine($"Durchschnittliche Gesamtprozesszeit: {avgGesamtprozesszeit:F2} Minuten");
 
             Console.WriteLine();

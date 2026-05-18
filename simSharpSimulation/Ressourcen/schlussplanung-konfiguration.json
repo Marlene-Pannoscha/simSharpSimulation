@@ -1,0 +1,7 @@
+{
+  "Aktiviert": true,
+  "PrognosefensterMinutenVorSchluss": 60,
+  "Sicherheitsfaktor": 1.15,
+  "VormittagsTerminStunde": 9,
+  "VormittagsTerminMinute": 0
+}

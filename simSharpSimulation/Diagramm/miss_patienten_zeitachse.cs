@@ -7,7 +7,7 @@ using System.Linq;
 namespace simSharpSimulation
 {
     // Dateirolle: Diagramm 13 - Zeitachse eines besonderen Miss-Patienten
-    // (Abbruch wegen zu langer Wartezeit oder ausserhalb der Arbeitszeit).
+    // (Abbruch wegen zu langer Wartezeit oder Verschiebung durch Schlussplanung).
     internal static partial class GenerateDiagramme
     {
         // Diagramm 13
@@ -34,7 +34,12 @@ namespace simSharpSimulation
             string[] priorisierteMissEvents =
             {
                 "bricht_ab_und_verlaesst_klinik_wegen_wartezeit",
-                "bricht_ab_wegen_feierabend_arzt"
+                "wird_auf_naechsten_tag_verschoben_arzt",
+                "erhaelt_festen_termin_am_naechsten_vormittag_arzt",
+                "wird_auf_naechsten_tag_verschoben_schwester",
+                "erhaelt_festen_termin_am_naechsten_vormittag_schwester",
+                "wird_auf_naechsten_tag_verschoben_rezeption",
+                "erhaelt_festen_termin_am_naechsten_vormittag_rezeption"
             };
 
             int? zielPatientId = priorisierteMissEvents
@@ -59,11 +64,13 @@ namespace simSharpSimulation
                 .Select(e => e.EventTyp)
                 .FirstOrDefault(priorisierteMissEvents.Contains) ?? "miss";
 
-            string missGrund = missEventTyp == "bricht_ab_wegen_feierabend_arzt"
-                ? "   Abbruch wegen Feierabend"
+            string missGrund = missEventTyp.Contains("naechsten_vormittag")
+                ? "   Verschoben mit festem Vormittagstermin"
+                : missEventTyp.Contains("verschoben")
+                ? "   Verschoben auf den naechsten Tag"
                 : "   Abbruch wegen zu langer Wartezeit";
 
-            Color linienFarbe = missEventTyp == "bricht_ab_wegen_feierabend_arzt"
+            Color linienFarbe = missEventTyp.Contains("naechsten_vormittag") || missEventTyp.Contains("verschoben")
                 ? Color.DarkOrange
                 : Color.Crimson;
 

@@ -59,12 +59,12 @@ namespace simSharpSimulation
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
 
-        public int AnzahlNichtBehandeltArztFeierabend { get; private set; }
-        public int AnzahlNichtBehandeltArztGesamt => AnzahlNichtBehandeltArztFeierabend;
-        public int AnzahlNichtBehandeltSchwesterFeierabend { get; private set; }
-        public int AnzahlNichtBehandeltSchwesterGesamt => AnzahlNichtBehandeltSchwesterFeierabend;
-        public int AnzahlNichtBehandeltRezeptionFeierabend { get; private set; }
-        public int AnzahlNichtBehandeltRezeptionGesamt => AnzahlNichtBehandeltRezeptionFeierabend;
+        public int AnzahlVerschobenArztSchlussplanung { get; private set; }
+        public int AnzahlNichtBehandeltArztGesamt => AnzahlVerschobenArztSchlussplanung;
+        public int AnzahlVerschobenSchwesterSchlussplanung { get; private set; }
+        public int AnzahlNichtBehandeltSchwesterGesamt => AnzahlVerschobenSchwesterSchlussplanung;
+        public int AnzahlVerschobenRezeptionSchlussplanung { get; private set; }
+        public int AnzahlNichtBehandeltRezeptionGesamt => AnzahlVerschobenRezeptionSchlussplanung;
 
         // Abgeleitete Kennzahlen
         public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
@@ -119,10 +119,10 @@ namespace simSharpSimulation
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
-        public void ErfasseArztAbbruchFeierabend(DateTime tag)
+        public void ErfasseArztVerschobenSchlussplanung(DateTime tag)
         {
             AnzahlAbgebrochenMiss++;
-            AnzahlNichtBehandeltArztFeierabend++;
+            AnzahlVerschobenArztSchlussplanung++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
@@ -138,10 +138,10 @@ namespace simSharpSimulation
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
-        public void ErfasseSchwesterAbbruchFeierabend(DateTime tag)
+        public void ErfasseSchwesterVerschobenSchlussplanung(DateTime tag)
         {
             AnzahlAbgebrochenMiss++;
-            AnzahlNichtBehandeltSchwesterFeierabend++;
+            AnzahlVerschobenSchwesterSchlussplanung++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
@@ -151,10 +151,10 @@ namespace simSharpSimulation
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
-        public void ErfasseRezeptionAbbruchFeierabend(DateTime tag)
+        public void ErfasseRezeptionVerschobenSchlussplanung(DateTime tag)
         {
             AnzahlAbgebrochenMiss++;
-            AnzahlNichtBehandeltRezeptionFeierabend++;
+            AnzahlVerschobenRezeptionSchlussplanung++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 

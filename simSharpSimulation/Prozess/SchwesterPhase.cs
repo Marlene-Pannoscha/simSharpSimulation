@@ -7,7 +7,7 @@ namespace simSharpSimulation
     /*
      * Diese Klasse kapselt die Logik fuer die Schwester-Phase im Simulationsprozess.
      * Die Warteschlange ist analog zur Arzt-Phase aufgebaut:
-     * warten auf freie Ressource oder Abbruch wegen Wartezeit/Feierabend.
+     * warten auf freie Ressource oder Verschiebung ueber die Schlussplanung.
      */
     public static class SchwesterPhase
     {
@@ -47,7 +47,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -55,10 +55,18 @@ namespace simSharpSimulation
             while (schwester.Remaining <= 0)
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeSchwester(env, schwester, patientenTyp, hatTermin);
+                if (prognose.MussVerschobenWerden)
+                {
+                    foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -70,7 +78,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!schwesterVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -114,19 +122,21 @@ namespace simSharpSimulation
             }
         }
 
-        private static IEnumerable<Event> BrichSchwesterWartenAb(
+        private static IEnumerable<Event> VerschiebeWegenSchwesterAufFolgetag(
             Simulation env,
             SimulationsDaten daten,
             int patientId,
             int schwesterId,
+            bool hatTermin,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
-            daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
-            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
+            daten.ErfasseSchwesterVerschobenSchlussplanung(env.StartDate);
+            string eventTyp = hatTermin
+                ? "erhaelt_festen_termin_am_naechsten_vormittag_schwester"
+                : "wird_auf_naechsten_tag_verschoben_schwester";
+            daten.LogEvent(nowMinutes, eventTyp, patientId, schwesterId: schwesterId);
 
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(interneBewegungsdauer);

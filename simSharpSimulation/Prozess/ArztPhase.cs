@@ -57,7 +57,7 @@ namespace simSharpSimulation
             // fuer diesen Tag ueberhaupt noch offen ist.
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -67,12 +67,22 @@ namespace simSharpSimulation
             while (arzt.Remaining <= 0)
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                // Im Prognosefenster vor Schichtende pruefen wir, ob die verbleibende
+                // Kapazitaet fuer diesen Patienten mit Sicherheitsaufschlag noch ausreicht.
+                SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeArzt(env, arzt, patientenTyp, hatTermin);
+                if (prognose.MussVerschobenWerden)
+                {
+                    foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+
                 // Berechne verbleibende Zeit bis Schichtende und warte entweder
                 // auf einen freien Arzt oder auf das Erreichen des Schichtendes.
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -82,10 +92,11 @@ namespace simSharpSimulation
                 yield return arztVerfuegbar | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Wenn das Schichtende zuerst eintrat, verlässt der Patient die Klinik.
+                // Wenn das Schichtende zuerst eintrat, wird der Patient nicht mehr
+                // als Feierabend-Abbruch behandelt, sondern geordnet verschoben.
                 if (!arztVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -96,15 +107,15 @@ namespace simSharpSimulation
             // entfernt werden muessten.
             using (Request req = arzt.Request(priority: GetPriority(patientenTyp)))
             {
-
                 // Request abgeschlossen: Patient hat den Arzt zugewiesen bekommen.
                 // Selbst wenn die Schicht inzwischen geendet hat, darf die Behandlung
-                // weiterlaufen — Patient wird fertig behandelt.
+                // weiterlaufen - Patient wird fertig behandelt.
                 yield return req;
 
                 // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
                 daten.ErfasseArztBehandlungBegonnen(env.StartDate);
 
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 // Patient verlaesst das Wartezimmer, sobald der Arzt frei ist.
                 daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
 
@@ -144,23 +155,26 @@ namespace simSharpSimulation
             }
         }
 
-        private static IEnumerable<Event> BrichArztWartenAb(
+        private static IEnumerable<Event> VerschiebeWegenArztAufFolgetag(
             Simulation env,
             SimulationsDaten daten,
             int patientId,
             int arztId,
+            bool hatTermin,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
-            // Diese Hilfsmethode haelt den Abbruchpfad an einer Stelle zusammen,
-            // damit Wartezeit- und Feierabend-Abbrueche identisch behandelt werden.
+            // Diese Hilfsmethode haelt den Verschiebungspfad an einer Stelle zusammen,
+            // damit Prognosefaelle in allen Arzt-Wartezustaenden identisch behandelt werden.
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
-            daten.ErfasseArztAbbruchFeierabend(env.StartDate);
-            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_arzt", patientId, arztId: arztId);
+            daten.ErfasseArztVerschobenSchlussplanung(env.StartDate);
 
-            // Nach dem Abbruch verlaesst der Patient die Klinik ueber den normalen Ausgangspfad.
+            string eventTyp = hatTermin
+                ? "erhaelt_festen_termin_am_naechsten_vormittag_arzt"
+                : "wird_auf_naechsten_tag_verschoben_arzt";
+            daten.LogEvent(nowMinutes, eventTyp, patientId, arztId: arztId);
+
+            // Nach der Verschiebung verlaesst der Patient die Klinik ueber den normalen Ausgangspfad.
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(interneBewegungsdauer);
 
