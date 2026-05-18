@@ -115,7 +115,7 @@ namespace simSharpSimulation
                 daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
 
                 // Behandlungsdauer nach Patienten-Typ.
-                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+                var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
                 double variationskoeffizient = typInfo.VariationskoeffizientArzt;
 

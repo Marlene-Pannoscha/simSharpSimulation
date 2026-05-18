@@ -11,23 +11,10 @@ internal sealed partial class FinanzWpfFenster
 {
     private Grid ErstelleFinanzenTab()
     {
-        Grid inhaltGrid = new();
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        Grid inhaltGrid = ErzeugeGeteiltesTabGrid();
 
         // Links stehen Textauswertung und Kennzahlen, rechts die erzeugten Diagramme.
-        ergebnisTextBox = new TextBox
-        {
-            IsReadOnly = true,
-            TextWrapping = TextWrapping.Wrap,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 13,
-            Padding = new Thickness(8)
-        };
+        ergebnisTextBox = ErzeugeErgebnisTextBox();
         Grid.SetColumn(ergebnisTextBox, 0);
         Grid.SetRow(ergebnisTextBox, 0);
         inhaltGrid.Children.Add(ergebnisTextBox);
@@ -57,6 +44,9 @@ internal sealed partial class FinanzWpfFenster
         Versicherungsverteilung versicherungen = ergebnis.VersicherungenGesamt;
         Umsatzverteilung umsatzverteilung = ergebnis.UmsatzverteilungGesamt;
         Behandlungsmix behandlungsmix = ergebnis.BehandlungsmixGesamt;
+        double privatAnteilProzent = KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert * 100.0;
+        double gesetzlichAnteilProzent = (1.0 - KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert) * 100.0;
+        int durchschnittPatientenProTagGerundet = (int)Math.Round(ergebnis.DurchschnittBehandeltePatientenProTag);
 
         // Der Bericht fasst die Simulation kompakt fuer die linke Textspalte zusammen.
         StringBuilder sb = new();
@@ -70,11 +60,11 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Durchschnitt Umsatz pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherUmsatzProTag)}");
         sb.AppendLine($"Durchschnitt Kosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicheKostenProTag)}");
         sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
-        sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.Tagespunkte.Average(t => t.BehandeltePatienten).ToString("N1", DeCulture)}");
+        sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.DurchschnittBehandeltePatientenProTag.ToString("N1", DeCulture)}");
         sb.AppendLine();
         sb.AppendLine("Versicherung");
-        sb.AppendLine($"Privat (20 %): {versicherungen.PrivatPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzPrivat)}");
-        sb.AppendLine($"Gesetzlich (80 %): {versicherungen.GesetzlichPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzGesetzlich)}");
+        sb.AppendLine($"Privat ({privatAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.PrivatPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzPrivat)}");
+        sb.AppendLine($"Gesetzlich ({gesetzlichAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.GesetzlichPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzGesetzlich)}");
         sb.AppendLine();
         sb.AppendLine("Behandlungsdauer");
         sb.AppendLine($"Kurz: {behandlungsmix.KurzPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.KurzKosten)}");
@@ -83,13 +73,14 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FinanzVisualisierung.FormatEuro(behandlungsmix.Gesamtkosten)}");
         sb.AppendLine();
         sb.AppendLine("Kostenstruktur pro Tag");
-        sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, (int)Math.Round(ergebnis.Tagespunkte.Average(t => t.BehandeltePatienten))))}");
+        sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, durchschnittPatientenProTagGerundet))}");
         sb.AppendLine($"Schwestern: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN))}");
         sb.AppendLine($"Rezeption: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN))}");
         sb.AppendLine($"Zimmer: {KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester} Schwester / {KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt} Arzt");
         sb.AppendLine($"Fläche: {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString("N1", DeCulture)} m² Schwester / {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString("N1", DeCulture)} m² Arzt");
+        sb.AppendLine($"Wartezimmerfläche: {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString("N1", DeCulture)} m²");
         double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
-        sb.AppendLine($"Mietkosten Behandlungsräume: {FinanzVisualisierung.FormatEuro(mietkostenProTag)}");
+        sb.AppendLine($"Mietkosten Räume: {FinanzVisualisierung.FormatEuro(mietkostenProTag)}");
         sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(mietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
         sb.AppendLine();
         sb.AppendLine("Dateien");

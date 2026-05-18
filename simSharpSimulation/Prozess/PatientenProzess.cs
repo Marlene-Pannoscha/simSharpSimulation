@@ -123,7 +123,7 @@ namespace simSharpSimulation
             daten.EchteAnkunftszeiten.Add(ankunftszeit);
 
             // Schritt P4.3B: Patienten-Typ zuweisen basierend auf Verteilung.
-            PatientenTyp patientenTyp = WaehlePatientenTyp(rnd);
+            PatientenTyp patientenTyp = PatientenKonfiguration.WaehlePatientenTyp(rnd);
             daten.ErfassePatientenTyp(patientenTyp);
 
             // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
@@ -328,21 +328,6 @@ namespace simSharpSimulation
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
             daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
-        }
-
-        // Phase P-C: Delegation an ausgelagerte Phasenklassen.
-        // Schritt P8: Interne Hilfsmethode, um Patienten-Typ zu wählen.
-        private static PatientenTyp WaehlePatientenTyp(Random rnd)
-        {
-            double rand = rnd.NextDouble();
-            double cumulative = 0.0;
-            foreach (var (typ, wahrsch, _, _, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
-            {
-                cumulative += wahrsch;
-                if (rand <= cumulative)
-                    return typ;
-            }
-            return PatientenTyp.Mittel; // Fallback
         }
 
         // Schritt P9: Interne Hilfsmethode, um aktuelle Belegung der Ressource zu prüfen.

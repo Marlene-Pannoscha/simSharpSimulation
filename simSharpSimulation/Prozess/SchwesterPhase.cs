@@ -99,7 +99,7 @@ namespace simSharpSimulation
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
                 daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
 
-                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+                var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitSchwester;
                 double variationskoeffizient = typInfo.VariationskoeffizientSchwester;
 

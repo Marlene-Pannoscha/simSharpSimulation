@@ -86,7 +86,14 @@ namespace simSharpSimulation
                 double wartezeitRezeption = nowMinutes - ankunftszeit;
                 daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
 
-                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / RezeptionKonfiguration.MITTELREZEPTIONSZEIT);
+                double mittlereDauer = RezeptionKonfiguration.MITTELREZEPTIONSZEIT;
+                double variationskoeffizient = RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION;
+
+                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
+                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
+
+                double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
                 daten.ErfasseRezeptionBehandlungszeit(dauer, hatTermin);
 
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));
