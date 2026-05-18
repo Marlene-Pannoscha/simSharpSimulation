@@ -62,24 +62,20 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            // Schritt A3: Solange kein Arzt frei ist, warten wir solange, bis
-            // entweder ein Arzt verfuegbar wird oder die Schicht endet.
-            while (arzt.Remaining <= 0)
+            SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeArzt(env, arzt, patientenTyp, hatTermin);
+            if (prognose.MussVerschobenWerden)
+            {
+                foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
+                    yield return ev;
+                yield break;
+            }
+
+            // Schritt A4: Request auf Arzt erstellen.
+            using (Request req = arzt.Request(priority: GetPriority(patientenTyp)))
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Im Prognosefenster vor Schichtende pruefen wir, ob die verbleibende
-                // Kapazitaet fuer diesen Patienten mit Sicherheitsaufschlag noch ausreicht.
-                SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeArzt(env, arzt, patientenTyp, hatTermin);
-                if (prognose.MussVerschobenWerden)
-                {
-                    foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
-                // Berechne verbleibende Zeit bis Schichtende und warte entweder
-                // auf einen freien Arzt oder auf das Erreichen des Schichtendes.
                 double restMinuten = schichtEndeMinuten - nowMinutes;
+
                 if (restMinuten <= 0)
                 {
                     foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
@@ -87,30 +83,15 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                Event arztVerfuegbar = arzt.WhenAny();
                 Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return arztVerfuegbar | schichtEnde;
+                yield return req | schichtEnde;
 
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Wenn das Schichtende zuerst eintrat, wird der Patient nicht mehr
-                // als Feierabend-Abbruch behandelt, sondern geordnet verschoben.
-                if (!arztVerfuegbar.IsProcessed)
+                if (!req.IsProcessed)
                 {
                     foreach (Event ev in VerschiebeWegenArztAufFolgetag(env, daten, patientId, arztId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
-            }
-
-            // Schritt A4: Erst wenn ein Arzt verfuegbar ist, wird der eigentliche Request erstellt.
-            // Dadurch vermeiden wir offene Requests, die spaeter kuenstlich aus internen Queues
-            // entfernt werden muessten.
-            using (Request req = arzt.Request(priority: GetPriority(patientenTyp)))
-            {
-                // Request abgeschlossen: Patient hat den Arzt zugewiesen bekommen.
-                // Selbst wenn die Schicht inzwischen geendet hat, darf die Behandlung
-                // weiterlaufen - Patient wird fertig behandelt.
-                yield return req;
 
                 // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
                 daten.ErfasseArztBehandlungBegonnen(env.StartDate);

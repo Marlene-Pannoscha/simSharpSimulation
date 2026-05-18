@@ -43,18 +43,19 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            while (rezeption.Remaining <= 0)
+            SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeRezeption(env, rezeption, hatTermin);
+            if (prognose.MussVerschobenWerden)
+            {
+                foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
+                    yield return ev;
+                yield break;
+            }
+
+            using (Request req = rezeption.Request())
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeRezeption(env, rezeption, hatTermin);
-                if (prognose.MussVerschobenWerden)
-                {
-                    foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
                 double restMinuten = schichtEndeMinuten - nowMinutes;
+
                 if (restMinuten <= 0)
                 {
                     foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
@@ -62,31 +63,17 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                Event rezeptionVerfuegbar = rezeption.WhenAny();
                 Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return rezeptionVerfuegbar | schichtEnde;
+                yield return req | schichtEnde;
 
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!rezeptionVerfuegbar.IsProcessed)
-                {
-                    foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-            }
-
-            using (Request req = rezeption.Request())
-            {
-                yield return req;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (nowMinutes > schichtEndeMinuten)
+                if (!req.IsProcessed)
                 {
                     foreach (Event ev in VerschiebeWegenRezeptionAufFolgetag(env, daten, patientId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
 
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!rezeptionWarFrei)
                 {
                     daten.LogEvent(nowMinutes, "rezeption_frei", patientId);

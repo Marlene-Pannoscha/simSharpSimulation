@@ -52,18 +52,19 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            while (schwester.Remaining <= 0)
+            SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeSchwester(env, schwester, patientenTyp, hatTermin);
+            if (prognose.MussVerschobenWerden)
+            {
+                foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
+                    yield return ev;
+                yield break;
+            }
+
+            using (Request req = schwester.Request(priority: GetPriority(patientenTyp)))
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                SchlussplanungsEntscheidung prognose = Schlussplanung.PruefeSchwester(env, schwester, patientenTyp, hatTermin);
-                if (prognose.MussVerschobenWerden)
-                {
-                    foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
                 double restMinuten = schichtEndeMinuten - nowMinutes;
+
                 if (restMinuten <= 0)
                 {
                     foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
@@ -71,25 +72,18 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                Event schwesterVerfuegbar = schwester.WhenAny();
                 Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return schwesterVerfuegbar | schichtEnde;
+                yield return req | schichtEnde;
 
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!schwesterVerfuegbar.IsProcessed)
+                if (!req.IsProcessed)
                 {
                     foreach (Event ev in VerschiebeWegenSchwesterAufFolgetag(env, daten, patientId, schwesterId, hatTermin, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
-            }
 
-            using (Request req = schwester.Request(priority: GetPriority(patientenTyp)))
-            {
                 // Request abgeschlossen: Patient hat die Schwester zugewiesen bekommen.
                 // Behandlung darf auch nach Schichtende zu Ende gefuehrt werden.
-                yield return req;
-
                 if (!direktZurSchwester)
                 {
                     daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
