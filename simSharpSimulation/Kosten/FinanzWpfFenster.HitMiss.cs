@@ -1,7 +1,6 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace simSharpSimulation;
 
@@ -9,23 +8,10 @@ internal sealed partial class FinanzWpfFenster
 {
     private Grid ErstelleHitMissTab()
     {
-        Grid inhaltGrid = new();
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        Grid inhaltGrid = ErzeugeGeteiltesTabGrid();
 
         // Links: Hit/Miss Statistik
-        hitMissErgebnisTextBox = new TextBox
-        {
-            IsReadOnly = true,
-            TextWrapping = TextWrapping.Wrap,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 13,
-            Padding = new Thickness(8)
-        };
+        hitMissErgebnisTextBox = ErzeugeErgebnisTextBox();
         Grid.SetColumn(hitMissErgebnisTextBox, 0);
         Grid.SetRow(hitMissErgebnisTextBox, 0);
         inhaltGrid.Children.Add(hitMissErgebnisTextBox);
