@@ -46,7 +46,7 @@ namespace simSharpSimulation
             PatientenTyp patientenTyp,
             bool hatTermin)
         {
-            var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+            var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
             return PruefeKapazitaet(
                 env,
                 schwester,
@@ -61,7 +61,7 @@ namespace simSharpSimulation
             PatientenTyp patientenTyp,
             bool hatTermin)
         {
-            var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+            var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
             return PruefeKapazitaet(
                 env,
                 arzt,
@@ -93,19 +93,16 @@ namespace simSharpSimulation
 
             // --- Schritt 2: Aktuelle Auslastung der Ressource ermitteln ---
             // Wir müssen wissen, wie lange alle bereits anwesenden Patienten sowie der aktuelle Patient benötigen.
-            int kapazitaet = ErmittleKapazitaet(ressource); // z.B. Wie viele Ärzte arbeiten parallel?
-            int aktiveNutzer = ErmittleAnzahlAusEigenschaft(ressource, "Users"); // Patienten aktuell im Sprechzimmer/an der Rezeption
-            int wartendePatienten = ErmittleAnzahlAusEigenschaft(ressource, "Queue"); // Patienten, die im Wartezimmer sitzen
+            RessourcenAuslastung auslastung = ErmittleAuslastung(ressource);
 
             // --- Schritt 3: Prognostizierte Restdauer berechnen ---
-            double sicherheitsfaktor = Math.Max(1.0, SchlussplanungKonfiguration.SICHERHEITSFAKTOR);
-            
             // Logik: 
             // (Aktive Patienten + Wartende + 1 für den neuen Patienten) * Behandlungsdauer je Patient
             // Das Ganze wird durch die Kapazität (Zahl der Behandler) geteilt und mit einem Sicherheitsfaktor multipliziert,
             // um einen Puffer für unerwartete Verzögerungen einzubauen.
-            double erwarteteGesamtzeit = ((aktiveNutzer + wartendePatienten + 1) * erwarteteBehandlungsdauerMinuten / Math.Max(1, kapazitaet))
-                * sicherheitsfaktor;
+            double erwarteteGesamtzeit = BerechnePrognostizierteMinuten(
+                auslastung,
+                erwarteteBehandlungsdauerMinuten);
 
             // --- Schritt 4: Entscheidung treffen ---
             // Falls die kalkulierte Gesamtdauer noch in die restliche Arbeitszeit passt, 
@@ -129,6 +126,28 @@ namespace simSharpSimulation
             return new SchlussplanungsEntscheidung(true, eventTyp, hinweis, restMinuten, erwarteteGesamtzeit);
         }
 
+        private static RessourcenAuslastung ErmittleAuslastung(object ressource)
+        {
+            return new RessourcenAuslastung(
+                ErmittleKapazitaet(ressource),
+                ErmittleAnzahlAusEigenschaft(ressource, "Users"),
+                ErmittleAnzahlAusEigenschaft(ressource, "Queue"));
+        }
+
+        private static double BerechnePrognostizierteMinuten(
+            RessourcenAuslastung auslastung,
+            double erwarteteBehandlungsdauerMinuten)
+        {
+            double sicherheitsfaktor = Math.Max(1.0, SchlussplanungKonfiguration.SICHERHEITSFAKTOR);
+            int patientenInPrognose = auslastung.AktiveNutzer + auslastung.WartendePatienten + 1;
+            int wirksameKapazitaet = Math.Max(1, auslastung.Kapazitaet);
+
+            return patientenInPrognose
+                * erwarteteBehandlungsdauerMinuten
+                / wirksameKapazitaet
+                * sicherheitsfaktor;
+        }
+
         private static int ErmittleKapazitaet(object ressorce)
         {
             PropertyInfo? capacityProperty = ressorce.GetType().GetProperty("Capacity");
@@ -147,5 +166,10 @@ namespace simSharpSimulation
                 _ => 0
             };
         }
+
+        private readonly record struct RessourcenAuslastung(
+            int Kapazitaet,
+            int AktiveNutzer,
+            int WartendePatienten);
     }
 }
