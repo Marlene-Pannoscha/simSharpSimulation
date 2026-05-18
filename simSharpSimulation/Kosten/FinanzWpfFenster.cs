@@ -18,6 +18,7 @@ internal sealed partial class FinanzWpfFenster : Window
     private readonly TextBox behandlungsflaecheSchwesterTextBox;
     private readonly TextBox behandlungsraeumeArztTextBox;
     private readonly TextBox behandlungsflaecheArztTextBox;
+    private readonly TextBox wartezimmerflaecheTextBox;
     private readonly ComboBox zeitraumComboBox;
     private TextBox ergebnisTextBox = null!;
     private Image finanzenImage = null!;
@@ -29,6 +30,8 @@ internal sealed partial class FinanzWpfFenster : Window
     private Image hitMissImage = null!;
 
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");
+    private const double ErgebnisSpaltenBreite = 360;
+    private const double SpaltenAbstand = 12;
 
     public FinanzWpfFenster()
     {
@@ -46,158 +49,82 @@ internal sealed partial class FinanzWpfFenster : Window
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.Margin = new Thickness(12);
 
-        Grid eingabeGrid = new();
-        eingabeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        eingabeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        eingabeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        // Zeile 1: Personal
-        Grid personalGrid = new();
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        personalGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-
-        Label aerzteLabel = new() { Content = "Anzahl Aerzte:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(aerzteLabel, 0);
-        personalGrid.Children.Add(aerzteLabel);
-
-        aerzteTextBox = new TextBox
+        Grid eingabeGrid = new()
         {
-            Text = ArztKonfiguration.ANZAHL_AERZTE.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
+            Margin = new Thickness(0, 0, 0, 4)
         };
-        Grid.SetColumn(aerzteTextBox, 1);
-        personalGrid.Children.Add(aerzteTextBox);
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.8, GridUnitType.Star) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(240) });
 
-        Label schwesternLabel = new() { Content = "Anzahl Schwestern:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(schwesternLabel, 3);
-        personalGrid.Children.Add(schwesternLabel);
+        Grid personalGrid = ErzeugeParameterGrid();
+        aerzteTextBox = FuegeParameterZeile(personalGrid, "Aerzte", ArztKonfiguration.ANZAHL_AERZTE.ToString(CultureInfo.InvariantCulture));
+        schwesternTextBox = FuegeParameterZeile(personalGrid, "Schwestern", SchwesterKonfiguration.ANZAHL_SCHWESTERN.ToString(CultureInfo.InvariantCulture));
+        rezeptionTextBox = FuegeParameterZeile(personalGrid, "Rezeption", RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN.ToString(CultureInfo.InvariantCulture));
+        Border personalBox = ErzeugeParameterGruppe("Personal", personalGrid);
+        Grid.SetColumn(personalBox, 0);
+        eingabeGrid.Children.Add(personalBox);
 
-        schwesternTextBox = new TextBox
-        {
-            Text = SchwesterKonfiguration.ANZAHL_SCHWESTERN.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(schwesternTextBox, 4);
-        personalGrid.Children.Add(schwesternTextBox);
+        Grid raeumeGrid = ErzeugeParameterGrid();
+        behandlungsraeumeSchwesterTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Schwesterzimmer",
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture));
+        behandlungsflaecheSchwesterTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Flaeche je Schwesterzimmer (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        behandlungsraeumeArztTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Arztzimmer",
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture));
+        behandlungsflaecheArztTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Flaeche je Arztzimmer (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        wartezimmerflaecheTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Wartezimmerflaeche (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
+        Grid.SetColumn(raeumeBox, 2);
+        eingabeGrid.Children.Add(raeumeBox);
 
-        Label rezeptionLabel = new() { Content = "Anzahl Rezeption:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(rezeptionLabel, 6);
-        personalGrid.Children.Add(rezeptionLabel);
-
-        rezeptionTextBox = new TextBox
-        {
-            Text = RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(rezeptionTextBox, 7);
-        personalGrid.Children.Add(rezeptionTextBox);
-        Grid.SetRow(personalGrid, 0);
-        eingabeGrid.Children.Add(personalGrid);
-
-        // Zeile 2: Behandlungsraeume
-        Grid raeumeGrid = new();
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        raeumeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
-
-        Label behandlungsSchwesterLabel = new() { Content = "Zimmer Schwester:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(behandlungsSchwesterLabel, 0);
-        raeumeGrid.Children.Add(behandlungsSchwesterLabel);
-
-        behandlungsraeumeSchwesterTextBox = new TextBox
-        {
-            Text = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(behandlungsraeumeSchwesterTextBox, 1);
-        raeumeGrid.Children.Add(behandlungsraeumeSchwesterTextBox);
-
-        Label behandlungsSchwesterFlaecheLabel = new() { Content = "Schwester-Zimmer Fläche m²:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(behandlungsSchwesterFlaecheLabel, 3);
-        raeumeGrid.Children.Add(behandlungsSchwesterFlaecheLabel);
-
-        behandlungsflaecheSchwesterTextBox = new TextBox
-        {
-            Text = KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(behandlungsflaecheSchwesterTextBox, 4);
-        raeumeGrid.Children.Add(behandlungsflaecheSchwesterTextBox);
-
-        Label behandlungsArztLabel = new() { Content = "Zimmer Arzt:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(behandlungsArztLabel, 6);
-        raeumeGrid.Children.Add(behandlungsArztLabel);
-
-        behandlungsraeumeArztTextBox = new TextBox
-        {
-            Text = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(behandlungsraeumeArztTextBox, 7);
-        raeumeGrid.Children.Add(behandlungsraeumeArztTextBox);
-
-        Label behandlungsArztFlaecheLabel = new() { Content = "Arzt-Zimmer Fläche m²:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(behandlungsArztFlaecheLabel, 9);
-        raeumeGrid.Children.Add(behandlungsArztFlaecheLabel);
-
-        behandlungsflaecheArztTextBox = new TextBox
-        {
-            Text = KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(behandlungsflaecheArztTextBox, 10);
-        raeumeGrid.Children.Add(behandlungsflaecheArztTextBox);
-        Grid.SetRow(raeumeGrid, 1);
-        eingabeGrid.Children.Add(raeumeGrid);
-
-        // Zeile 3: Zeitraum + Start
-        Grid aktionenGrid = new();
-        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
-        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-        aktionenGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        Label zeitraumLabel = new() { Content = "Zeitraum:", VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(zeitraumLabel, 0);
-        aktionenGrid.Children.Add(zeitraumLabel);
+        Grid aktionenGrid = ErzeugeParameterGrid();
 
         zeitraumComboBox = new ComboBox
         {
             ItemsSource = FinanzVisualisierung.ZeitraumOptionen,
             SelectedItem = "Jahr",
             VerticalContentAlignment = VerticalAlignment.Center,
-            IsEditable = false
+            IsEditable = false,
+            MinHeight = 30,
+            Padding = new Thickness(8, 2, 8, 2)
         };
-        Grid.SetColumn(zeitraumComboBox, 1);
-        aktionenGrid.Children.Add(zeitraumComboBox);
+        FuegeParameterZeile(aktionenGrid, "Zeitraum", zeitraumComboBox);
 
         Button startenButton = new()
         {
             Content = "Simulation starten",
-            Padding = new Thickness(14, 6, 14, 6),
+            Padding = new Thickness(14, 7, 14, 7),
             Background = new SolidColorBrush(Color.FromRgb(33, 150, 243)),
             Foreground = Brushes.White,
-            FontWeight = FontWeights.SemiBold
+            FontWeight = FontWeights.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Margin = new Thickness(0, 12, 0, 0)
         };
         startenButton.Click += SimulationStarten_Click;
-        Grid.SetColumn(startenButton, 3);
+        aktionenGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        Grid.SetRow(startenButton, aktionenGrid.RowDefinitions.Count - 1);
+        Grid.SetColumn(startenButton, 0);
+        Grid.SetColumnSpan(startenButton, 2);
         aktionenGrid.Children.Add(startenButton);
-        Grid.SetRow(aktionenGrid, 2);
-        eingabeGrid.Children.Add(aktionenGrid);
+
+        Border aktionenBox = ErzeugeParameterGruppe("Simulation", aktionenGrid);
+        Grid.SetColumn(aktionenBox, 4);
+        eingabeGrid.Children.Add(aktionenBox);
 
         Grid.SetRow(eingabeGrid, 0);
         root.Children.Add(eingabeGrid);
@@ -289,15 +216,21 @@ internal sealed partial class FinanzWpfFenster : Window
             if (!TryParseDouble(behandlungsflaecheArztTextBox.Text, 1.0, 1000.0, out double flaecheArzt, out string arztFlaecheFehler))
                 throw new InvalidOperationException(arztFlaecheFehler);
 
+            if (!TryParseDouble(wartezimmerflaecheTextBox.Text, 1.0, 1000.0, out double flaecheWartezimmer, out string wartezimmerFlaecheFehler))
+                throw new InvalidOperationException(wartezimmerFlaecheFehler);
+
             if (anzahlSchwesterZimmer + anzahlArztZimmer <= 0)
                 throw new InvalidOperationException("Bitte mindestens ein Behandlungszimmer insgesamt angeben.");
 
             // Setze globale Konfigurationen, damit Simulation und Auswertung die Werte verwenden
+            ArztKonfiguration.ANZAHL_AERZTE = anzahlAerzte;
+            SchwesterKonfiguration.ANZAHL_SCHWESTERN = anzahlSchwestern;
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = anzahlRezeptionisten;
             KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester = anzahlSchwesterZimmer;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter = flaecheSchwester;
             KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt = anzahlArztZimmer;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter = flaecheArzt;
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter = flaecheWartezimmer;
 
             string zeitraum = zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
 
@@ -394,6 +327,104 @@ internal sealed partial class FinanzWpfFenster : Window
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
             Child = panel
+        };
+    }
+
+    private static Grid ErzeugeGeteiltesTabGrid()
+    {
+        Grid inhaltGrid = new();
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ErgebnisSpaltenBreite) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(SpaltenAbstand) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        return inhaltGrid;
+    }
+
+    private static TextBox ErzeugeErgebnisTextBox()
+    {
+        return new TextBox
+        {
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 13,
+            Padding = new Thickness(8)
+        };
+    }
+
+    private static Border ErzeugeParameterGruppe(string titel, UIElement inhalt)
+    {
+        DockPanel panel = new();
+
+        TextBlock header = new()
+        {
+            Text = titel,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.DimGray,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        DockPanel.SetDock(header, Dock.Top);
+        panel.Children.Add(header);
+        panel.Children.Add(inhalt);
+
+        return new Border
+        {
+            BorderBrush = Brushes.Gainsboro,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(12),
+            Background = Brushes.WhiteSmoke,
+            Child = panel
+        };
+    }
+
+    private static Grid ErzeugeParameterGrid()
+    {
+        Grid grid = new();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+        return grid;
+    }
+
+    private static TextBox FuegeParameterZeile(Grid grid, string labelText, string wert)
+    {
+        TextBox textBox = ErzeugeParameterTextBox(wert);
+        FuegeParameterZeile(grid, labelText, textBox);
+        return textBox;
+    }
+
+    private static void FuegeParameterZeile(Grid grid, string labelText, Control eingabe)
+    {
+        int row = grid.RowDefinitions.Count;
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        TextBlock label = new()
+        {
+            Text = labelText,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 3, 12, 3)
+        };
+        Grid.SetRow(label, row);
+        Grid.SetColumn(label, 0);
+        grid.Children.Add(label);
+
+        eingabe.Margin = new Thickness(0, 3, 0, 3);
+        Grid.SetRow(eingabe, row);
+        Grid.SetColumn(eingabe, 1);
+        grid.Children.Add(eingabe);
+    }
+
+    private static TextBox ErzeugeParameterTextBox(string wert)
+    {
+        return new TextBox
+        {
+            Text = wert,
+            MinHeight = 30,
+            Padding = new Thickness(8, 3, 8, 3),
+            HorizontalContentAlignment = HorizontalAlignment.Right,
+            VerticalContentAlignment = VerticalAlignment.Center
         };
     }
 

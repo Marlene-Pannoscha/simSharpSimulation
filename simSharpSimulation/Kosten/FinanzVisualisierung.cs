@@ -46,7 +46,11 @@ internal static class FinanzVisualisierung
 
             int nachfrage = SimuliereTaeglicheNachfrage(tagImJahr, rnd);
             int behandeltePatientenTag = BerechneBehandeltePatienten(anzahlAerzte, anzahlSchwestern, nachfrage, rnd);
-            Tagesergebnis tagesergebnis = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatientenTag);
+            Tagesergebnis tagesergebnis = FinanzRechner.BerechneTagesergebnis(
+                anzahlAerzte,
+                anzahlSchwestern,
+                RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+                behandeltePatientenTag);
 
             FinanzTagespunkt tagespunkt = new(
                 (index + 1).ToString(CultureInfo.InvariantCulture),
@@ -480,6 +484,7 @@ internal sealed record FinanzErgebnis(
             Tagespunkte.Sum(p => p.Behandlungsmix.MittelKosten),
             Tagespunkte.Sum(p => p.Behandlungsmix.LangKosten));
     public int GesamtNichtBehandelt => Math.Max(0, Gesamtnachfrage - GesamtBehandelt);
+    public double DurchschnittBehandeltePatientenProTag => SimulierteTage > 0 ? GesamtBehandelt / (double)SimulierteTage : 0.0;
     public double Behandlungsquote => Gesamtnachfrage > 0 ? (GesamtBehandelt / (double)Gesamtnachfrage) * 100.0 : 0.0;
     public string DurchschnittLabel => string.Equals(Zeitraum, "Jahr", StringComparison.OrdinalIgnoreCase) ? "Monat" : "Tag";
 }

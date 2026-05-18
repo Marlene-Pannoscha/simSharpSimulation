@@ -39,6 +39,7 @@ namespace simSharpSimulation
             var rezeption = LeseJson<RezeptionKonfigurationJson>(Path.Combine(zielOrdner, "rezeption-konfiguration.json"));
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = rezeption.AnzahlRezeptionisten;
             RezeptionKonfiguration.MITTELREZEPTIONSZEIT = rezeption.MittelRezeptionszeit;
+            RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION = rezeption.VariationskoeffizientRezeption;
 
             var patienten = LeseJson<PatientenKonfigurationJson>(Path.Combine(zielOrdner, "patienten-konfiguration.json"));
             PatientenKonfiguration.ANZAHL_PATIENTEN_TAG = patienten.AnzahlPatientenTag;
@@ -100,6 +101,7 @@ namespace simSharpSimulation
             {
                 AnzahlRezeptionisten = RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
                 MittelRezeptionszeit = RezeptionKonfiguration.MITTELREZEPTIONSZEIT,
+                VariationskoeffizientRezeption = RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION,
                 Beschreibung = new RezeptionKonfiguration().Beschreibung
             });
 
@@ -201,6 +203,7 @@ namespace simSharpSimulation
     {
         public int AnzahlRezeptionisten { get; set; }
         public double MittelRezeptionszeit { get; set; }
+        public double VariationskoeffizientRezeption { get; set; } = 1.0;
         public string Beschreibung { get; set; } = string.Empty;
     }
 
@@ -267,6 +270,7 @@ namespace simSharpSimulation
         public double FlaecheBehandlungsraumSchwesterQuadratmeter { get; set; } = 12.0;
         public int AnzahlBehandlungsraeumeArzt { get; set; } = 2;
         public double FlaecheBehandlungsraumArztQuadratmeter { get; set; } = 18.0;
+        public double FlaecheWartezimmerQuadratmeter { get; set; } = 30.0;
 
         [JsonIgnore]
         public int AnzahlBehandlungsraeumeGesamt => AnzahlBehandlungsraeumeSchwester + AnzahlBehandlungsraeumeArzt;
@@ -276,7 +280,8 @@ namespace simSharpSimulation
         public double BerechneMietkostenProTag()
         {
             double flaecheGesamt = (AnzahlBehandlungsraeumeSchwester * FlaecheBehandlungsraumSchwesterQuadratmeter)
-                + (AnzahlBehandlungsraeumeArzt * FlaecheBehandlungsraumArztQuadratmeter);
+                + (AnzahlBehandlungsraeumeArzt * FlaecheBehandlungsraumArztQuadratmeter)
+                + FlaecheWartezimmerQuadratmeter;
 
             return MietkostenProQuadratmeterProTag * Math.Max(flaecheGesamt, 0.0);
         }

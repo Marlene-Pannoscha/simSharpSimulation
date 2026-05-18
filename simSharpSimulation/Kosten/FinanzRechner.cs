@@ -13,7 +13,7 @@ public static class FinanzRechner
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
         ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
-        double grundlohn = anzahlAerzte * Finanzen.Personal.ArztLohnProStunde * Finanzen.Personal.ArbeitsstundenProTag;
+        double grundlohn = BerechneArztGrundlohn(anzahlAerzte);
         double variablerAnteil = behandeltePatienten * Finanzen.Personal.ArztLohnProPatient;
         return grundlohn + variablerAnteil;
     }
@@ -78,31 +78,155 @@ public static class FinanzRechner
         int mittelPatienten = verteilung.GetValueOrDefault(PatientenTyp.Mittel, 0);
         int langPatienten = verteilung.GetValueOrDefault(PatientenTyp.Lang, 0);
 
-        // Ermittle Behandlungskosten pro Typ aus der Patienten-Konfiguration
-        double TypKurzKosten = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Kurz).Behandlungskosten;
-        double TypMittelKosten = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Mittel).Behandlungskosten;
-        double TypLangKosten = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == PatientenTyp.Lang).Behandlungskosten;
-
         return new Behandlungsmix(
             kurzPatienten,
             mittelPatienten,
             langPatienten,
-            kurzPatienten * TypKurzKosten,
-            mittelPatienten * TypMittelKosten,
-            langPatienten * TypLangKosten);
+            kurzPatienten * BehandlungskostenFuer(PatientenTyp.Kurz),
+            mittelPatienten * BehandlungskostenFuer(PatientenTyp.Mittel),
+            langPatienten * BehandlungskostenFuer(PatientenTyp.Lang));
     }
 
     public static Tageskosten BerechneTageskosten(int anzahlAerzte, int behandeltePatienten)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+
         // Fasst alle Kostenarten eines Praxistages zu einem Gesamtergebnis zusammen.
-        double arztlohn = BerechneArztlohn(anzahlAerzte, behandeltePatienten);
-        double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
-        double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
-        double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
-        double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
         Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
-        double personalGesamt = arztlohn + schwesterlohn + rezeptionlohn;
-        double gesamtkosten = personalGesamt + fixkosten + behandlungsmix.Gesamtkosten;
+        return BerechneKosten(
+            anzahlAerzte,
+            SchwesterKonfiguration.ANZAHL_SCHWESTERN,
+            RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+            behandeltePatienten,
+            arbeitstage: 1,
+            behandlungsmix);
+    }
+
+    public static Tageskosten BerechneTageskosten(
+        int anzahlAerzte,
+        int anzahlSchwestern,
+        int anzahlRezeptionisten,
+        int behandeltePatienten)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlSchwestern, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlRezeptionisten, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+
+        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
+        return BerechneKosten(
+            anzahlAerzte,
+            anzahlSchwestern,
+            anzahlRezeptionisten,
+            behandeltePatienten,
+            arbeitstage: 1,
+            behandlungsmix);
+    }
+
+    public static Tagesergebnis BerechneTagesergebnis(int anzahlAerzte, int behandeltePatienten)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+
+        // Kombiniert Kosten, Versicherungsstruktur und Behandlungsmix zu einer kompakten Tagesauswertung.
+        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
+        Tageskosten kosten = BerechneKosten(
+            anzahlAerzte,
+            SchwesterKonfiguration.ANZAHL_SCHWESTERN,
+            RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+            behandeltePatienten,
+            arbeitstage: 1,
+            behandlungsmix);
+        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
+        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
+        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
+    }
+
+    public static Tagesergebnis BerechneTagesergebnis(
+        int anzahlAerzte,
+        int anzahlSchwestern,
+        int anzahlRezeptionisten,
+        int behandeltePatienten)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlSchwestern, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlRezeptionisten, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+
+        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
+        Tageskosten kosten = BerechneKosten(
+            anzahlAerzte,
+            anzahlSchwestern,
+            anzahlRezeptionisten,
+            behandeltePatienten,
+            arbeitstage: 1,
+            behandlungsmix);
+        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
+        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
+        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
+    }
+
+    public static Tagesergebnis BerechneZeitraumergebnis(int anzahlAerzte, int behandeltePatienten, int arbeitstage)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(arbeitstage, 0);
+
+        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
+        Tageskosten kosten = BerechneKosten(
+            anzahlAerzte,
+            SchwesterKonfiguration.ANZAHL_SCHWESTERN,
+            RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+            behandeltePatienten,
+            arbeitstage,
+            behandlungsmix);
+        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
+        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
+        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
+    }
+
+    private static double BerechneArztGrundlohn(int anzahlAerzte)
+    {
+        return anzahlAerzte
+            * Finanzen.Personal.ArztLohnProStunde
+            * Finanzen.Personal.ArbeitsstundenProTag;
+    }
+
+    private static double BerechneFixkosten()
+    {
+        return KonfigurationJsonExport.MietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
+    }
+
+    private static double BehandlungskostenFuer(PatientenTyp typ)
+    {
+        return typ switch
+        {
+            PatientenTyp.Kurz => Finanzen.Behandlungskosten.Kurz,
+            PatientenTyp.Mittel => Finanzen.Behandlungskosten.Mittel,
+            PatientenTyp.Lang => Finanzen.Behandlungskosten.Lang,
+            _ => 0.0
+        };
+    }
+
+    private static Tageskosten BerechneKosten(
+        int anzahlAerzte,
+        int anzahlSchwestern,
+        int anzahlRezeptionisten,
+        int behandeltePatienten,
+        int arbeitstage,
+        Behandlungsmix behandlungsmix)
+    {
+        double arztlohn = (BerechneArztGrundlohn(anzahlAerzte) * arbeitstage)
+            + (behandeltePatienten * Finanzen.Personal.ArztLohnProPatient);
+        double schwesterlohn = BerechneSchwesterlohn(anzahlSchwestern) * arbeitstage;
+        double rezeptionlohn = BerechneRezeptionlohn(anzahlRezeptionisten) * arbeitstage;
+        double fixkosten = BerechneFixkosten() * arbeitstage;
+        double gesamtkosten = arztlohn
+            + schwesterlohn
+            + rezeptionlohn
+            + fixkosten
+            + behandlungsmix.Gesamtkosten;
 
         return new Tageskosten(
             arztlohn,
@@ -113,59 +237,14 @@ public static class FinanzRechner
             gesamtkosten);
     }
 
-    public static Tagesergebnis BerechneTagesergebnis(int anzahlAerzte, int behandeltePatienten)
+    private static Tagesergebnis ErstelleErgebnis(
+        Tageskosten kosten,
+        Versicherungsverteilung versicherungen,
+        Umsatzverteilung umsatzverteilung,
+        Behandlungsmix behandlungsmix)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
-
-        // Kombiniert Kosten, Versicherungsstruktur und Behandlungsmix zu einer kompakten Tagesauswertung.
-        Tageskosten kosten = BerechneTageskosten(anzahlAerzte, behandeltePatienten);
-        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
-        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
         double umsatz = umsatzverteilung.Gesamtumsatz;
         double gewinn = umsatz - kosten.Gesamtkosten;
-
-        return new Tagesergebnis(umsatz, gewinn, kosten, versicherungen, umsatzverteilung, behandlungsmix);
-    }
-
-    public static Tagesergebnis BerechneZeitraumergebnis(int anzahlAerzte, int behandeltePatienten, int arbeitstage)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(arbeitstage, 0);
-
-        double arztGrundlohn = anzahlAerzte
-            * Finanzen.Personal.ArztLohnProStunde
-            * Finanzen.Personal.ArbeitsstundenProTag
-            * arbeitstage;
-        double arztVariablerAnteil = behandeltePatienten * Finanzen.Personal.ArztLohnProPatient;
-        double arztlohn = arztGrundlohn + arztVariablerAnteil;
-
-        double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN) * arbeitstage;
-        double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN) * arbeitstage;
-        double fixkosten = (KonfigurationJsonExport.MietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag) * arbeitstage;
-
-        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
-        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
-
-        double gesamtkosten = arztlohn
-            + schwesterlohn
-            + rezeptionlohn
-            + fixkosten
-            + behandlungsmix.Gesamtkosten;
-        Tageskosten kosten = new(
-            arztlohn,
-            schwesterlohn,
-            rezeptionlohn,
-            fixkosten,
-            behandlungsmix.Gesamtkosten,
-            gesamtkosten);
-
-        double umsatz = umsatzverteilung.Gesamtumsatz;
-        double gewinn = umsatz - kosten.Gesamtkosten;
-
         return new Tagesergebnis(umsatz, gewinn, kosten, versicherungen, umsatzverteilung, behandlungsmix);
     }
 
