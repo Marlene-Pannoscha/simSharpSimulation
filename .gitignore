@@ -3,5 +3,5 @@
 **/obj/**
 **/.dotnet/**
 **/klinik_trace.txt
-**/images/**
+#**/images/**
 

@@ -12,10 +12,18 @@ namespace simSharpSimulation
         double PrognostizierteMinuten);
 
     /*
+     * LOGIK DES PROGNOSEMODELLS FÜR DIE SCHLUSSPLANUNG:
+     * 
      * Diese Hilfsklasse bewertet kurz vor Schichtende, ob ein wartender Patient
-     * mit hoher Wahrscheinlichkeit noch in die aktuelle Tageskapazitaet passt.
-     * Falls nicht, wird spaeter in der jeweiligen Phase ein Verschiebe-Event
-     * statt eines harten Feierabend-Abbruchs ausgeloggt.
+     * mit hoher Wahrscheinlichkeit noch in die Betriebszeit (Tageskapazität) passt.
+     * Falls nicht, wird später in der jeweiligen Phase ein Verschiebe-Event
+     * statt eines plötzlichen Feierabend-Abbruchs generiert.
+     * 
+     * Wie funktioniert das Modell?
+     * 1. Zeitfenster: Es wird nur im konfigurierten "Prognosefenster" (z.B. letzte 60 Min) kurz vor Schichtende aktiv.
+     * 2. Berechnung: (Anzahl aktiver Patienten + wartender Patienten + 1) * erwartete Dauer / Kapazität.
+     * 3. Sicherheit: Ein Sicherheitsfaktor puffert unerwartete Verzögerungen ab (z.B. +10%).
+     * 4. Entscheidung: Passt die prognostizierte Zeit nicht mehr in die Restzeit der Schicht, wird der Patient verschoben.
      */
     internal static class Schlussplanung
     {
@@ -69,36 +77,47 @@ namespace simSharpSimulation
             bool hatTermin,
             string bereich)
         {
-            // Restzeit bis Tagesende bestimmen. Die Prognose wird nur in einem
-            // konfigurierbaren Fenster vor Schichtende aktiviert.
+            // --- Schritt 1: Zeitliche Relevanz prüfen ---
+            // Berechne die Restzeit bis zum Ende der Schicht in Minuten.
+            // Die Prognose wird nur in einem definierten Fenster vor Schichtende (z.B. letzte Stunde) aktiviert.
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             double restMinuten = SimulationKonfiguration.SIMULATIONSDAUER - nowMinutes;
             double prognosefenster = SchlussplanungKonfiguration.PROGNOSEFENSTER_MINUTEN_VOR_SCHLUSS;
 
+            // Wenn die Prognosefunktion deaktiviert ist oder das Zeitfenster noch nicht erreicht wurde,
+            // wird die Prüfung sofort abgebrochen und der Patient darf planmäßig warten.
             if (!SchlussplanungKonfiguration.AKTIVIERT || restMinuten > prognosefenster)
             {
                 return new SchlussplanungsEntscheidung(false, string.Empty, string.Empty, restMinuten, 0.0);
             }
 
-            // Belegte Ressourcen + Warteschlange + aktueller Patient ergeben die
-            // erwartete Zeit bis zum fruehesten moeglichen Abschluss.
-            int kapazitaet = ErmittleKapazitaet(ressource);
-            int aktiveNutzer = ErmittleAnzahlAusEigenschaft(ressource, "Users");
-            int wartendePatienten = ErmittleAnzahlAusEigenschaft(ressource, "Queue");
+            // --- Schritt 2: Aktuelle Auslastung der Ressource ermitteln ---
+            // Wir müssen wissen, wie lange alle bereits anwesenden Patienten sowie der aktuelle Patient benötigen.
+            int kapazitaet = ErmittleKapazitaet(ressource); // z.B. Wie viele Ärzte arbeiten parallel?
+            int aktiveNutzer = ErmittleAnzahlAusEigenschaft(ressource, "Users"); // Patienten aktuell im Sprechzimmer/an der Rezeption
+            int wartendePatienten = ErmittleAnzahlAusEigenschaft(ressource, "Queue"); // Patienten, die im Wartezimmer sitzen
 
+            // --- Schritt 3: Prognostizierte Restdauer berechnen ---
             double sicherheitsfaktor = Math.Max(1.0, SchlussplanungKonfiguration.SICHERHEITSFAKTOR);
+            
+            // Logik: 
+            // (Aktive Patienten + Wartende + 1 für den neuen Patienten) * Behandlungsdauer je Patient
+            // Das Ganze wird durch die Kapazität (Zahl der Behandler) geteilt und mit einem Sicherheitsfaktor multipliziert,
+            // um einen Puffer für unerwartete Verzögerungen einzubauen.
             double erwarteteGesamtzeit = ((aktiveNutzer + wartendePatienten + 1) * erwarteteBehandlungsdauerMinuten / Math.Max(1, kapazitaet))
                 * sicherheitsfaktor;
 
-            // Falls die prognostizierte Zeit noch in die Restzeit passt,
-            // bleibt der Patient normal in der aktuellen Queue.
+            // --- Schritt 4: Entscheidung treffen ---
+            // Falls die kalkulierte Gesamtdauer noch in die restliche Arbeitszeit passt, 
+            // bleibt der Patient normal in der aktuellen Warteschlange.
             if (erwarteteGesamtzeit <= restMinuten)
             {
                 return new SchlussplanungsEntscheidung(false, string.Empty, string.Empty, restMinuten, erwarteteGesamtzeit);
             }
 
-            // Terminpatienten bekommen einen festen Vormittagstermin,
-            // Patienten ohne Termin werden auf den naechsten Tag verschoben.
+            // Wenn die Zeit nicht reicht: Der Patient wird verschoben.
+            // Terminpatienten bekommen bevorzugte Behandlung (z.B. festen Termin direkt am nächsten Vormittag),
+            // Patienten ohne Termin werden allgemein auf den nächsten Tag verschoben.
             string eventTyp = hatTermin
                 ? $"erhaelt_festen_termin_am_naechsten_vormittag_{bereich}"
                 : $"wird_auf_naechsten_tag_verschoben_{bereich}";
