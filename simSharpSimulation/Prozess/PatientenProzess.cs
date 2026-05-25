@@ -16,7 +16,6 @@ namespace simSharpSimulation
     class: Der Bauplan für die Klinik-Simulation. */
     internal sealed class PatientenProzess
     {
-        private const double WahrscheinlichkeitNachArztZurRezeption = 0.6;
         private readonly Random rnd;
         private readonly SimulationsDaten daten;
 
@@ -129,18 +128,27 @@ namespace simSharpSimulation
 
             // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
             bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
-            double erwarteteRestzeitAbAnkunft =
-                eingangZurRezeptionDauer.TotalMinutes +
-                RezeptionKonfiguration.MITTELREZEPTIONSZEIT +
-                BerechneErwarteteSchwesterRestzeit(
+
+            {
+                double prognoseRest = BerechnePrognoseRestzeitMinuten(
+                    PrognosePhase.Ankunft,
+                    patientenTyp,
                     hatTermin,
-                    interneBewegungsdauer,
-                    hatTermin
-                        ? PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT
-                        : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT) +
-                BerechneRestzeitAbSchwester(interneBewegungsdauer) +
-                BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer);
-            ErfassePrognoseCheckpoint(env, patientId, "Ankunft", erwarteteRestzeitAbAnkunft);
+                    brauchtVorbereitungBekannt: false,
+                    brauchtVorbereitung: false,
+                    direktZurSchwester: false,
+                    wartezimmerSchwesterDurchlaufen: false,
+                    ueberspringeSchwester: false,
+                    kenntEntscheidungNachArzt: false,
+                    gehtNachArztZurRezeption: false);
+
+                if (FuehrtPrognoseZumAbbruch(env, patientId, "ankunft", prognoseRest))
+                {
+                    foreach (var ev in BrichPrognoseAb(env, patientId, eingangZurRezeptionDauer))
+                        yield return ev;
+                    yield break;
+                }
+            }
 
             // Schritt P4.4: Rezeption durchlaufen.
             // --- REZEPTION (RECEPTION) PHASE ---
@@ -159,6 +167,7 @@ namespace simSharpSimulation
             bool brauchtVorbereitung = false;
             bool direktZurSchwester = false;
             bool ueberspringeSchwester = false;
+            bool wartezimmerSchwesterDurchlaufen = false;
 
             // Schritt P4.6: Prüfen, ob der Patient einen Termin hat.
             if (hatTermin)
@@ -194,6 +203,7 @@ namespace simSharpSimulation
                             rnd,
                                 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
+                        wartezimmerSchwesterDurchlaufen = true;
 
                         // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
@@ -239,6 +249,7 @@ namespace simSharpSimulation
                             rnd,
                             1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
+                        wartezimmerSchwesterDurchlaufen = true;
 
                         // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
@@ -251,30 +262,51 @@ namespace simSharpSimulation
                 }
             }
 
-            // Schritt P4.10: Falls Schwester nicht übersprungen wird,
-            // Schwester-Phase (Variante mit Prüfung) durchlaufen.
-            ErfassePrognoseCheckpoint(
-                env,
-                patientId,
-                "NachRezeption",
-                BerechneSchwesterRestzeitNachRezeption(
+            {
+                double prognoseRest = BerechnePrognoseRestzeitMinuten(
+                    PrognosePhase.NachRezeption,
+                    patientenTyp,
+                    hatTermin,
+                    brauchtVorbereitungBekannt: true,
                     brauchtVorbereitung,
                     direktZurSchwester,
-                    hatTermin,
-                    interneBewegungsdauer) +
-                BerechneRestzeitAbSchwester(interneBewegungsdauer) +
-                BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer));
+                    wartezimmerSchwesterDurchlaufen,
+                    ueberspringeSchwester,
+                    kenntEntscheidungNachArzt: false,
+                    gehtNachArztZurRezeption: false);
 
+                if (FuehrtPrognoseZumAbbruch(env, patientId, "nach_rezeption", prognoseRest))
+                {
+                    foreach (var ev in BrichPrognoseAb(env, patientId, rezeptionZumAusgangDauer))
+                        yield return ev;
+                    yield break;
+                }
+            }
+
+            // Schritt P4.10: Falls Schwester nicht übersprungen wird,
+            // Schwester-Phase (Variante mit Prüfung) durchlaufen.
             if (!ueberspringeSchwester)
             {
-                ErfassePrognoseCheckpoint(
-                    env,
-                    patientId,
-                    "VorSchwester",
-                    interneBewegungsdauer.TotalMinutes +
-                    SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER +
-                    BerechneRestzeitAbSchwester(interneBewegungsdauer) +
-                    BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer));
+                {
+                    double prognoseRest = BerechnePrognoseRestzeitMinuten(
+                        PrognosePhase.VorSchwester,
+                        patientenTyp,
+                        hatTermin,
+                        brauchtVorbereitungBekannt: true,
+                        brauchtVorbereitung,
+                        direktZurSchwester,
+                        wartezimmerSchwesterDurchlaufen,
+                        ueberspringeSchwester,
+                        kenntEntscheidungNachArzt: false,
+                        gehtNachArztZurRezeption: false);
+
+                    if (FuehrtPrognoseZumAbbruch(env, patientId, "vor_schwester", prognoseRest))
+                    {
+                        foreach (var ev in BrichPrognoseAb(env, patientId, interneBewegungsdauer))
+                            yield return ev;
+                        yield break;
+                    }
+                }
 
                 var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
                 var schwesterErgebnis = new BehandlungsPhaseErgebnis();
@@ -297,18 +329,32 @@ namespace simSharpSimulation
 
                 if (schwesterErgebnis.PatientHatKlinikVerlassen)
                     yield break;
-
-                ErfassePrognoseCheckpoint(
-                    env,
-                    patientId,
-                    "NachSchwester",
-                    BerechneRestzeitAbSchwester(interneBewegungsdauer) +
-                    BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer));
             }
             else
             {
                 // Schritt P4.10B: Schwester wird in diesem Pfad übersprungen (nur bei Terminpatienten).
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "ueberspringt_schwester", patientId);
+            }
+
+            {
+                double prognoseRest = BerechnePrognoseRestzeitMinuten(
+                    PrognosePhase.NachSchwester,
+                    patientenTyp,
+                    hatTermin,
+                    brauchtVorbereitungBekannt: true,
+                    brauchtVorbereitung,
+                    direktZurSchwester,
+                    wartezimmerSchwesterDurchlaufen,
+                    ueberspringeSchwester,
+                    kenntEntscheidungNachArzt: false,
+                    gehtNachArztZurRezeption: false);
+
+                if (FuehrtPrognoseZumAbbruch(env, patientId, "nach_schwester", prognoseRest))
+                {
+                    foreach (var ev in BrichPrognoseAb(env, patientId, interneBewegungsdauer))
+                        yield return ev;
+                    yield break;
+                }
             }
 
             // Schritt P4.11: Wartevorgang für den Arzt.
@@ -326,13 +372,26 @@ namespace simSharpSimulation
                 rnd, 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * wartezeitFaktor));
             yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauerArzt));
 
-            ErfassePrognoseCheckpoint(
-                env,
-                patientId,
-                "VorArzt",
-                interneBewegungsdauer.TotalMinutes +
-                ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER +
-                BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer));
+            {
+                double prognoseRest = BerechnePrognoseRestzeitMinuten(
+                    PrognosePhase.VorArzt,
+                    patientenTyp,
+                    hatTermin,
+                    brauchtVorbereitungBekannt: true,
+                    brauchtVorbereitung,
+                    direktZurSchwester,
+                    wartezimmerSchwesterDurchlaufen,
+                    ueberspringeSchwester,
+                    kenntEntscheidungNachArzt: false,
+                    gehtNachArztZurRezeption: false);
+
+                if (FuehrtPrognoseZumAbbruch(env, patientId, "vor_arzt", prognoseRest))
+                {
+                    foreach (var ev in BrichPrognoseAb(env, patientId, interneBewegungsdauer))
+                        yield return ev;
+                    yield break;
+                }
+            }
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
@@ -345,18 +404,30 @@ namespace simSharpSimulation
                 yield break;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
-            bool gehtNachArztZurRezeption = rnd.NextDouble() < WahrscheinlichkeitNachArztZurRezeption;
-            ErfassePrognoseCheckpoint(
-                env,
-                patientId,
-                "NachArzt",
-                BerechneRestzeitNachArztMitKonkretemPfad(
-                    gehtNachArztZurRezeption,
-                    interneBewegungsdauer,
-                    rezeptionZumAusgangDauer,
-                    arztZumAusgangDauer));
+            bool gehtNachArztZurRezeption = rnd.NextDouble() < 0.6;
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, gehtNachArztZurRezeption ? "geht_nach_arzt_zur_rezeption" : "verlaesst_nach_arzt_ohne_rezeption", patientId);
+
+            {
+                double prognoseRest = BerechnePrognoseRestzeitMinuten(
+                    PrognosePhase.NachArzt,
+                    patientenTyp,
+                    hatTermin,
+                    brauchtVorbereitungBekannt: true,
+                    brauchtVorbereitung,
+                    direktZurSchwester,
+                    wartezimmerSchwesterDurchlaufen,
+                    ueberspringeSchwester,
+                    kenntEntscheidungNachArzt: true,
+                    gehtNachArztZurRezeption);
+
+                if (FuehrtPrognoseZumAbbruch(env, patientId, "nach_arzt", prognoseRest))
+                {
+                    foreach (var ev in BrichPrognoseAb(env, patientId, arztZumAusgangDauer))
+                        yield return ev;
+                    yield break;
+                }
+            }
 
             if (gehtNachArztZurRezeption)
             {
@@ -382,11 +453,11 @@ namespace simSharpSimulation
             // EREIGNIS 10: Patient verlässt die Klinik
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, nowMinutes);
 
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
             daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
-            daten.SchliessePrognosen(patientId, nowMinutes);
         }
 
         // Phase P-C: Delegation an ausgelagerte Phasenklassen.
@@ -414,104 +485,129 @@ namespace simSharpSimulation
             });
         }
 
-        private void ErfassePrognoseCheckpoint(Simulation env, int patientId, string phase, double prognoseRestMinuten)
+        private enum PrognosePhase
         {
-            double zeitpunktMinuten = (env.Now - env.StartDate).TotalMinutes;
-            bool fertigBisSchichtende = zeitpunktMinuten + prognoseRestMinuten <= SimulationKonfiguration.SIMULATIONSDAUER;
-            daten.ErfassePrognosePruefung(
-                patientId,
-                phase,
-                zeitpunktMinuten,
-                Math.Max(0.0, prognoseRestMinuten),
-                fertigBisSchichtende);
+            Ankunft,
+            NachRezeption,
+            VorSchwester,
+            NachSchwester,
+            VorArzt,
+            NachArzt
         }
 
-        private static double BerechneSchwesterRestzeitNachRezeption(
+        private double BerechnePrognoseRestzeitMinuten(
+            PrognosePhase phase,
+            PatientenTyp patientenTyp,
+            bool hatTermin,
+            bool brauchtVorbereitungBekannt,
             bool brauchtVorbereitung,
             bool direktZurSchwester,
-            bool hatTermin,
-            TimeSpan interneBewegungsdauer)
+            bool wartezimmerSchwesterDurchlaufen,
+            bool ueberspringeSchwester,
+            bool kenntEntscheidungNachArzt,
+            bool gehtNachArztZurRezeption)
         {
-            if (!brauchtVorbereitung)
+            double eingangZurRezeptionMin = SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN / 60.0;
+            double interneMin = SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN / 60.0;
+            double arztZumAusgangMin = SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN / 60.0;
+            double rezeptionZumAusgangMin = SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN / 60.0;
+
+            double arztBehandlungMean = ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
+            double schwesterBehandlungMean = SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
+
+            double wartezimmerSchwesterMean = PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER *
+                (hatTermin ? PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER
+                           : PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER);
+
+            double wartezimmerArztMean = PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT *
+                (hatTermin ? PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT
+                           : PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT);
+
+            double rezeptionMean = RezeptionKonfiguration.MITTELREZEPTIONSZEIT;
+
+            double erwarteterNachArztPfad;
+            if (kenntEntscheidungNachArzt)
             {
-                return 0.0;
+                erwarteterNachArztPfad = gehtNachArztZurRezeption
+                    ? interneMin + rezeptionMean + rezeptionZumAusgangMin
+                    : arztZumAusgangMin;
+            }
+            else
+            {
+                double erwartungRezeptionPfad = interneMin + rezeptionMean + rezeptionZumAusgangMin;
+                erwarteterNachArztPfad = (0.6 * erwartungRezeptionPfad) + (0.4 * arztZumAusgangMin);
             }
 
-            double restzeit = interneBewegungsdauer.TotalMinutes + SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
-            if (!direktZurSchwester)
+            double schwesterTeil = 0.0;
+            if (brauchtVorbereitungBekannt)
             {
-                restzeit += interneBewegungsdauer.TotalMinutes + BerechneMittlereSchwesterWartezimmerzeit(hatTermin);
+                if (!ueberspringeSchwester && brauchtVorbereitung)
+                {
+                    if (direktZurSchwester)
+                    {
+                        schwesterTeil = interneMin + schwesterBehandlungMean;
+                    }
+                    else if (wartezimmerSchwesterDurchlaufen)
+                    {
+                        schwesterTeil = interneMin + schwesterBehandlungMean;
+                    }
+                    else
+                    {
+                        schwesterTeil = interneMin + wartezimmerSchwesterMean + interneMin + schwesterBehandlungMean;
+                    }
+                }
+            }
+            else
+            {
+                double vorbereitungWahrscheinlichkeit = hatTermin
+                    ? PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT
+                    : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
+
+                double erwarteteSchwesterZeit = interneMin + wartezimmerSchwesterMean + interneMin + schwesterBehandlungMean;
+                schwesterTeil = vorbereitungWahrscheinlichkeit * erwarteteSchwesterZeit;
             }
 
-            return restzeit;
-        }
+            double arztTeil = interneMin + wartezimmerArztMean + interneMin + arztBehandlungMean;
 
-        private static double BerechneErwarteteSchwesterRestzeit(
-            bool hatTermin,
-            TimeSpan interneBewegungsdauer,
-            double vorbereitungsWahrscheinlichkeit)
-        {
-            double restzeitMitVorbereitung =
-                (2.0 * interneBewegungsdauer.TotalMinutes) +
-                BerechneMittlereSchwesterWartezimmerzeit(hatTermin) +
-                SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
-
-            return vorbereitungsWahrscheinlichkeit * restzeitMitVorbereitung;
-        }
-
-        private static double BerechneRestzeitAbSchwester(TimeSpan interneBewegungsdauer)
-        {
-            return (2.0 * interneBewegungsdauer.TotalMinutes) +
-                   BerechneMittlereArztWartezimmerzeit() +
-                   ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
-        }
-
-        private static double BerechneErwarteteRestzeitNachArzt(
-            TimeSpan interneBewegungsdauer,
-            TimeSpan rezeptionZumAusgangDauer,
-            TimeSpan arztZumAusgangDauer)
-        {
-            double restMitRezeption =
-                interneBewegungsdauer.TotalMinutes +
-                RezeptionKonfiguration.MITTELREZEPTIONSZEIT +
-                rezeptionZumAusgangDauer.TotalMinutes;
-
-            double restOhneRezeption = arztZumAusgangDauer.TotalMinutes;
-            return WahrscheinlichkeitNachArztZurRezeption * restMitRezeption +
-                   ((1.0 - WahrscheinlichkeitNachArztZurRezeption) * restOhneRezeption);
-        }
-
-        private static double BerechneRestzeitNachArztMitKonkretemPfad(
-            bool gehtNachArztZurRezeption,
-            TimeSpan interneBewegungsdauer,
-            TimeSpan rezeptionZumAusgangDauer,
-            TimeSpan arztZumAusgangDauer)
-        {
-            if (!gehtNachArztZurRezeption)
+            return phase switch
             {
-                return arztZumAusgangDauer.TotalMinutes;
-            }
-
-            return interneBewegungsdauer.TotalMinutes +
-                   RezeptionKonfiguration.MITTELREZEPTIONSZEIT +
-                   rezeptionZumAusgangDauer.TotalMinutes;
+                PrognosePhase.Ankunft => eingangZurRezeptionMin + rezeptionMean + schwesterTeil + arztTeil + erwarteterNachArztPfad,
+                PrognosePhase.NachRezeption => schwesterTeil + arztTeil + erwarteterNachArztPfad,
+                PrognosePhase.VorSchwester => interneMin + schwesterBehandlungMean + arztTeil + erwarteterNachArztPfad,
+                PrognosePhase.NachSchwester => arztTeil + erwarteterNachArztPfad,
+                PrognosePhase.VorArzt => interneMin + arztBehandlungMean + erwarteterNachArztPfad,
+                PrognosePhase.NachArzt => erwarteterNachArztPfad,
+                _ => 0.0
+            };
         }
 
-        private static double BerechneMittlereSchwesterWartezimmerzeit(bool hatTermin)
+        private bool FuehrtPrognoseZumAbbruch(
+            Simulation env,
+            int patientId,
+            string phase,
+            double prognoseRestMinuten)
         {
-            double faktor = hatTermin
-                ? PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER
-                : PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER;
-            return PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * faktor;
+            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            bool fertigBisSchichtende = nowMinutes + prognoseRestMinuten <= SimulationKonfiguration.SIMULATIONSDAUER;
+
+            daten.ErfassePrognosePruefung(patientId, phase, nowMinutes, prognoseRestMinuten, fertigBisSchichtende);
+            return !fertigBisSchichtende;
         }
 
-        private static double BerechneMittlereArztWartezimmerzeit()
+        private IEnumerable<Event> BrichPrognoseAb(
+            Simulation env,
+            int patientId,
+            TimeSpan exitDauer)
         {
-            double terminAnteil = PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
-            double faktor =
-                (terminAnteil * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT) +
-                ((1.0 - terminAnteil) * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT);
-            return PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * faktor;
+            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            daten.ErfassePrognoseAbbruch(env.StartDate);
+
+            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
+            yield return env.Timeout(exitDauer);
+
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, nowMinutes);
         }
 
     }

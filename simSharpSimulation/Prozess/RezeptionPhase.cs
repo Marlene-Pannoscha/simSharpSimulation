@@ -38,7 +38,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -49,7 +49,7 @@ namespace simSharpSimulation
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -61,7 +61,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!rezeptionVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -74,7 +74,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (nowMinutes > schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -121,7 +121,6 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             int patientId,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;

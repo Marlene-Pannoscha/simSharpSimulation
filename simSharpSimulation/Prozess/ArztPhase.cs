@@ -57,7 +57,7 @@ namespace simSharpSimulation
             // fuer diesen Tag ueberhaupt noch offen ist.
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -72,7 +72,7 @@ namespace simSharpSimulation
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -85,7 +85,7 @@ namespace simSharpSimulation
                 // Wenn das Schichtende zuerst eintrat, verlässt der Patient die Klinik.
                 if (!arztVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -150,7 +150,6 @@ namespace simSharpSimulation
             int patientId,
             int arztId,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             // Diese Hilfsmethode haelt den Abbruchpfad an einer Stelle zusammen,

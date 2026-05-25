@@ -31,7 +31,6 @@ namespace simSharpSimulation
             double ankunftszeit,
             bool hatTermin,
             bool direktZurSchwester,
-            bool pruefeVorbereitungNachZimmer,
             TimeSpan interneBewegungsdauer,
             Random rnd,
             SimulationsDaten daten,
@@ -47,7 +46,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -58,7 +57,7 @@ namespace simSharpSimulation
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -70,7 +69,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!schwesterVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -120,7 +119,6 @@ namespace simSharpSimulation
             int patientId,
             int schwesterId,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
