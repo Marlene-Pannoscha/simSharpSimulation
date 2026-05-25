@@ -67,6 +67,10 @@ namespace simSharpSimulation
             daten.SchreibePrognoseReport(prognosePfad);
             Console.WriteLine($"--- Prognose-Report gespeichert: {prognosePfad} ---");
 
+            string prognoseJsonPfad = "prognose_daten.json";
+            daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
+            Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
+
             Console.WriteLine();
             Console.WriteLine(daten.ErzeugePrognoseReportText());
             

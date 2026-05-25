@@ -58,6 +58,7 @@ namespace simSharpSimulation
 
         private readonly Dictionary<int, List<PrognosePruefung>> prognoseOffen = new();
         private readonly List<PrognoseErgebnis> prognoseErgebnisse = new();
+        private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -168,11 +169,12 @@ namespace simSharpSimulation
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
-        public void ErfassePrognoseAbbruch(DateTime tag)
+        public void ErfassePrognoseAbbruch(DateTime tag, double zeitpunktMinuten, string phase)
         {
             AnzahlAbgebrochenMiss++;
             AnzahlPrognoseAbbruch++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+            prognoseAbbrueche.Add(new PrognoseAbbruchPunkt(zeitpunktMinuten, phase));
         }
 
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
@@ -352,6 +354,55 @@ namespace simSharpSimulation
             File.WriteAllText(dateiPfad, sb.ToString());
         }
 
+        public void SchreibePrognoseDatenJson(string dateiPfad)
+        {
+            var phaseDaten = prognoseErgebnisse
+                .GroupBy(e => e.Phase)
+                .OrderBy(g => g.Key)
+                .Select(g => new
+                {
+                    Phase = g.Key,
+                    Anzahl = g.Count(),
+                    Korrekt = g.Count(e => e.Korrekt),
+                    Trefferquote = g.Any() ? (g.Count(e => e.Korrekt) / (double)g.Count()) * 100.0 : 0.0
+                })
+                .ToList();
+
+            var daten = new
+            {
+                AnzahlPrognosePruefungen,
+                AnzahlPrognoseRichtig,
+                AnzahlPrognoseAbbruch,
+                PrognoseTrefferquote,
+                Abbruchgruende = new
+                {
+                    Prognose = AnzahlPrognoseAbbruch,
+                    RezeptionFeierabend = AnzahlNichtBehandeltRezeptionFeierabend,
+                    SchwesterFeierabend = AnzahlNichtBehandeltSchwesterFeierabend,
+                    ArztFeierabend = AnzahlNichtBehandeltArztFeierabend
+                },
+                Phasen = phaseDaten,
+                Ergebnisse = prognoseErgebnisse.Select(e => new
+                {
+                    e.PatientId,
+                    e.Phase,
+                    e.ZeitpunktMinuten,
+                    e.PrognoseRestMinuten,
+                    IstRestMinuten = e.IstRestMinuten,
+                    e.Korrekt,
+                    e.PrognoseFertigBisSchichtende
+                }),
+                PrognoseAbbrueche = prognoseAbbrueche.Select(a => new
+                {
+                    a.ZeitpunktMinuten,
+                    a.Phase
+                })
+            };
+
+            var optionen = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(dateiPfad, JsonSerializer.Serialize(daten, optionen));
+        }
+
         public void ErfassePatientenTyp(PatientenTyp typ)
         {
             PatientenTypZaehler[typ]++;
@@ -499,6 +550,10 @@ namespace simSharpSimulation
             double IstRestMinuten,
             bool Korrekt,
             bool PrognoseFertigBisSchichtende);
+
+        private sealed record PrognoseAbbruchPunkt(
+            double ZeitpunktMinuten,
+            string Phase);
     }
 
     internal readonly record struct TagesHitMissPunkt(string Label, int Hit, int Miss);

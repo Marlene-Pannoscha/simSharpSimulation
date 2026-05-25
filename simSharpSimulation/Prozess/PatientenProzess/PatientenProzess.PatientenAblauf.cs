@@ -55,7 +55,7 @@ namespace simSharpSimulation
                 BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer);
             if (!ErfassePrognoseCheckpoint(env, patientId, "Ankunft", erwarteteRestzeitAbAnkunft))
             {
-                foreach (var ev in BrichWegenPrognoseAb(env, patientId, TimeSpan.Zero))
+                foreach (var ev in BrichWegenPrognoseAb(env, patientId, "Ankunft", TimeSpan.Zero))
                     yield return ev;
                 yield break;
             }
@@ -183,7 +183,7 @@ namespace simSharpSimulation
                 BerechneRestzeitAbSchwester(interneBewegungsdauer) +
                 BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer)))
             {
-                foreach (var ev in BrichWegenPrognoseAb(env, patientId, rezeptionZumAusgangDauer))
+                foreach (var ev in BrichWegenPrognoseAb(env, patientId, "NachRezeption", rezeptionZumAusgangDauer))
                     yield return ev;
                 yield break;
             }
@@ -199,7 +199,7 @@ namespace simSharpSimulation
                     BerechneRestzeitAbSchwester(interneBewegungsdauer) +
                     BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer)))
                 {
-                    foreach (var ev in BrichWegenPrognoseAb(env, patientId, interneBewegungsdauer))
+                    foreach (var ev in BrichWegenPrognoseAb(env, patientId, "VorSchwester", interneBewegungsdauer))
                         yield return ev;
                     yield break;
                 }
@@ -232,7 +232,7 @@ namespace simSharpSimulation
                     BerechneRestzeitAbSchwester(interneBewegungsdauer) +
                     BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer)))
                 {
-                    foreach (var ev in BrichWegenPrognoseAb(env, patientId, interneBewegungsdauer))
+                    foreach (var ev in BrichWegenPrognoseAb(env, patientId, "NachSchwester", interneBewegungsdauer))
                         yield return ev;
                     yield break;
                 }
@@ -266,7 +266,7 @@ namespace simSharpSimulation
                 ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER +
                 BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer)))
             {
-                foreach (var ev in BrichWegenPrognoseAb(env, patientId, interneBewegungsdauer))
+                foreach (var ev in BrichWegenPrognoseAb(env, patientId, "VorArzt", interneBewegungsdauer))
                     yield return ev;
                 yield break;
             }
@@ -293,7 +293,7 @@ namespace simSharpSimulation
                     rezeptionZumAusgangDauer,
                     arztZumAusgangDauer)))
             {
-                foreach (var ev in BrichWegenPrognoseAb(env, patientId, arztZumAusgangDauer))
+                foreach (var ev in BrichWegenPrognoseAb(env, patientId, "NachArzt", arztZumAusgangDauer))
                     yield return ev;
                 yield break;
             }

@@ -30,10 +30,10 @@ namespace simSharpSimulation
         // Wenn die Prognose negativ ist, verlässt der Patient die Klinik über einen normalen Ausgangspfad.
         // Wir loggen bewusst keinen separaten Prognose-Event im Trace, sondern nur die Zählung
         // in SimulationsDaten und den üblichen Weg zum Ausgang.
-        private IEnumerable<Event> BrichWegenPrognoseAb(Simulation env, int patientId, TimeSpan wegZumAusgang)
+        private IEnumerable<Event> BrichWegenPrognoseAb(Simulation env, int patientId, string phase, TimeSpan wegZumAusgang)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.ErfassePrognoseAbbruch(env.StartDate);
+            daten.ErfassePrognoseAbbruch(env.StartDate, nowMinutes, phase);
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(wegZumAusgang);
 
