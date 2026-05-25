@@ -1,0 +1,11 @@
+Prognosemodell-Auswertung
+==================================================
+Prognoseprüfungen gesamt: 0
+Richtig (±20 %): 0
+Trefferquote: 0,00 %
+Prognose-Abbrüche: 0
+
+
+
+Details
+PatientId;Phase;ZeitpunktMin;PrognoseRestMin;IstRestMin;Korrekt;PrognoseFertigBisSchichtende

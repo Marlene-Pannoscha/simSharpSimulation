@@ -138,7 +138,7 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetRow(statusTextBlock, 1);
         root.Children.Add(statusTextBlock);
 
-        // TabControl mit zwei Tabs: Finanzen und Hit/Miss
+        // TabControl mit Tabs: Finanzen, Hit/Miss, Prognose
         TabControl tabControl = new();
         
         // Tab 1: Finanzen
@@ -156,11 +156,20 @@ internal sealed partial class FinanzWpfFenster : Window
             Content = ErstelleHitMissTab()
         };
         tabControl.Items.Add(hitMissTab);
+
+        TabItem prognoseTab = new()
+        {
+            Header = "Prognose",
+            Content = ErstellePrognoseTab()
+        };
+        tabControl.Items.Add(prognoseTab);
         
         Grid.SetRow(tabControl, 2);
         root.Children.Add(tabControl);
 
         Content = root;
+
+        AktualisierePrognoseTab();
     }
 
     public static void StarteFenster()
@@ -251,6 +260,8 @@ internal sealed partial class FinanzWpfFenster : Window
             // Hit/Miss Tab aktualisieren
             hitMissErgebnisTextBox.Text = ErzeugeHitMissErgebnisText(anzahlHit, anzahlMiss, hitMissPfad);
             hitMissImage.Source = LadeBild(hitMissPfad);
+
+            AktualisierePrognoseTab();
             
             statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
         }

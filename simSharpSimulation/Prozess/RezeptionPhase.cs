@@ -134,6 +134,7 @@ namespace simSharpSimulation
 
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, nowMinutes);
             ergebnis.MarkiereKlinikVerlassen();
         }
 

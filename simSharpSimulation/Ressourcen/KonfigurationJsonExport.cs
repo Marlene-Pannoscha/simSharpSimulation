@@ -27,14 +27,16 @@ namespace simSharpSimulation
             string zielOrdner = ErmittleRessourcenOrdner();
             if (!AlleKonfigurationsdateienVorhanden(zielOrdner))
             {
-                ExportiereAlle();
+                throw new FileNotFoundException($"Konfigurationen fehlen im Ressourcenordner: {zielOrdner}");
             }
 
             var arzt = LeseJson<ArztKonfigurationJson>(Path.Combine(zielOrdner, "arzt-konfiguration.json"));
             ArztKonfiguration.ANZAHL_AERZTE = arzt.AnzahlAerzte;
+            ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER = arzt.MittlereBehandlungsdauer;
 
             var schwester = LeseJson<SchwesterKonfigurationJson>(Path.Combine(zielOrdner, "schwester-konfiguration.json"));
             SchwesterKonfiguration.ANZAHL_SCHWESTERN = schwester.AnzahlSchwestern;
+            SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER = schwester.MittlereBehandlungsdauer;
 
             var rezeption = LeseJson<RezeptionKonfigurationJson>(Path.Combine(zielOrdner, "rezeption-konfiguration.json"));
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = rezeption.AnzahlRezeptionisten;
@@ -74,7 +76,7 @@ namespace simSharpSimulation
             string zielOrdner = ErmittleRessourcenOrdner();
             if (!AlleKonfigurationsdateienVorhanden(zielOrdner))
             {
-                ExportiereAlle();
+                throw new FileNotFoundException($"Konfigurationen fehlen im Ressourcenordner: {zielOrdner}");
             }
 
             Finanzen = LeseJson<FinanzKonfigurationJson>(Path.Combine(zielOrdner, "finanz-konfiguration.json"));
@@ -82,73 +84,7 @@ namespace simSharpSimulation
 
         public static void ExportiereAlle()
         {
-            string zielOrdner = ErmittleRessourcenOrdner();
-            Directory.CreateDirectory(zielOrdner);
-
-            SchreibeJson(Path.Combine(zielOrdner, "arzt-konfiguration.json"), new ArztKonfigurationJson
-            {
-                AnzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE,
-                Beschreibung = new ArztKonfiguration().Beschreibung
-            });
-
-            SchreibeJson(Path.Combine(zielOrdner, "schwester-konfiguration.json"), new SchwesterKonfigurationJson
-            {
-                AnzahlSchwestern = SchwesterKonfiguration.ANZAHL_SCHWESTERN,
-                Beschreibung = new SchwesterKonfiguration().Beschreibung
-            });
-
-            SchreibeJson(Path.Combine(zielOrdner, "rezeption-konfiguration.json"), new RezeptionKonfigurationJson
-            {
-                AnzahlRezeptionisten = RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
-                MittelRezeptionszeit = RezeptionKonfiguration.MITTELREZEPTIONSZEIT,
-                VariationskoeffizientRezeption = RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION,
-                Beschreibung = new RezeptionKonfiguration().Beschreibung
-            });
-
-            SchreibeJson(Path.Combine(zielOrdner, "patienten-konfiguration.json"), new PatientenKonfigurationJson
-            {
-                AnzahlPatientenTag = PatientenKonfiguration.ANZAHL_PATIENTEN_TAG,
-                Erwartungswert = PatientenKonfiguration.ERWARTUNGSWERT,
-                Standardabweichung = PatientenKonfiguration.STANDARDABWEICHUNG,
-                TerminWahrscheinlichkeit = PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT,
-                TerminVorbereitungWahrscheinlichkeit = PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT,
-                OhneTerminVorbereitungWahrscheinlichkeit = PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT,
-                MittlereWartezimmerDauerSchwester = PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER,
-                MittlereWartezimmerDauerArzt = PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT,
-                MitTerminWartezimmerFaktorSchwester = PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER,
-                OhneTerminWartezimmerFaktorSchwester = PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER,
-                MitTerminWartezimmerFaktorArzt = PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT,
-                OhneTerminWartezimmerFaktorArzt = PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT,
-                TypenVerteilung = PatientenKonfiguration.TYPEN_VERTEILUNG.Select(t => new PatientenTypKonfigurationJson
-                {
-                    Typ = t.Typ,
-                    Wahrscheinlichkeit = t.Wahrscheinlichkeit,
-                    BehandlungszeitArzt = t.BehandlungszeitArzt,
-                    VariationskoeffizientArzt = t.VariationskoeffizientArzt,
-                    BehandlungszeitSchwester = t.BehandlungszeitSchwester,
-                    VariationskoeffizientSchwester = t.VariationskoeffizientSchwester,
-                    Behandlungskosten = t.Behandlungskosten
-                }).ToList(),
-                Beschreibung = new PatientenKonfiguration().Beschreibung
-            });
-
-            SchreibeJson(Path.Combine(zielOrdner, "simulation-konfiguration.json"), new SimulationKonfigurationJson
-            {
-                RandomSeed = SimulationKonfiguration.RANDOM_SEED,
-                Simulationsdauer = SimulationKonfiguration.SIMULATIONSDAUER,
-                BewegungszeitEingangZurRezeptionSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN,
-                BewegungszeitInnerhalbKlinikSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN,
-                BewegungszeitArztZumAusgangSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN,
-                BewegungszeitRezeptionZumAusgangSekunden = SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN
-            });
-
-            SchreibeJson(Path.Combine(zielOrdner, "finanz-konfiguration.json"), new FinanzKonfigurationJson
-            {
-                Personal = new PersonalKostenJson(),
-                Fixkosten = new FixkostenJson(),
-                Versicherung = new VersicherungsKostenJson(),
-                Behandlungskosten = new BehandlungskostenJson()
-            });
+            throw new InvalidOperationException("ExportiereAlle ist deaktiviert. Bitte JSON-Konfigurationen bereitstellen.");
         }
 
         private static T LeseJson<T>(string pfad)
@@ -190,12 +126,14 @@ namespace simSharpSimulation
     internal sealed class ArztKonfigurationJson
     {
         public int AnzahlAerzte { get; set; }
+        public double MittlereBehandlungsdauer { get; set; }
         public string Beschreibung { get; set; } = string.Empty;
     }
 
     internal sealed class SchwesterKonfigurationJson
     {
         public int AnzahlSchwestern { get; set; }
+        public double MittlereBehandlungsdauer { get; set; }
         public string Beschreibung { get; set; } = string.Empty;
     }
 

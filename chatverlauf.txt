@@ -1,0 +1,20 @@
+Hinweis: Ich habe keinen Zugriff auf Chats anderer Agenten. Diese Datei enthält eine Zusammenfassung des aktuellen Chatverlaufs.
+
+Zusammenfassung (25. Mai 2026)
+- Prognosemodell erweitert: kontinuierliche Prognoseprüfungen im Patientenprozess (Ankunft, nach Rezeption, vor/nach Schwester, vor/nach Arzt).
+- Prognose nutzt Mittelwerte aus JSON (Behandlung Arzt/Schwester, Wartezimmerzeiten, Bewegungszeiten) und berücksichtigt bereits absolvierte Wartezimmerzeit.
+- Trefferquote: ±20 % Fehlerband, Auswertung pro Prüfung; Abbruch wenn Prognose über Schichtende.
+- Ausgabe: Konsole + prognose_report.txt + WPF-Tab „Prognose“.
+- Prognose-Events wurden aus Trace entfernt.
+- JSON-Konfiguration erweitert: mittlere Behandlungsdauer in arzt-/schwester-konfiguration.json.
+- Konfiguration strikt aus JSON (kein Auto-Export/Fallback) in KonfigurationJsonExport.cs.
+
+Letzte relevante Dateien:
+- simSharpSimulation/Prozess/PatientenProzess.cs
+- simSharpSimulation/SimulationsDaten.cs
+- simSharpSimulation/Program.cs
+- simSharpSimulation/Kosten/FinanzWpfFenster.cs (+ Prognose-Tab)
+- simSharpSimulation/Kosten/FinanzWpfFenster.Prognose.cs
+- simSharpSimulation/Ressourcen/arzt-konfiguration.json
+- simSharpSimulation/Ressourcen/schwester-konfiguration.json
+- simSharpSimulation/Ressourcen/konfigurationJsonExport.cs

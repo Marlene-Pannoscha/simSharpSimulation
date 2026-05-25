@@ -56,6 +56,9 @@ namespace simSharpSimulation
             Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => new List<double>());
         private readonly SortedDictionary<DateTime, TagesHitMissZaehler> hitMissProTag = new();
 
+        private readonly Dictionary<int, List<PrognosePruefung>> prognoseOffen = new();
+        private readonly List<PrognoseErgebnis> prognoseErgebnisse = new();
+
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
 
@@ -65,6 +68,10 @@ namespace simSharpSimulation
         public int AnzahlNichtBehandeltSchwesterGesamt => AnzahlNichtBehandeltSchwesterFeierabend;
         public int AnzahlNichtBehandeltRezeptionFeierabend { get; private set; }
         public int AnzahlNichtBehandeltRezeptionGesamt => AnzahlNichtBehandeltRezeptionFeierabend;
+
+        public int AnzahlPrognosePruefungen { get; private set; }
+        public int AnzahlPrognoseRichtig { get; private set; }
+        public int AnzahlPrognoseAbbruch { get; private set; }
 
         // Abgeleitete Kennzahlen
         public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
@@ -85,6 +92,9 @@ namespace simSharpSimulation
         public double DurchschnittlicheGesamtprozesszeit => MittelwertOder0(Gesamtprozesszeiten);
         public double DurchschnittlicheGesamtprozesszeitMitTermin => MittelwertOder0(GesamtprozesszeitenMitTermin);
         public double DurchschnittlicheGesamtprozesszeitOhneTermin => MittelwertOder0(GesamtprozesszeitenOhneTermin);
+        public double PrognoseTrefferquote => AnzahlPrognosePruefungen > 0
+            ? (AnzahlPrognoseRichtig / (double)AnzahlPrognosePruefungen) * 100.0
+            : 0.0;
         internal IReadOnlyList<TagesHitMissPunkt> HitMissProTag => hitMissProTag
             .Select(eintrag => new TagesHitMissPunkt(
                 eintrag.Key.ToString("ddd dd.MM", CultureInfo.GetCultureInfo("de-DE")),
@@ -158,6 +168,13 @@ namespace simSharpSimulation
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
         }
 
+        public void ErfassePrognoseAbbruch(DateTime tag)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlPrognoseAbbruch++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+        }
+
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
         {
             SchwesternWartezeiten.Add(wartezeitSchwester);
@@ -216,6 +233,123 @@ namespace simSharpSimulation
                 hatTermin,
                 GesamtprozesszeitenMitTermin,
                 GesamtprozesszeitenOhneTermin);
+        }
+
+        public void ErfassePrognosePruefung(
+            int patientId,
+            string phase,
+            double zeitpunktMinuten,
+            double prognoseRestMinuten,
+            bool prognoseFertigBisSchichtende)
+        {
+            if (!prognoseOffen.TryGetValue(patientId, out List<PrognosePruefung>? liste))
+            {
+                liste = new List<PrognosePruefung>();
+                prognoseOffen[patientId] = liste;
+            }
+
+            liste.Add(new PrognosePruefung(patientId, phase, zeitpunktMinuten, prognoseRestMinuten, prognoseFertigBisSchichtende));
+            AnzahlPrognosePruefungen++;
+
+            if (AnzahlPrognosePruefungen == 1)
+            {
+                Console.WriteLine($"[Prognose] Erste Prüfung: Patient {patientId}, Phase {phase}, t={zeitpunktMinuten:F2}, Rest={prognoseRestMinuten:F2}");
+            }
+        }
+
+        public void SchliessePrognosen(int patientId, double endZeitpunktMinuten)
+        {
+            if (!prognoseOffen.TryGetValue(patientId, out List<PrognosePruefung>? liste) || liste.Count == 0)
+                return;
+
+            foreach (var pruefung in liste)
+            {
+                double actualRest = Math.Max(0.0, endZeitpunktMinuten - pruefung.ZeitpunktMinuten);
+                bool korrekt;
+
+                if (actualRest <= 0.0001)
+                {
+                    korrekt = pruefung.PrognoseRestMinuten <= 0.0001;
+                }
+                else
+                {
+                    double toleranz = actualRest * 0.20;
+                    korrekt = Math.Abs(pruefung.PrognoseRestMinuten - actualRest) <= toleranz;
+                }
+
+                if (korrekt)
+                    AnzahlPrognoseRichtig++;
+
+                prognoseErgebnisse.Add(new PrognoseErgebnis(
+                    pruefung.PatientId,
+                    pruefung.Phase,
+                    pruefung.ZeitpunktMinuten,
+                    pruefung.PrognoseRestMinuten,
+                    actualRest,
+                    korrekt,
+                    pruefung.PrognoseFertigBisSchichtende));
+            }
+
+            prognoseOffen.Remove(patientId);
+        }
+
+        public string ErzeugePrognoseReportText()
+        {
+            var culture = CultureInfo.GetCultureInfo("de-DE");
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine("Prognosemodell-Auswertung");
+            sb.AppendLine(new string('=', 50));
+            sb.AppendLine($"Prognoseprüfungen gesamt: {AnzahlPrognosePruefungen.ToString("N0", culture)}");
+            sb.AppendLine($"Richtig (±20 %): {AnzahlPrognoseRichtig.ToString("N0", culture)}");
+            sb.AppendLine($"Trefferquote: {PrognoseTrefferquote.ToString("N2", culture)} %");
+            sb.AppendLine($"Prognose-Abbrüche: {AnzahlPrognoseAbbruch.ToString("N0", culture)}");
+            sb.AppendLine();
+
+            var nachPhase = prognoseErgebnisse
+                .GroupBy(e => e.Phase)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            if (nachPhase.Count > 0)
+            {
+                sb.AppendLine("Trefferquote je Phase");
+                sb.AppendLine(new string('-', 50));
+                foreach (var gruppe in nachPhase)
+                {
+                    int total = gruppe.Count();
+                    int korrekt = gruppe.Count(e => e.Korrekt);
+                    double quote = total > 0 ? (korrekt / (double)total) * 100.0 : 0.0;
+                    sb.AppendLine($"{gruppe.Key}: {korrekt}/{total} ({quote.ToString("N2", culture)} %)");
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        public void SchreibePrognoseReport(string dateiPfad)
+        {
+            string report = ErzeugePrognoseReportText();
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(report);
+            sb.AppendLine();
+            sb.AppendLine("Details");
+            sb.AppendLine("PatientId;Phase;ZeitpunktMin;PrognoseRestMin;IstRestMin;Korrekt;PrognoseFertigBisSchichtende");
+            foreach (var eintrag in prognoseErgebnisse)
+            {
+                sb.AppendLine(string.Join(";", new[]
+                {
+                    eintrag.PatientId.ToString(CultureInfo.InvariantCulture),
+                    eintrag.Phase,
+                    eintrag.ZeitpunktMinuten.ToString("F2", CultureInfo.InvariantCulture),
+                    eintrag.PrognoseRestMinuten.ToString("F2", CultureInfo.InvariantCulture),
+                    eintrag.IstRestMinuten.ToString("F2", CultureInfo.InvariantCulture),
+                    eintrag.Korrekt ? "1" : "0",
+                    eintrag.PrognoseFertigBisSchichtende ? "1" : "0"
+                }));
+            }
+
+            File.WriteAllText(dateiPfad, sb.ToString());
         }
 
         public void ErfassePatientenTyp(PatientenTyp typ)
@@ -349,6 +483,22 @@ namespace simSharpSimulation
             public int Hit { get; set; }
             public int Miss { get; set; }
         }
+
+        private sealed record PrognosePruefung(
+            int PatientId,
+            string Phase,
+            double ZeitpunktMinuten,
+            double PrognoseRestMinuten,
+            bool PrognoseFertigBisSchichtende);
+
+        private sealed record PrognoseErgebnis(
+            int PatientId,
+            string Phase,
+            double ZeitpunktMinuten,
+            double PrognoseRestMinuten,
+            double IstRestMinuten,
+            bool Korrekt,
+            bool PrognoseFertigBisSchichtende);
     }
 
     internal readonly record struct TagesHitMissPunkt(string Label, int Hit, int Miss);
