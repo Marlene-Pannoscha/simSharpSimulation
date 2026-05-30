@@ -39,7 +39,7 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeArzt(
             Simulation env,
             int patientId,
-            BeweglicherMitarbeiterPool aerzte,
+            BeweglicherArztPool aerzte,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,
@@ -72,6 +72,8 @@ namespace simSharpSimulation
                 // Der Prozess pausiert hier (yield return), bis ein Arzt verfügbar ist.
                 yield return req;
 
+                // Schritt A3: Arzt ist frei, die Behandlung beginnt.
+                int arztId = aerzte.UebernehmeFreienMitarbeiter();
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 // Falls die Schicht exakt zwischen Freigabe und Zuweisung endet,
                 // wird der Patient noch vor Betreten des Arztzimmers abgewiesen.
