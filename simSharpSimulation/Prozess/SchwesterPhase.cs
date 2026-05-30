@@ -81,6 +81,7 @@ namespace simSharpSimulation
                 // Behandlung darf auch nach Schichtende zu Ende gefuehrt werden.
                 yield return req;
 
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!direktZurSchwester)
                 {
                     daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);

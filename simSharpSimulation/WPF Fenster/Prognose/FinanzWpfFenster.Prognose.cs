@@ -21,37 +21,40 @@ internal sealed partial class FinanzWpfFenster
         Grid.SetRow(prognoseTextBox, 0);
         inhaltGrid.Children.Add(prognoseTextBox);
 
-        Grid diagrammGrid = new();
-        diagrammGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        diagrammGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        diagrammGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        diagrammGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        diagrammGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
-        diagrammGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        StackPanel diagrammPanel = new()
+        {
+            Orientation = Orientation.Vertical
+        };
 
         Border phaseBorder = ErzeugeBildContainer("Prognose-Trefferquote je Phase", out prognosePhaseImage);
-        Grid.SetColumn(phaseBorder, 0);
-        Grid.SetRow(phaseBorder, 0);
-        diagrammGrid.Children.Add(phaseBorder);
+        phaseBorder.MinHeight = 420;
+        phaseBorder.Margin = new Thickness(0, 0, 0, 12);
+        diagrammPanel.Children.Add(phaseBorder);
 
         Border scatterBorder = ErzeugeBildContainer("Prognose Restzeit vs. Ist-Restzeit", out prognoseScatterImage);
-        Grid.SetColumn(scatterBorder, 2);
-        Grid.SetRow(scatterBorder, 0);
-        diagrammGrid.Children.Add(scatterBorder);
+        scatterBorder.MinHeight = 420;
+        scatterBorder.Margin = new Thickness(0, 0, 0, 12);
+        diagrammPanel.Children.Add(scatterBorder);
 
         Border abbruecheZeitBorder = ErzeugeBildContainer("Prognose-Abbrüche über Zeit", out prognoseAbbruecheZeitImage);
-        Grid.SetColumn(abbruecheZeitBorder, 0);
-        Grid.SetRow(abbruecheZeitBorder, 2);
-        diagrammGrid.Children.Add(abbruecheZeitBorder);
+        abbruecheZeitBorder.MinHeight = 420;
+        abbruecheZeitBorder.Margin = new Thickness(0, 0, 0, 12);
+        diagrammPanel.Children.Add(abbruecheZeitBorder);
 
         Border abbruchgruendeBorder = ErzeugeBildContainer("Abbruchgründe Vergleich", out prognoseAbbruchgruendeImage);
-        Grid.SetColumn(abbruchgruendeBorder, 2);
-        Grid.SetRow(abbruchgruendeBorder, 2);
-        diagrammGrid.Children.Add(abbruchgruendeBorder);
+        abbruchgruendeBorder.MinHeight = 420;
+        diagrammPanel.Children.Add(abbruchgruendeBorder);
 
-        Grid.SetColumn(diagrammGrid, 2);
-        Grid.SetRow(diagrammGrid, 0);
-        inhaltGrid.Children.Add(diagrammGrid);
+        ScrollViewer diagrammScrollViewer = new()
+        {
+            Content = diagrammPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+
+        Grid.SetColumn(diagrammScrollViewer, 2);
+        Grid.SetRow(diagrammScrollViewer, 0);
+        inhaltGrid.Children.Add(diagrammScrollViewer);
 
         return inhaltGrid;
     }

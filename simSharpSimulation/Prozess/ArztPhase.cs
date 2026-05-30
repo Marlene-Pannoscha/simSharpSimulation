@@ -105,6 +105,7 @@ namespace simSharpSimulation
                 // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
                 daten.ErfasseArztBehandlungBegonnen(env.StartDate);
 
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 // Patient verlaesst das Wartezimmer, sobald der Arzt frei ist.
                 daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
 

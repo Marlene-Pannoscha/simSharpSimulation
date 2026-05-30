@@ -28,6 +28,12 @@ internal sealed partial class FinanzWpfFenster : Window
     // Hit/Miss Tab-Steuerelemente
     private TextBox hitMissErgebnisTextBox = null!;
     private Image hitMissImage = null!;
+    private TextBox wartezeitenTextBox = null!;
+    private DataGrid warteschlangenDataGrid = null!;
+    private DataGrid bereicheDataGrid = null!;
+    private DataGrid wartezeitenDataGrid = null!;
+    private DataGrid auslastungDataGrid = null!;
+    private DataGrid behandlungszeitenDataGrid = null!;
 
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");
     private const double ErgebnisSpaltenBreite = 360;
@@ -138,7 +144,7 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetRow(statusTextBlock, 1);
         root.Children.Add(statusTextBlock);
 
-        // TabControl mit Tabs: Finanzen, Hit/Miss, Prognose
+        // TabControl mit Tabs: Finanzen, Hit/Miss, Wartezeiten, Prognose
         TabControl tabControl = new();
         
         // Tab 1: Finanzen
@@ -157,6 +163,13 @@ internal sealed partial class FinanzWpfFenster : Window
         };
         tabControl.Items.Add(hitMissTab);
 
+        TabItem wartezeitenTab = new()
+        {
+            Header = "Wartezeiten",
+            Content = ErstelleWartezeitenTab()
+        };
+        tabControl.Items.Add(wartezeitenTab);
+
         TabItem prognoseTab = new()
         {
             Header = "Prognose",
@@ -169,6 +182,7 @@ internal sealed partial class FinanzWpfFenster : Window
 
         Content = root;
 
+        AktualisiereWartezeitenTab(null);
         AktualisierePrognoseTab();
     }
 
@@ -252,6 +266,12 @@ internal sealed partial class FinanzWpfFenster : Window
             (int anzahlHit, int anzahlMiss, string hitMissPfad) = 
                 FinanzVisualisierung.ErzeugeHitMissDiagramm(ergebnis);
 
+            SimulationsDaten simulationsDaten = new();
+            PatientenProzess patientenProzess = new(SimulationKonfiguration.RANDOM_SEED, simulationsDaten);
+            patientenProzess.FuehreAus();
+            simulationsDaten.SchreibePrognoseReport("prognose_report.txt");
+            simulationsDaten.SchreibePrognoseDatenJson("prognose_daten.json");
+
             // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
             ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad);
             finanzenImage.Source = LadeBild(finanzenPfad);
@@ -261,6 +281,7 @@ internal sealed partial class FinanzWpfFenster : Window
             hitMissErgebnisTextBox.Text = ErzeugeHitMissErgebnisText(anzahlHit, anzahlMiss, hitMissPfad);
             hitMissImage.Source = LadeBild(hitMissPfad);
 
+            AktualisiereWartezeitenTab(simulationsDaten);
             AktualisierePrognoseTab();
             
             statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
