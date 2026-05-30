@@ -40,6 +40,7 @@ namespace simSharpSimulation
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,
+            TimeSpan interneBewegungsdauer,
             Random rnd,
             SimulationsDaten daten)
         {
@@ -60,6 +61,16 @@ namespace simSharpSimulation
                 // Schritt A3: Arzt ist frei, die Behandlung beginnt.
                 int arztId = aerzte.UebernehmeFreienMitarbeiter();
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
+
+                // Weg zum Arzt (Interne Bewegung)
+                daten.LogEvent(nowMinutes, "geht_zum_arzt", patientId);
+                yield return env.Timeout(interneBewegungsdauer);
+                
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                daten.LogEvent(nowMinutes, "betritt_arztzimmer", patientId);
+
+                // Schritt A3: Arzt ist bereit, die Behandlung beginnt.
                 daten.LogEvent(nowMinutes, "startet_arzt_behandlung", patientId, arztId: arztId);
 
                 // Die Wartezeit auf den Arzt berechnen und für die Statistik speichern.

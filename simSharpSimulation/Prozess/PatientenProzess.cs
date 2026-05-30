@@ -227,7 +227,7 @@ namespace simSharpSimulation
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "ueberspringt_schwester", patientId);
             }
 
-            // Schritt P4.11: Wartezeit auf den Arzt.
+            // Schritt P4.11: Wartevorgang für den Arzt.
             // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
             daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_fuer_arzt", patientId);
 
@@ -241,9 +241,6 @@ namespace simSharpSimulation
             double wartezimmerDauerArzt = MathNet.Numerics.Distributions.Exponential.Sample(
                 rnd, 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * wartezeitFaktor));
             yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauerArzt));
-
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
-
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
