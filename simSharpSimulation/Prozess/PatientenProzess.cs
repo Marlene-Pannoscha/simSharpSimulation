@@ -41,8 +41,8 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
-                var aerzte = new BeweglicherMitarbeiterPool(env, ArztKonfiguration.ANZAHL_AERZTE);
-                var schwestern = new BeweglicherMitarbeiterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+                var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
+                var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
@@ -67,7 +67,7 @@ namespace simSharpSimulation
         - Terminpatienten warten im Schnitt kürzer über kürzere Wartezimmerdauer.
         - Patienten ohne Termin warten im Schnitt länger, laufen aber parallel weiter.
         */
-        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, BeweglicherMitarbeiterPool schwestern, BeweglicherMitarbeiterPool aerzte)
+        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, BeweglicherSchwesterPool schwestern, BeweglicherArztPool aerzte)
         {
             TimeSpan eingangZurRezeptionDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN);
             TimeSpan interneBewegungsdauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN);
