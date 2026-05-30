@@ -39,8 +39,7 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeArzt(
             Simulation env,
             int patientId,
-            PriorityResource arzt,
-            int arztId,
+            BeweglicherArztPool aerzte,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,
@@ -65,50 +64,16 @@ namespace simSharpSimulation
 
             double deadlineMinuten = Math.Min(schichtEndeMinuten, nowMinutes + limitMinuten);
 
-            // Schritt A3: Solange kein Arzt frei ist, wird nicht aktiv gepollt.
-            // Statt vieler Mini-Timeouts warten wir auf genau zwei moegliche Ereignisse:
-            // 1. Ein Arzt wird frei (`WhenAny()`), oder
-            // 2. das erlaubte Wartefenster laeuft ab.
-            while (arzt.Remaining <= 0)
+            // Schritt A2: Einen Arzt anfordern.
+            // 'using' sorgt dafür, dass die Ressource (der Arzt) nach der Behandlung
+            // automatisch wieder für den nächsten Patienten freigegeben wird.
+            using (var req = arzt.Request(priority: GetPriority(patientenTyp)))
             {
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double restMinuten = deadlineMinuten - nowMinutes;
-
-                // Sobald weder Restwartezeit noch Restschicht vorhanden ist,
-                // bricht der Patient den Arztbesuch kontrolliert ab.
-                if (restMinuten <= 0)
-                {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
-                // `WhenAny()` signalisiert, dass mindestens ein Platz an dieser Ressource
-                // verfuegbar geworden ist. Mit `| timeout` warten wir auf das zuerst eintretende Event.
-                Event arztVerfuegbar = arzt.WhenAny();
-                Event timeout = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return arztVerfuegbar | timeout;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Wenn nicht das Ressourcen-Event, sondern das Timeout ausgeloest wurde,
-                // verlaesst der Patient die Klinik nach den bestehenden Fachregeln.
-                if (!arztVerfuegbar.IsProcessed)
-                {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-            }
-
-            // Schritt A4: Erst wenn ein Arzt verfuegbar ist, wird der eigentliche Request erstellt.
-            // Dadurch vermeiden wir offene Requests, die spaeter kuenstlich aus internen Queues
-            // entfernt werden muessten.
-            using (Request req = arzt.Request(priority: GetPriority(patientenTyp)))
-            {
+                // Der Prozess pausiert hier (yield return), bis ein Arzt verfügbar ist.
                 yield return req;
 
+                // Schritt A3: Arzt ist frei, die Behandlung beginnt.
+                int arztId = aerzte.UebernehmeFreienMitarbeiter();
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 // Falls die Schicht exakt zwischen Freigabe und Zuweisung endet,
                 // wird der Patient noch vor Betreten des Arztzimmers abgewiesen.
@@ -142,11 +107,15 @@ namespace simSharpSimulation
                 // Behandlungsdauer nach Patienten-Typ.
                 var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
+                double variationskoeffizient = typInfo.VariationskoeffizientArzt;
 
                 // Log-Normalverteilung fuer realistischere Zeiten:
                 // viele Werte liegen nahe am Mittelwert, einige dauern deutlich laenger.
-                double sigma = 0.4;
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Pow(sigma, 2);
+                // Umrechnung von Mittelwert und Variationskoeffizient in die Parameter mu und sigma der Lognormalverteilung
+                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
+                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
+
                 double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
                 daten.ErfasseArztBehandlungszeit(dauer, hatTermin, patientenTyp);
 
@@ -154,6 +123,7 @@ namespace simSharpSimulation
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
+                aerzte.GibMitarbeiterZurueck(arztId);
             }
         }
 

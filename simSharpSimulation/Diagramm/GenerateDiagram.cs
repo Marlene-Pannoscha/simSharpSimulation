@@ -86,7 +86,7 @@ namespace simSharpSimulation
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)
         {
-            foreach (var (typ, _, behandlungszeitArzt, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            foreach (var (typ, _, behandlungszeitArzt, _, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
             {
                 if (!arztBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
                     continue;
@@ -96,7 +96,7 @@ namespace simSharpSimulation
 
         private static void ErzeugeSchwesterBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp)
         {
-            foreach (var (typ, _, _, behandlungszeitSchwester, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            foreach (var (typ, _, _, _, behandlungszeitSchwester, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
             {
                 if (!schwesternBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
                     continue;
