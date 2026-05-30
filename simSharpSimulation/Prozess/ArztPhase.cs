@@ -45,7 +45,7 @@ namespace simSharpSimulation
             double ankunftszeit,
             bool hatTermin,
             TimeSpan interneBewegungsdauer,
-            Random rnd,
+            double behandlungsdauer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
@@ -122,22 +122,9 @@ namespace simSharpSimulation
                 double wartezeitArzt = nowMinutes - ankunftszeit;
                 daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
 
-                // Behandlungsdauer nach Patienten-Typ.
-                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
-                double mittlereDauer = typInfo.BehandlungszeitArzt;
-                double variationskoeffizient = typInfo.VariationskoeffizientArzt;
+                daten.ErfasseArztBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
 
-                // Log-Normalverteilung fuer realistischere Zeiten:
-                // viele Werte liegen nahe am Mittelwert, einige dauern deutlich laenger.
-                // Umrechnung von Mittelwert und Variationskoeffizient in die Parameter mu und sigma der Lognormalverteilung
-                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
-                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
-
-                double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
-                daten.ErfasseArztBehandlungszeit(dauer, hatTermin, patientenTyp);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(dauer));
+                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);

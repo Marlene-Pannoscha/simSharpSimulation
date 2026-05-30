@@ -51,17 +51,19 @@ namespace simSharpSimulation
             bool brauchtVorbereitung,
             bool direktZurSchwester,
             bool hatTermin,
-            TimeSpan interneBewegungsdauer)
+            TimeSpan interneBewegungsdauer,
+            double schwesterBehandlungsdauer,
+            double schwesterWartezimmerdauer)
         {
             if (!brauchtVorbereitung)
             {
                 return 0.0;
             }
 
-            double restzeit = interneBewegungsdauer.TotalMinutes + SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
+            double restzeit = interneBewegungsdauer.TotalMinutes + schwesterBehandlungsdauer;
             if (!direktZurSchwester)
             {
-                restzeit += interneBewegungsdauer.TotalMinutes + BerechneMittlereSchwesterWartezimmerzeit(hatTermin);
+                restzeit += interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer;
             }
 
             return restzeit;
@@ -74,23 +76,28 @@ namespace simSharpSimulation
         private static double BerechneErwarteteSchwesterRestzeit(
             bool hatTermin,
             TimeSpan interneBewegungsdauer,
-            double vorbereitungsWahrscheinlichkeit)
+            double vorbereitungsWahrscheinlichkeit,
+            double schwesterBehandlungsdauer,
+            double schwesterWartezimmerdauer)
         {
             double restzeitMitVorbereitung =
                 (2.0 * interneBewegungsdauer.TotalMinutes) +
-                BerechneMittlereSchwesterWartezimmerzeit(hatTermin) +
-                SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
+                schwesterWartezimmerdauer +
+                schwesterBehandlungsdauer;
 
             return vorbereitungsWahrscheinlichkeit * restzeitMitVorbereitung;
         }
 
         // Restzeit ab abgeschlossenem Schwesterpfad:
         // Bewegung zum Arzt-Wartezimmer + erwartete Wartezimmerzeit + Arztbehandlung.
-        private static double BerechneRestzeitAbSchwester(TimeSpan interneBewegungsdauer)
+        private static double BerechneRestzeitAbSchwester(
+            TimeSpan interneBewegungsdauer,
+            double arztBehandlungsdauer,
+            double arztWartezimmerdauer)
         {
             return (2.0 * interneBewegungsdauer.TotalMinutes) +
-                   BerechneMittlereArztWartezimmerzeit() +
-                   ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER;
+                   arztWartezimmerdauer +
+                   arztBehandlungsdauer;
         }
 
         // Erwartete Restzeit nach dem Arzt, solange noch nicht entschieden ist,
@@ -99,11 +106,12 @@ namespace simSharpSimulation
         private static double BerechneErwarteteRestzeitNachArzt(
             TimeSpan interneBewegungsdauer,
             TimeSpan rezeptionZumAusgangDauer,
-            TimeSpan arztZumAusgangDauer)
+            TimeSpan arztZumAusgangDauer,
+            double rezeptionsdauerNachArzt)
         {
             double restMitRezeption =
                 interneBewegungsdauer.TotalMinutes +
-                RezeptionKonfiguration.MITTELREZEPTIONSZEIT +
+                rezeptionsdauerNachArzt +
                 rezeptionZumAusgangDauer.TotalMinutes;
 
             double restOhneRezeption = arztZumAusgangDauer.TotalMinutes;
@@ -117,7 +125,8 @@ namespace simSharpSimulation
             bool gehtNachArztZurRezeption,
             TimeSpan interneBewegungsdauer,
             TimeSpan rezeptionZumAusgangDauer,
-            TimeSpan arztZumAusgangDauer)
+            TimeSpan arztZumAusgangDauer,
+            double rezeptionsdauerNachArzt)
         {
             if (!gehtNachArztZurRezeption)
             {
@@ -125,7 +134,7 @@ namespace simSharpSimulation
             }
 
             return interneBewegungsdauer.TotalMinutes +
-                   RezeptionKonfiguration.MITTELREZEPTIONSZEIT +
+                   rezeptionsdauerNachArzt +
                    rezeptionZumAusgangDauer.TotalMinutes;
         }
 
