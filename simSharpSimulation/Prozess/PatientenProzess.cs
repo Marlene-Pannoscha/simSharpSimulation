@@ -34,8 +34,9 @@ namespace simSharpSimulation
             // Wir simulieren eine Arbeitswoche: 5 Tage (Montag bis Freitag).
             // Der 3. Januar 2000 war ein Montag.
             DateTime startDatum = new DateTime(2000, 1, 3);
+            TimeSpan maximaleTagesdauer = BerechneMaximaleTagesdauer();
 
-            for (int tag = 0; tag < 5; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
+            for (int tag = 0; tag < Program.SimulierteArbeitstage; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
             {
                 // Schritt P2.1: Für jeden Tag eine neue Simulationsumgebung erzeugen.
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
@@ -52,10 +53,18 @@ namespace simSharpSimulation
                 int patientIdStart = (tag * 10_000) + 1;
                 env.Process(PatientenGenerator.Generiere(env, rezeption, aerzte, schwestern, rnd, daten, patientIdStart, Patient));
 
-                // Schritt P2.2: Tages-Simulation bis zur konfigurierten Dauer ausführen.
-                // Simulation für diesen einen Tag laufen lassen (z.B. 8 Stunden / 480 Minuten)
-                env.Run(TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER));
+                // Schritt P2.2: Tages-Simulation ausführen.
+                // Die Ankünfte enden nach SIMULATIONSDAUER, aber einzelne Prozesse können
+                // noch nachlaufen. Ein fester Nachlaufpuffer verhindert, dass der Tag bei
+                // offenen Warteschlangen oder extrem langen Zufallsdauern unbegrenzt läuft.
+                env.Run(maximaleTagesdauer);
             }
+        }
+
+        private static TimeSpan BerechneMaximaleTagesdauer()
+        {
+            const double nachlaufPufferMinuten = 180.0;
+            return TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER + nachlaufPufferMinuten);
         }
 
         /*Schritt P4: Der Weg des Patienten
@@ -74,6 +83,24 @@ namespace simSharpSimulation
             TimeSpan arztZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN);
             TimeSpan rezeptionZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN);
 
+            // Hilfsmethode zum Auswählen einer Ressource
+            (PriorityResource res, int id) WaehleRessource(List<PriorityResource> ressourcen)
+            {
+                // Freie Ressourcen werden bevorzugt, sonst wartet der Patient bei einer zufaelligen Ressource.
+                var freieRessourcen = ressourcen
+                    .Select((res, index) => (res, index))
+                    .Where(eintrag => eintrag.res.Remaining > 0)
+                    .ToList();
+
+                if (freieRessourcen.Count > 0)
+                {
+                    var eintrag = freieRessourcen[rnd.Next(freieRessourcen.Count)];
+                    return (eintrag.res, eintrag.index + 1);
+                }
+
+                int index = rnd.Next(ressourcen.Count);
+                return (ressourcen[index], index + 1);
+            }
             // Phase P-B: Individueller Patientenablauf.
             // Schritt P4.1: Aktuelle Simulationszeit in Minuten holen.
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
@@ -99,8 +126,12 @@ namespace simSharpSimulation
             yield return env.Timeout(eingangZurRezeptionDauer);
             double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
 
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rnd, daten))
+            var ersteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, eingangZurRezeptionDauer, rnd, daten, ersteRezeptionErgebnis))
                 yield return ev;
+
+            if (ersteRezeptionErgebnis.PatientHatKlinikVerlassen)
+                yield break;
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
             bool brauchtVorbereitung = false;
@@ -141,9 +172,7 @@ namespace simSharpSimulation
                                 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
-                        // Schritt P4.11B: Wartezimmer verlassen.
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                        // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
                 }
                 else
@@ -187,8 +216,7 @@ namespace simSharpSimulation
                             1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER));
                         yield return env.Timeout(TimeSpan.FromMinutes(wartezimmerDauer));
 
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
+                        // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
                 }
                 else
@@ -203,10 +231,8 @@ namespace simSharpSimulation
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
             if (!ueberspringeSchwester)
             {
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_schwester", patientId);
-                yield return env.Timeout(interneBewegungsdauer);
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_schwesterzimmer", patientId);
-
+                var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
+                var schwesterErgebnis = new BehandlungsPhaseErgebnis();
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
                     env,
@@ -217,9 +243,14 @@ namespace simSharpSimulation
                     hatTermin,
                     direktZurSchwester,
                     pruefeVorbereitungNachZimmer: false,
+                    interneBewegungsdauer,
                     rnd,
-                    daten))
+                    daten,
+                    schwesterErgebnis))
                     yield return ev;
+
+                if (schwesterErgebnis.PatientHatKlinikVerlassen)
+                    yield break;
             }
             else
             {
@@ -244,12 +275,13 @@ namespace simSharpSimulation
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_arzt", patientId);
-            yield return env.Timeout(interneBewegungsdauer);
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_arztzimmer", patientId);
-
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, rnd, daten))
+            var (arztRes, arztId) = WaehleRessource(aerzte);
+            var arztErgebnis = new BehandlungsPhaseErgebnis();
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, rnd, daten, arztErgebnis))
                 yield return ev;
+
+            if (arztErgebnis.PatientHatKlinikVerlassen)
+                yield break;
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
             bool gehtNachArztZurRezeption = rnd.NextDouble() < 0.6;
@@ -260,8 +292,12 @@ namespace simSharpSimulation
             {
                 yield return env.Timeout(interneBewegungsdauer);
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rnd, daten))
+                var zweiteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, interneBewegungsdauer, rnd, daten, zweiteRezeptionErgebnis))
                     yield return ev;
+
+                if (zweiteRezeptionErgebnis.PatientHatKlinikVerlassen)
+                    yield break;
 
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
                 yield return env.Timeout(rezeptionZumAusgangDauer);
@@ -288,7 +324,7 @@ namespace simSharpSimulation
         {
             double rand = rnd.NextDouble();
             double cumulative = 0.0;
-            foreach (var (typ, wahrsch, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            foreach (var (typ, wahrsch, _, _, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
             {
                 cumulative += wahrsch;
                 if (rand <= cumulative)

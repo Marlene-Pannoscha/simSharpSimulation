@@ -129,6 +129,46 @@ public static class FinanzRechner
         return new Tagesergebnis(umsatz, gewinn, kosten, versicherungen, umsatzverteilung, behandlungsmix);
     }
 
+    public static Tagesergebnis BerechneZeitraumergebnis(int anzahlAerzte, int behandeltePatienten, int arbeitstage)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(arbeitstage, 0);
+
+        double arztGrundlohn = anzahlAerzte
+            * Finanzen.Personal.ArztLohnProStunde
+            * Finanzen.Personal.ArbeitsstundenProTag
+            * arbeitstage;
+        double arztVariablerAnteil = behandeltePatienten * Finanzen.Personal.ArztLohnProPatient;
+        double arztlohn = arztGrundlohn + arztVariablerAnteil;
+
+        double schwesterlohn = BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN) * arbeitstage;
+        double rezeptionlohn = BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN) * arbeitstage;
+        double fixkosten = (KonfigurationJsonExport.MietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag) * arbeitstage;
+
+        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
+        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
+        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
+
+        double gesamtkosten = arztlohn
+            + schwesterlohn
+            + rezeptionlohn
+            + fixkosten
+            + behandlungsmix.Gesamtkosten;
+        Tageskosten kosten = new(
+            arztlohn,
+            schwesterlohn,
+            rezeptionlohn,
+            fixkosten,
+            behandlungsmix.Gesamtkosten,
+            gesamtkosten);
+
+        double umsatz = umsatzverteilung.Gesamtumsatz;
+        double gewinn = umsatz - kosten.Gesamtkosten;
+
+        return new Tagesergebnis(umsatz, gewinn, kosten, versicherungen, umsatzverteilung, behandlungsmix);
+    }
+
     private static Dictionary<TKey, int> VerteileGanzzahlen<TKey>(
         int gesamt,
         IEnumerable<(TKey Schluessel, double Anteil)> anteile)

@@ -56,7 +56,7 @@ namespace simSharpSimulation
             PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.MitTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.OhneTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.TYPEN_VERTEILUNG = patienten.TypenVerteilung
-                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.BehandlungszeitSchwester, t.Behandlungskosten))
+                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.VariationskoeffizientArzt, t.BehandlungszeitSchwester, t.VariationskoeffizientSchwester, t.Behandlungskosten))
                 .ToArray();
 
             var simulation = LeseJson<SimulationKonfigurationJson>(Path.Combine(zielOrdner, "simulation-konfiguration.json"));
@@ -126,7 +126,9 @@ namespace simSharpSimulation
                     Typ = t.Typ,
                     Wahrscheinlichkeit = t.Wahrscheinlichkeit,
                     BehandlungszeitArzt = t.BehandlungszeitArzt,
+                    VariationskoeffizientArzt = t.VariationskoeffizientArzt,
                     BehandlungszeitSchwester = t.BehandlungszeitSchwester,
+                    VariationskoeffizientSchwester = t.VariationskoeffizientSchwester,
                     Behandlungskosten = t.Behandlungskosten
                 }).ToList(),
                 Beschreibung = new PatientenKonfiguration().Beschreibung
@@ -231,7 +233,9 @@ namespace simSharpSimulation
         public PatientenTyp Typ { get; set; }
         public double Wahrscheinlichkeit { get; set; }
         public double BehandlungszeitArzt { get; set; }
+        public double VariationskoeffizientArzt { get; set; }
         public double BehandlungszeitSchwester { get; set; }
+        public double VariationskoeffizientSchwester { get; set; }
         public double Behandlungskosten { get; set; }
     }
 

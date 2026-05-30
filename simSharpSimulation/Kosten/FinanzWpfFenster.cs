@@ -16,10 +16,14 @@ internal sealed class FinanzWpfFenster : Window
     private readonly TextBox rezeptionTextBox;
     private readonly TextBox behandlungsraeumeTextBox;
     private readonly ComboBox zeitraumComboBox;
-    private readonly TextBox ergebnisTextBox;
-    private readonly Image finanzenImage;
-    private readonly Image gewinnImage;
+    private TextBox ergebnisTextBox = null!;
+    private Image finanzenImage = null!;
+    private Image gewinnImage = null!;
     private readonly TextBlock statusTextBlock;
+    
+    // Hit/Miss Tab-Steuerelemente
+    private TextBox hitMissErgebnisTextBox = null!;
+    private Image hitMissImage = null!;
 
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");
 
@@ -147,6 +151,33 @@ internal sealed class FinanzWpfFenster : Window
         Grid.SetRow(statusTextBlock, 1);
         root.Children.Add(statusTextBlock);
 
+        // TabControl mit zwei Tabs: Finanzen und Hit/Miss
+        TabControl tabControl = new();
+        
+        // Tab 1: Finanzen
+        TabItem finanzenTab = new()
+        {
+            Header = "Finanzen",
+            Content = ErstelleFinanzenTab()
+        };
+        tabControl.Items.Add(finanzenTab);
+        
+        // Tab 2: Hit/Miss Analyse
+        TabItem hitMissTab = new()
+        {
+            Header = "Hit/Miss Analyse",
+            Content = ErstelleHitMissTab()
+        };
+        tabControl.Items.Add(hitMissTab);
+        
+        Grid.SetRow(tabControl, 2);
+        root.Children.Add(tabControl);
+
+        Content = root;
+    }
+
+    private Grid ErstelleFinanzenTab()
+    {
         Grid inhaltGrid = new();
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
@@ -185,11 +216,41 @@ internal sealed class FinanzWpfFenster : Window
         Grid.SetRow(bilderGrid, 0);
         inhaltGrid.Children.Add(bilderGrid);
 
-        Grid.SetRow(inhaltGrid, 2);
-        root.Children.Add(inhaltGrid);
-
-        Content = root;
+        return inhaltGrid;
     }
+
+    private Grid ErstelleHitMissTab()
+    {
+        Grid inhaltGrid = new();
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        // Links: Hit/Miss Statistik
+        hitMissErgebnisTextBox = new TextBox
+        {
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 13,
+            Padding = new Thickness(8)
+        };
+        Grid.SetColumn(hitMissErgebnisTextBox, 0);
+        Grid.SetRow(hitMissErgebnisTextBox, 0);
+        inhaltGrid.Children.Add(hitMissErgebnisTextBox);
+
+        // Rechts: Hit/Miss Diagramm
+        Border diagrammBorder = ErzeugeBildContainer("Hit vs Miss Verteilung", out hitMissImage);
+        Grid.SetColumn(diagrammBorder, 2);
+        Grid.SetRow(diagrammBorder, 0);
+        inhaltGrid.Children.Add(diagrammBorder);
+
+        return inhaltGrid;
+    }
+    
 
     public static void StarteFenster()
     {
@@ -226,11 +287,20 @@ internal sealed class FinanzWpfFenster : Window
             FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, anzahlSchwestern, zeitraum);
             (string finanzenPfad, string gewinnPfad) =
                 FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, anzahlSchwestern);
+            
+            // Hit/Miss Diagramm erzeugen
+            (int anzahlHit, int anzahlMiss, string hitMissPfad) = 
+                FinanzVisualisierung.ErzeugeHitMissDiagramm(ergebnis);
 
             // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
             ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad);
             finanzenImage.Source = LadeBild(finanzenPfad);
             gewinnImage.Source = LadeBild(gewinnPfad);
+            
+            // Hit/Miss Tab aktualisieren
+            hitMissErgebnisTextBox.Text = ErzeugeHitMissErgebnisText(anzahlHit, anzahlMiss, hitMissPfad);
+            hitMissImage.Source = LadeBild(hitMissPfad);
+            
             statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
         }
         catch (Exception ex)
@@ -330,6 +400,31 @@ internal sealed class FinanzWpfFenster : Window
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");
         sb.AppendLine($"- Gewinn: {gewinnPfad}");
+
+        return sb.ToString();
+    }
+
+    private static string ErzeugeHitMissErgebnisText(int anzahlHit, int anzahlMiss, string hitMissPfad)
+    {
+        int gesamt = anzahlHit + anzahlMiss;
+        double hitQuote = gesamt > 0 ? (anzahlHit / (double)gesamt) * 100.0 : 0.0;
+        double missQuote = gesamt > 0 ? (anzahlMiss / (double)gesamt) * 100.0 : 0.0;
+
+        StringBuilder sb = new();
+        sb.AppendLine("Hit/Miss Analyse");
+        sb.AppendLine(new string('=', 50));
+        sb.AppendLine($"Gesamtnachfrage: {gesamt.ToString("N0", DeCulture)}");
+        sb.AppendLine($"Behandelt (Hit): {anzahlHit.ToString("N0", DeCulture)} ({hitQuote.ToString("N2", DeCulture)} %)");
+        sb.AppendLine($"Nicht behandelt (Miss): {anzahlMiss.ToString("N0", DeCulture)} ({missQuote.ToString("N2", DeCulture)} %)");
+        sb.AppendLine($"Hit-Quote: {hitQuote.ToString("N2", DeCulture)} %");
+        sb.AppendLine($"Miss-Quote: {missQuote.ToString("N2", DeCulture)} %");
+        sb.AppendLine();
+        sb.AppendLine("Interpretation");
+        sb.AppendLine($"Von {gesamt.ToString("N0", DeCulture)} angefragten Patienten konnten {anzahlHit.ToString("N0", DeCulture)} ({hitQuote.ToString("N2", DeCulture)} %) versorgt werden.");
+        sb.AppendLine($"{anzahlMiss.ToString("N0", DeCulture)} Patienten ({missQuote.ToString("N2", DeCulture)} %) konnten wegen begrenzter Tageskapazitaet nicht behandelt werden.");
+        sb.AppendLine();
+        sb.AppendLine("Datei");
+        sb.AppendLine($"- Hit/Miss: {hitMissPfad}");
 
         return sb.ToString();
     }

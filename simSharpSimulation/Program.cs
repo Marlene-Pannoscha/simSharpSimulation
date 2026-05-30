@@ -14,7 +14,7 @@ namespace simSharpSimulation
         - SimulationsDaten.cs sammelt alle Wartezeiten und Ereignisse.
         - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
         */
-        private const int SimulierteArbeitstage = 5;
+        internal const int SimulierteArbeitstage = 10;
 
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
         [STAThread]
@@ -44,6 +44,7 @@ namespace simSharpSimulation
                 daten.WartezeitenOhneTermin,
                 daten.SchwesternWartezeiten,
                 daten.Gesamtprozesszeiten,
+                daten.HitMissProTag,
                 daten.TraceData,
                 daten.ArztBehandlungszeitenNachTyp,
                 daten.SchwesternBehandlungszeitenNachTyp,
@@ -87,6 +88,13 @@ namespace simSharpSimulation
             Console.WriteLine($"Durchschnittliche Wartezeit (Rezeption): {avgRezeptionsWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
+            Console.WriteLine($"Nicht behandelte Patienten gesamt: {daten.AnzahlNichtBehandeltRezeptionGesamt + daten.AnzahlNichtBehandeltSchwesterGesamt + daten.AnzahlNichtBehandeltArztGesamt}");
+            Console.WriteLine($"  davon Rezeption-Wartezeit > 15 Min.: {daten.AnzahlNichtBehandeltRezeptionWartezeit}");
+            Console.WriteLine($"  davon Rezeption-Schichtende: {daten.AnzahlNichtBehandeltRezeptionFeierabend}");
+            Console.WriteLine($"  davon Schwester-Wartezeit > 20 Min.: {daten.AnzahlNichtBehandeltSchwesterWartezeit}");
+            Console.WriteLine($"  davon Schwester-Schichtende: {daten.AnzahlNichtBehandeltSchwesterFeierabend}");
+            Console.WriteLine($"  davon Arzt-Wartezeit > 55 Min.: {daten.AnzahlNichtBehandeltArztWartezeit}");
+            Console.WriteLine($"  davon Arzt-Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend}");
             Console.WriteLine($"Durchschnittliche Gesamtprozesszeit: {avgGesamtprozesszeit:F2} Minuten");
 
             Console.WriteLine();
@@ -118,16 +126,30 @@ namespace simSharpSimulation
             }
 
             Console.WriteLine();
-            Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
+            Console.WriteLine("--- Finanzen (Gesamtübersicht) ---");
             int behandeltePatientenGesamt = daten.Gesamtprozesszeiten.Count;
             int behandeltePatientenProTag = (int)Math.Round(behandeltePatientenGesamt / (double)SimulierteArbeitstage);
             int anzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE;
-            Tagesergebnis finanzen = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatientenProTag);
+            Tagesergebnis finanzenGesamt = FinanzRechner.BerechneZeitraumergebnis(anzahlAerzte, behandeltePatientenGesamt, SimulierteArbeitstage);
 
             Console.WriteLine($"Simulierte Arbeitstage: {SimulierteArbeitstage}");
-            Console.WriteLine($"Behandelte Patienten gesamt (Woche): {behandeltePatientenGesamt}");
+            Console.WriteLine($"Behandelte Patienten gesamt: {behandeltePatientenGesamt}");
             Console.WriteLine($"Behandelte Patienten pro Tag: {behandeltePatientenProTag}");
             Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
+            SchreibeFinanzwerte(finanzenGesamt);
+
+            Console.WriteLine();
+            Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
+            Tagesergebnis finanzenProTag = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatientenProTag);
+            Console.WriteLine($"Behandelte Patienten pro Tag: {behandeltePatientenProTag}");
+            Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
+            SchreibeFinanzwerte(finanzenProTag);
+            Console.WriteLine();
+            Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
+        }
+
+        private static void SchreibeFinanzwerte(Tagesergebnis finanzen)
+        {
             Console.WriteLine($"Umsatz: {finanzen.Umsatz:F2} €");
             Console.WriteLine($"Arztlohn: {finanzen.Kosten.Arztlohn:F2} €");
             Console.WriteLine($"Schwesterlohn: {finanzen.Kosten.Schwesterlohn:F2} €");
@@ -136,8 +158,6 @@ namespace simSharpSimulation
             Console.WriteLine($"Behandlungskosten: {finanzen.Kosten.Behandlungskosten:F2} €");
             Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
             Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
-            Console.WriteLine();
-            Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
         }
 
     }
