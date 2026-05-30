@@ -1,7 +1,6 @@
 using SimSharp;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace simSharpSimulation
 {
@@ -113,42 +112,17 @@ namespace simSharpSimulation
                     daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
                 }
             }
+            // Die Ressource wird hier durch 'using' automatisch freigegeben.
         }
 
-        private static IEnumerable<Event> BrichRezeptionWartenAb(
-            Simulation env,
-            SimulationsDaten daten,
-            int patientId,
-            TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
-            BehandlungsPhaseErgebnis ergebnis)
+        private static Request FordereRezeptionistenAn(Resource rezeption)
         {
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            if (wegenFeierabend)
-            {
-                daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_rezeption", patientId);
-            }
-            else
-            {
-                daten.ErfasseRezeptionAbbruchWartezeit(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_rezeption", patientId);
-            }
-
-            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
-            yield return env.Timeout(interneBewegungsdauer);
-
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
-            ergebnis.MarkiereKlinikVerlassen();
+            return rezeption.Request();
         }
 
         private static bool IstRezeptionFrei(Resource rezeption)
         {
-            var usersProperty = rezeption.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
-            var usersCollection = usersProperty?.GetValue(rezeption) as IReadOnlyCollection<Request>;
-            int aktiveNutzer = usersCollection?.Count ?? 0;
-            return aktiveNutzer < RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN;
+            return rezeption.Remaining > 0;
         }
     }
 }
