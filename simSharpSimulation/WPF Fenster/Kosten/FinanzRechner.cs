@@ -223,6 +223,7 @@ public static class FinanzRechner
             MietkostenAnteil = kosten.Mietkosten / umsatz,
             InfrastrukturkostenAnteil = kosten.Infrastrukturkosten / umsatz,
             MaterialkostenAnteil = kosten.MedizinischesMaterialkosten / umsatz,
+            GeraeteLeasingAnteil = kosten.GeraeteLeasingKosten / umsatz,
             SonstigeFixkostenAnteil = kosten.SonstigeFixkosten / umsatz,
             BehandlungskostenAnteil = kosten.Behandlungskosten / umsatz
         };
@@ -266,7 +267,7 @@ public static class FinanzRechner
             mietkostenProTag,
             Finanzen.Fixkosten.InfrastrukturProTag,
             Finanzen.Fixkosten.MedizinischesMaterialProTag,
-            Finanzen.Fixkosten.GeräteLeasingProTag,
+            Finanzen.Fixkosten.GeraeteLeasingProTag,
             Finanzen.Fixkosten.SonstigeFixkostenProTag,
             behandlungsmix.Gesamtkosten);
     }
@@ -322,12 +323,13 @@ public readonly record struct Tageskosten(
     double Mietkosten,
     double Infrastrukturkosten,
     double MedizinischesMaterialkosten,
+    double GeraeteLeasingKosten,
     double SonstigeFixkosten,
     double Behandlungskosten)
 {
     public double Gesamtkosten => Personalkosten + Fixkosten + Behandlungskosten;
     public double Personalkosten => Arztlohn + Schwesterlohn + Rezeptionlohn;
-    public double Fixkosten => Mietkosten + Infrastrukturkosten + MedizinischesMaterialkosten + SonstigeFixkosten;
+    public double Fixkosten => Mietkosten + Infrastrukturkosten + MedizinischesMaterialkosten + GeraeteLeasingKosten + SonstigeFixkosten;
 }
 
 public readonly record struct Kostenstruktur
@@ -336,6 +338,7 @@ public readonly record struct Kostenstruktur
     public double MietkostenAnteil { get; init; }
     public double InfrastrukturkostenAnteil { get; init; }
     public double MaterialkostenAnteil { get; init; }
+    public double GeraeteLeasingAnteil { get; init; }
     public double SonstigeFixkostenAnteil { get; init; }
     public double BehandlungskostenAnteil { get; init; }
 }

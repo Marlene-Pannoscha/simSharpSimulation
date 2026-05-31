@@ -212,7 +212,8 @@ namespace simSharpSimulation
         public double FlaecheWartezimmerQuadratmeter { get; set; }
         public double InfrastrukturProTag { get; set; }
         public double MedizinischesMaterialProTag { get; set; }
-        public double GeräteLeasingProTag { get; set; }
+        // JSON uses 'GeraeteLeasingProTag' (no hyphen/umlaut) — map to this property name.
+        public double GeraeteLeasingProTag { get; set; }
         public double SonstigeFixkostenProTag { get; set; }
 
         public double BerechneMietkostenProTag()

@@ -110,7 +110,7 @@ internal static class FinanzVisualisierung
         double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
         double gesamtMietkostenMonat = mietkostenProQm * gesamtflaeche;
         double gesamtMietkostenProTag = (gesamtMietkostenMonat * 12) / 365.0;
-        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.InfrastrukturProTag + fixkosten.MedizinischesMaterialProTag + fixkosten.Geräte-LeasingProTag + fixkosten.SonstigeFixkostenProTag;
+        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.InfrastrukturProTag + fixkosten.MedizinischesMaterialProTag + fixkosten.GeraeteLeasingProTag + fixkosten.SonstigeFixkostenProTag;
 
         var tagesergebnisse = tagespunkte.Select(p => FinanzRechner.BerechneTagesergebnis(
             anzahlAerzte,
@@ -386,30 +386,62 @@ internal static class FinanzVisualisierung
 
     private static void ErzeugeKostenstrukturDiagramm(FinanzErgebnis ergebnis, string outputPfad)
     {
-        var tagesergebnis = ergebnis.Tagesergebnisse.FirstOrDefault();
+        // Etwas schmalere Grafik, damit sie besser in die WPF-Ansicht passt
+        Plot plot = new(820, 620);
 
-        var kostenstruktur = tagesergebnis.Kostenstruktur;
+        // Build a pie that represents the distribution over the COMPLETE selected period
+        // (Jahr oder Saison), so chart and text always use identical totals.
+        double umsatz = ergebnis.GesamtUmsatz;
+        double gewinn = ergebnis.Gesamtgewinn;
 
-        Plot plot = new(800, 600);
-
-        double[] values = {
-            kostenstruktur.PersonalkostenAnteil,
-            kostenstruktur.MietkostenAnteil,
-            kostenstruktur.InfrastrukturkostenAnteil,
-            kostenstruktur.MaterialkostenAnteil,
-            kostenstruktur.GeraeteLeasingAnteil,
-            kostenstruktur.SonstigeFixkostenAnteil,
-            kostenstruktur.BehandlungskostenAnteil
+        double[] amounts = {
+            ergebnis.GesamtPersonalkosten,
+            ergebnis.GesamtMietkosten,
+            ergebnis.GesamtInfrastrukturkosten,
+            ergebnis.GesamtMaterialkosten,
+            ergebnis.GesamtLeasingkosten,
+            ergebnis.GesamtSonstigeFixkosten,
+            ergebnis.GesamtBehandlungskosten,
+            // include profit so the pie represents the whole revenue
+            Math.Max(0.0, gewinn)
         };
-        string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung" };
 
-        var pie = plot.AddPie(values);
+        string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung", "Gewinn" };
+
+        var pie = plot.AddPie(amounts);
+        // Keep the pie clean: no direct slice text, legend will contain all details.
         pie.SliceLabels = labels;
         pie.ShowPercentages = true;
+        pie.ShowLabels = false;
         pie.ShowValues = false;
-        pie.ShowLabels = true;
 
-        plot.Title("Kostenstruktur");
+        // Farben: dezente, aber unterscheidbare Palette
+        pie.SliceFillColors = new[] {
+            Color.FromArgb(52, 152, 219),   // blau
+            Color.FromArgb(155, 89, 182),   // violett
+            Color.FromArgb(46, 204, 113),   // gruen
+            Color.FromArgb(241, 196, 15),   // gelb
+            Color.FromArgb(231, 76, 60),    // rot
+            Color.FromArgb(149, 165, 166),  // grau
+            Color.FromArgb(52, 73, 94),     // dunkel
+            Color.FromArgb(230, 126, 34)    // orange (Gewinn)
+        };
+
+        // Leicht auseinanderziehen, damit Beschriftungen besser lesbar sind
+        pie.Explode = true;
+
+        // Labels/Prozente auf den Slices sind deaktiviert, damit das Diagramm ruhig und lesbar bleibt.
+        pie.Size = 0.70;
+        pie.SliceLabelPosition = 0.92;
+        pie.SliceLabelColors = Enumerable.Repeat(Color.Black, amounts.Length).ToArray();
+
+        // Create legend labels that include absolute amounts and percentages relative to Umsatz
+        double total = amounts.Sum(); // should equal Umsatz (or Umsatz - negative profit handled above)
+        string[] legendLabels = labels.Select((lab, i) =>
+            $"{lab}: {FormatEuro(amounts[i])} ({(umsatz > 0 ? amounts[i] / umsatz : 0.0):P2})").ToArray();
+        pie.LegendLabels = legendLabels;
+
+        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Anteil am Umsatz)", size: 18);
         plot.Legend(location: Alignment.LowerRight);
         plot.SaveFig(outputPfad);
     }
@@ -524,6 +556,13 @@ internal sealed record FinanzErgebnis(
     public IReadOnlyList<double> GewinnVerlauf => Tagespunkte.Select(p => p.Gewinn).ToList();
     public double GesamtUmsatz => Tagespunkte.Sum(p => p.Umsatz);
     public double Gesamtkosten => Tagespunkte.Sum(p => p.Kosten);
+    public double GesamtPersonalkosten => Tagesergebnisse.Sum(t => t.Kosten.Personalkosten);
+    public double GesamtMietkosten => Tagesergebnisse.Sum(t => t.Kosten.Mietkosten);
+    public double GesamtInfrastrukturkosten => Tagesergebnisse.Sum(t => t.Kosten.Infrastrukturkosten);
+    public double GesamtMaterialkosten => Tagesergebnisse.Sum(t => t.Kosten.MedizinischesMaterialkosten);
+    public double GesamtLeasingkosten => Tagesergebnisse.Sum(t => t.Kosten.GeraeteLeasingKosten);
+    public double GesamtSonstigeFixkosten => Tagesergebnisse.Sum(t => t.Kosten.SonstigeFixkosten);
+    public double GesamtBehandlungskosten => Tagesergebnisse.Sum(t => t.Kosten.Behandlungskosten);
     public double DurchschnittlicherUmsatzProTag => SimulierteTage > 0 ? GesamtUmsatz / SimulierteTage : 0.0;
     public double DurchschnittlicheKostenProTag => SimulierteTage > 0 ? Gesamtkosten / SimulierteTage : 0.0;
     public Versicherungsverteilung VersicherungenGesamt =>

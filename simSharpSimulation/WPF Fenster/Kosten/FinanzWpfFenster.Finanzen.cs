@@ -75,7 +75,16 @@ internal sealed partial class FinanzWpfFenster
         Versicherungsverteilung versicherungen = ergebnis.VersicherungenGesamt;
         Umsatzverteilung umsatzverteilung = ergebnis.UmsatzverteilungGesamt;
         Behandlungsmix behandlungsmix = ergebnis.BehandlungsmixGesamt;
-        Kostenstruktur kostenstruktur = tagesergebnis.Kostenstruktur;
+        Kostenstruktur kostenstruktur = new()
+        {
+            PersonalkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0,
+            MietkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0,
+            InfrastrukturkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0,
+            MaterialkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0,
+            GeraeteLeasingAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0,
+            SonstigeFixkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0,
+            BehandlungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0,
+        };
         BreakEvenPoint breakEven = tagesergebnis.BreakEven;
 
         double privatAnteilProzent = KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert * 100.0;
@@ -106,8 +115,17 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Mietkosten: {kostenstruktur.MietkostenAnteil:P2}");
         sb.AppendLine($"Infrastruktur: {kostenstruktur.InfrastrukturkostenAnteil:P2}");
         sb.AppendLine($"Medizinisches Material: {kostenstruktur.MaterialkostenAnteil:P2}");
+        sb.AppendLine($"Geräte-Leasing: {kostenstruktur.GeraeteLeasingAnteil:P2}");
         sb.AppendLine($"Sonstige Fixkosten: {kostenstruktur.SonstigeFixkostenAnteil:P2}");
         sb.AppendLine($"Behandlungskosten: {kostenstruktur.BehandlungskostenAnteil:P2}");
+        sb.AppendLine($"Gewinn: {(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2}");
+        sb.AppendLine();
+        sb.AppendLine("Saisonaler Gewinn (im gewählten Zeitraum)");
+        foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
+        {
+            double saisonWert = ergebnis.SaisonGewinn.TryGetValue(saison, out double wert) ? wert : 0.0;
+            sb.AppendLine($"{saison}: {FinanzVisualisierung.FormatEuro(saisonWert)}");
+        }
         sb.AppendLine();
         sb.AppendLine("Versicherung");
         sb.AppendLine($"Privat ({privatAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.PrivatPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzPrivat)}");
