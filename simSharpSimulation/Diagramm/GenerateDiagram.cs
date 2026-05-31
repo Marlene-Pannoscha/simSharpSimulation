@@ -34,6 +34,7 @@ namespace simSharpSimulation
             IReadOnlyList<string> traceData,
             IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp,
             IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp,
+            IReadOnlyList<double> rezeptionsBehandlungszeiten,
             double simulationsdauer,
             double erwartungswert,
             double standardabweichung,
@@ -76,11 +77,13 @@ namespace simSharpSimulation
             ErzeugeArztBehandlungszeitenJeTyp(arztBehandlungszeitenNachTyp);
             // [Diagramm 10] Schwester-Behandlungszeiten (Histogramm + PDF + CDF je Typ)
             ErzeugeSchwesterBehandlungszeitenJeTyp(schwesternBehandlungszeitenNachTyp);
-            // [Diagramm 11] Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin
+            // [Diagramm 11] Rezeption-Prozesszeiten (Histogramm + PDF + CDF)
+            ErzeugeRezeptionBehandlungszeitenPdfCdfDiagramm(rezeptionsBehandlungszeiten);
+            // [Diagramm 12] Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin
             ErzeugeWartezeitenTheorieExponentialDiagramm(wartezeitenMitTermin, wartezeitenOhneTermin);
-            // [Diagramm 12] Hit/Miss pro Tag
+            // [Diagramm 13] Hit/Miss pro Tag
             ErzeugeHitMissProTagDiagramm(hitMissProTag);
-            // [Diagramm 13] Zeitachse eines Miss-Patienten (Wartezeit/Feierabend)
+            // [Diagramm 14] Zeitachse eines Miss-Patienten (Wartezeit/Feierabend)
             ErzeugeMissPatientenZeitachsenDiagramm(traceData);
         }
 
@@ -90,7 +93,7 @@ namespace simSharpSimulation
             {
                 if (!arztBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
                     continue;
-                ErzeugeArztBehandlungszeitenPdfCdfDiagramm(werte, typ, behandlungszeitArzt);
+                ErzeugeArztBehandlungszeitenPdfCdfDiagramm(werte, typ);
             }
         }
 
@@ -100,7 +103,7 @@ namespace simSharpSimulation
             {
                 if (!schwesternBehandlungszeitenNachTyp.TryGetValue(typ, out var werte) || werte.Count == 0)
                     continue;
-                ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(werte, typ, behandlungszeitSchwester);
+                ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(werte, typ);
             }
         }
 

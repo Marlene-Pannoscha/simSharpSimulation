@@ -23,7 +23,6 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
-            double limitMinuten = 15.0;
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
@@ -43,30 +42,25 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            double deadlineMinuten = Math.Min(schichtEndeMinuten, nowMinutes + limitMinuten);
-
             while (rezeption.Remaining <= 0)
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double restMinuten = deadlineMinuten - nowMinutes;
-
+                double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
 
                 Event rezeptionVerfuegbar = rezeption.WhenAny();
-                Event timeout = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return rezeptionVerfuegbar | timeout;
+                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return rezeptionVerfuegbar | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!rezeptionVerfuegbar.IsProcessed)
                 {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -96,7 +90,14 @@ namespace simSharpSimulation
                 double wartezeitRezeption = nowMinutes - ankunftszeit;
                 daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
 
-                double dauer = MathNet.Numerics.Distributions.Exponential.Sample(rnd, 1.0 / RezeptionKonfiguration.MITTELREZEPTIONSZEIT);
+                double mittlereDauer = RezeptionKonfiguration.MITTELREZEPTIONSZEIT;
+                double variationskoeffizient = RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION;
+
+                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
+                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
+                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
+
+                double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
                 daten.ErfasseRezeptionBehandlungszeit(dauer, hatTermin);
 
                 yield return env.Timeout(TimeSpan.FromMinutes(dauer));
@@ -113,11 +114,6 @@ namespace simSharpSimulation
                 }
             }
             // Die Ressource wird hier durch 'using' automatisch freigegeben.
-        }
-
-        private static Request FordereRezeptionistenAn(Resource rezeption)
-        {
-            return rezeption.Request();
         }
 
         private static bool IstRezeptionFrei(Resource rezeption)

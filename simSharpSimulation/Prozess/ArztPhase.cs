@@ -49,7 +49,6 @@ namespace simSharpSimulation
             BehandlungsPhaseErgebnis ergebnis)
         {
             // Aktuelle Simulationszeit fuer das Logging holen.
-            double limitMinuten = 55.0;
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
@@ -62,27 +61,45 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            double deadlineMinuten = Math.Min(schichtEndeMinuten, nowMinutes + limitMinuten);
-
-            // Schritt A2: Einen Arzt anfordern.
-            // 'using' sorgt dafür, dass die Ressource (der Arzt) nach der Behandlung
-            // automatisch wieder für den nächsten Patienten freigegeben wird.
-            using (var req = arzt.Request(priority: GetPriority(patientenTyp)))
+            // Schritt A3: Solange kein Arzt frei ist, warten wir solange, bis
+            // entweder ein Arzt verfuegbar wird oder die Schicht endet.
+            while (arzt.Remaining <= 0)
             {
-                // Der Prozess pausiert hier (yield return), bis ein Arzt verfügbar ist.
-                yield return req;
-
-                // Schritt A3: Arzt ist frei, die Behandlung beginnt.
-                int arztId = aerzte.UebernehmeFreienMitarbeiter();
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Falls die Schicht exakt zwischen Freigabe und Zuweisung endet,
-                // wird der Patient noch vor Betreten des Arztzimmers abgewiesen.
-                if (nowMinutes > schichtEndeMinuten)
+                // Berechne verbleibende Zeit bis Schichtende und warte entweder
+                // auf einen freien Arzt oder auf das Erreichen des Schichtendes.
+                double restMinuten = schichtEndeMinuten - nowMinutes;
+                if (restMinuten <= 0)
                 {
                     foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
+
+                Event arztVerfuegbar = arzt.WhenAny();
+                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return arztVerfuegbar | schichtEnde;
+
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                // Wenn das Schichtende zuerst eintrat, verlässt der Patient die Klinik.
+                if (!arztVerfuegbar.IsProcessed)
+                {
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                        yield return ev;
+                    yield break;
+                }
+            }
+
+            // Schritt A4: Erst wenn ein Arzt verfuegbar ist, wird der eigentliche Request erstellt.
+            // Dadurch vermeiden wir offene Requests, die spaeter kuenstlich aus internen Queues
+            // entfernt werden muessten.
+            using (Request req = arzt.Request(priority: GetPriority(patientenTyp)))
+            {
+
+                // Request abgeschlossen: Patient hat den Arzt zugewiesen bekommen.
+                // Selbst wenn die Schicht inzwischen geendet hat, darf die Behandlung
+                // weiterlaufen — Patient wird fertig behandelt.
+                yield return req;
 
                 // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
                 daten.ErfasseArztBehandlungBegonnen(env.StartDate);
@@ -105,7 +122,7 @@ namespace simSharpSimulation
                 daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
 
                 // Behandlungsdauer nach Patienten-Typ.
-                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+                var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitArzt;
                 double variationskoeffizient = typInfo.VariationskoeffizientArzt;
 
@@ -123,7 +140,6 @@ namespace simSharpSimulation
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
-                aerzte.GibMitarbeiterZurueck(arztId);
             }
         }
 
@@ -139,16 +155,9 @@ namespace simSharpSimulation
             // Diese Hilfsmethode haelt den Abbruchpfad an einer Stelle zusammen,
             // damit Wartezeit- und Feierabend-Abbrueche identisch behandelt werden.
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            if (wegenFeierabend)
-            {
-                daten.ErfasseArztAbbruchFeierabend(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_arzt", patientId, arztId: arztId);
-            }
-            else
-            {
-                daten.ErfasseArztAbbruchWartezeit(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_und_verlaesst_klinik_wegen_wartezeit", patientId);
-            }
+            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
+            daten.ErfasseArztAbbruchFeierabend(env.StartDate);
+            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_arzt", patientId, arztId: arztId);
 
             // Nach dem Abbruch verlaesst der Patient die Klinik ueber den normalen Ausgangspfad.
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);

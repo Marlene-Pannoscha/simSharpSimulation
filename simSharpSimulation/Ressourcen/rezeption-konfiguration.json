@@ -1,5 +1,6 @@
 {
   "AnzahlRezeptionisten": 1,
   "MittelRezeptionszeit": 2,
+  "VariationskoeffizientRezeption": 1.0,
   "Beschreibung": "Rezeptionisten in der Klinik"
 }

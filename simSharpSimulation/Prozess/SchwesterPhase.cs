@@ -36,7 +36,6 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
-            double limitMinuten = 20.0;
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
@@ -52,30 +51,25 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            double deadlineMinuten = Math.Min(schichtEndeMinuten, nowMinutes + limitMinuten);
-
             while (schwester.Remaining <= 0)
             {
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double restMinuten = deadlineMinuten - nowMinutes;
-
+                double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
 
                 Event schwesterVerfuegbar = schwester.WhenAny();
-                Event timeout = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return schwesterVerfuegbar | timeout;
+                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return schwesterVerfuegbar | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!schwesterVerfuegbar.IsProcessed)
                 {
-                    bool wegenFeierabend = nowMinutes >= schichtEndeMinuten;
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend, ergebnis))
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -83,15 +77,9 @@ namespace simSharpSimulation
 
             using (Request req = schwester.Request(priority: GetPriority(patientenTyp)))
             {
+                // Request abgeschlossen: Patient hat die Schwester zugewiesen bekommen.
+                // Behandlung darf auch nach Schichtende zu Ende gefuehrt werden.
                 yield return req;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (nowMinutes > schichtEndeMinuten)
-                {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
 
                 if (!direktZurSchwester)
                 {
@@ -108,7 +96,7 @@ namespace simSharpSimulation
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
                 daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
 
-                var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+                var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
                 double mittlereDauer = typInfo.BehandlungszeitSchwester;
                 double variationskoeffizient = typInfo.VariationskoeffizientSchwester;
 
@@ -135,16 +123,9 @@ namespace simSharpSimulation
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            if (wegenFeierabend)
-            {
-                daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
-            }
-            else
-            {
-                daten.ErfasseSchwesterAbbruchWartezeit(env.StartDate);
-                daten.LogEvent(nowMinutes, "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_schwester", patientId, schwesterId: schwesterId);
-            }
+            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
+            daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
+            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
 
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(interneBewegungsdauer);

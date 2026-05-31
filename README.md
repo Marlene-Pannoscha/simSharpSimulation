@@ -60,6 +60,7 @@ dotnet run --project c:\home\simSharpSimulation\simSharpSimulation\simSharpSimul
 - **Trace-Datei** wird als `klinik_trace.txt` im Projektordner gespeichert.
 - **Standard-Diagramme** werden in `simSharpSimulation/images/` gespeichert.
 - **Finanz-Diagramme** (WPF) werden in `simSharpSimulation/Kosten/images/` gespeichert.
+- **Mietkosten** in der Finanzansicht berechnen sich aus Schwesterzimmern, Arztzimmern und der Wartezimmerfläche.
 - **Bewegungs-Events im Trace** folgen dem Muster:
 	- `geht_*` = Start einer Bewegung
 	- `betritt_*` = Ankunft am Ziel nach Bewegungszeit

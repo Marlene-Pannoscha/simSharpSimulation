@@ -114,7 +114,7 @@ namespace simSharpSimulation
             daten.EchteAnkunftszeiten.Add(ankunftszeit);
 
             // Schritt P4.3B: Patienten-Typ zuweisen basierend auf Verteilung.
-            PatientenTyp patientenTyp = WaehlePatientenTyp(rnd);
+            PatientenTyp patientenTyp = PatientenKonfiguration.WaehlePatientenTyp(rnd);
             daten.ErfassePatientenTyp(patientenTyp);
 
             // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
@@ -324,13 +324,23 @@ namespace simSharpSimulation
         {
             double rand = rnd.NextDouble();
             double cumulative = 0.0;
-            foreach (var (typ, wahrsch, _, _, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
+            foreach (var (typ, wahrsch, _, _, _) in PatientenKonfiguration.TYPEN_VERTEILUNG)
             {
                 cumulative += wahrsch;
                 if (rand <= cumulative)
                     return typ;
             }
             return PatientenTyp.Mittel; // Fallback
+        }
+
+        // Schritt P9: Interne Hilfsmethode, um aktuelle Belegung der Ressource zu prüfen.
+        private static int ErmittleAktiveNutzer<T>(List<T> ressourcen)
+        {
+            return ressourcen.Sum(r => {
+                var usersProperty = r?.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
+                var usersCollection = usersProperty?.GetValue(r) as IReadOnlyCollection<Request>;
+                return usersCollection?.Count ?? 0;
+            });
         }
 
     }
