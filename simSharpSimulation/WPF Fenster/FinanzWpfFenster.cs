@@ -10,19 +10,25 @@ namespace simSharpSimulation;
 
 internal sealed partial class FinanzWpfFenster : Window
 {
-    // Diese Steuerelemente werden benoetigt, um Eingaben zu lesen und Ergebnisse anzuzeigen.
-    private readonly TextBox aerzteTextBox;
-    private readonly TextBox schwesternTextBox;
-    private readonly TextBox rezeptionTextBox;
-    private readonly TextBox behandlungsraeumeSchwesterTextBox;
-    private readonly TextBox behandlungsflaecheSchwesterTextBox;
-    private readonly TextBox behandlungsraeumeArztTextBox;
-    private readonly TextBox behandlungsflaecheArztTextBox;
-    private readonly TextBox wartezimmerflaecheTextBox;
-    private readonly ComboBox zeitraumComboBox;
-    private TextBox ergebnisTextBox = null!;
-    private Image finanzenImage = null!;
-    private Image gewinnImage = null!;
+    private TextBox ergebnisTextBox = new TextBox();
+    private TextBlock breakEvenTicker = new TextBlock();
+    private Image finanzenImage = new Image();
+    private Image gewinnImage = new Image();
+    private Image kostenstrukturImage = new Image();
+
+    private TextBox aerzteTextBox = new TextBox();
+    private TextBox schwesternTextBox = new TextBox();
+    private TextBox rezeptionTextBox = new TextBox();
+    private TextBox behandlungsraeumeSchwesterTextBox = new TextBox();
+    private TextBox behandlungsflaecheSchwesterTextBox = new TextBox();
+    private TextBox behandlungsraeumeArztTextBox = new TextBox();
+    private TextBox behandlungsflaecheArztTextBox = new TextBox();
+    private TextBox wartezimmerflaecheTextBox = new TextBox();
+    private ComboBox zeitraumComboBox = new ComboBox();
+
+    private Button? exportButton;
+    private Button? exportFinanzenButton;
+
     private readonly TextBlock statusTextBlock;
     // Kennzahlen Anzeige (wird unter 'Raeume und Flaechen' angezeigt)
     private TextBox mietkostenProQmTextBox = null!;
@@ -288,7 +294,7 @@ internal sealed partial class FinanzWpfFenster : Window
 
             statusTextBlock.Text = "Simulation laeuft...";
             FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, anzahlSchwestern, zeitraum);
-            (string finanzenPfad, string gewinnPfad) =
+            (string finanzenPfad, string gewinnPfad, string kostenstrukturPfad) =
                 FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, anzahlSchwestern);
             
             // Hit/Miss Diagramm erzeugen
@@ -302,9 +308,22 @@ internal sealed partial class FinanzWpfFenster : Window
             simulationsDaten.SchreibePrognoseDatenJson("prognose_daten.json");
 
             // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
-            ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad);
-            finanzenImage.Source = LadeBild(finanzenPfad);
-            gewinnImage.Source = LadeBild(gewinnPfad);
+            if (ergebnisTextBox != null)
+            {
+                ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
+            }
+            if (finanzenImage != null)
+            {
+                finanzenImage.Source = LadeBild(finanzenPfad);
+            }
+            if (gewinnImage != null)
+            {
+                gewinnImage.Source = LadeBild(gewinnPfad);
+            }
+            if (kostenstrukturImage != null)
+            {
+                kostenstrukturImage.Source = LadeBild(kostenstrukturPfad);
+            }
 
             // Aktualisiere die Kennzahlen-Anzeige im Eingabebereich
             try

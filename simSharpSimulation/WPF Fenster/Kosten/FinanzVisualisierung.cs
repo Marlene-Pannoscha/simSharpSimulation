@@ -110,12 +110,19 @@ internal static class FinanzVisualisierung
         double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
         double gesamtMietkostenMonat = mietkostenProQm * gesamtflaeche;
         double gesamtMietkostenProTag = (gesamtMietkostenMonat * 12) / 365.0;
-        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.WeitereFixkostenProTag;
+        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.InfrastrukturProTag + fixkosten.MedizinischesMaterialProTag + fixkosten.Geräte-LeasingProTag + fixkosten.SonstigeFixkostenProTag;
+
+        var tagesergebnisse = tagespunkte.Select(p => FinanzRechner.BerechneTagesergebnis(
+            anzahlAerzte,
+            anzahlSchwestern,
+            RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+            p.BehandeltePatienten)).ToList();
 
         return new FinanzErgebnis(
             normalisierterZeitraum,
             tage.Count,
             tagespunkte,
+            tagesergebnisse,
             gesamteNachfrage,
             gesamtBehandelt,
             gesamtgewinn,
@@ -127,7 +134,7 @@ internal static class FinanzVisualisierung
             gesamtkostenFix);
     }
 
-    public static (string PatientenPfad, string GewinnPfad) ErzeugeDiagramme(
+    public static (string PatientenPfad, string GewinnPfad, string KostenstrukturPfad) ErzeugeDiagramme(
         FinanzErgebnis ergebnis,
         int anzahlAerzte,
         int anzahlSchwestern)
@@ -137,11 +144,13 @@ internal static class FinanzVisualisierung
 
         string finanzenPfad = Path.Combine(outputOrdner, $"finanzen_{zeitraumSlug}.png");
         string gewinnPfad = Path.Combine(outputOrdner, $"gewinn_{zeitraumSlug}.png");
+        string kostenstrukturPfad = Path.Combine(outputOrdner, $"kostenstruktur_{zeitraumSlug}.png");
 
         ErzeugeFinanzenDiagramm(ergebnis, anzahlAerzte, anzahlSchwestern, finanzenPfad);
         ErzeugeGewinnDiagramm(ergebnis, anzahlAerzte, anzahlSchwestern, gewinnPfad);
+        ErzeugeKostenstrukturDiagramm(ergebnis, kostenstrukturPfad);
 
-        return (finanzenPfad, gewinnPfad);
+        return (finanzenPfad, gewinnPfad, kostenstrukturPfad);
     }
 
     public static (int AnzahlHit, int AnzahlMiss, string DiagrammPfad) ErzeugeHitMissDiagramm(FinanzErgebnis ergebnis)
@@ -375,6 +384,35 @@ internal static class FinanzVisualisierung
         plot.SaveFig(outputPfad);
     }
 
+    private static void ErzeugeKostenstrukturDiagramm(FinanzErgebnis ergebnis, string outputPfad)
+    {
+        var tagesergebnis = ergebnis.Tagesergebnisse.FirstOrDefault();
+
+        var kostenstruktur = tagesergebnis.Kostenstruktur;
+
+        Plot plot = new(800, 600);
+
+        double[] values = {
+            kostenstruktur.PersonalkostenAnteil,
+            kostenstruktur.MietkostenAnteil,
+            kostenstruktur.InfrastrukturkostenAnteil,
+            kostenstruktur.MaterialkostenAnteil,
+            kostenstruktur.SonstigeFixkostenAnteil,
+            kostenstruktur.BehandlungskostenAnteil
+        };
+        string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Sonstige", "Behandlung" };
+
+        var pie = plot.AddPie(values);
+        pie.SliceLabels = labels;
+        pie.ShowPercentages = true;
+        pie.ShowValues = false;
+        pie.ShowLabels = true;
+
+        plot.Title("Kostenstruktur");
+        plot.Legend(location: Alignment.LowerRight);
+        plot.SaveFig(outputPfad);
+    }
+
     private static string ErzeugeKostenImageOrdner()
     {
         string projektOrdner = ErmittleProjektRoot();
@@ -468,6 +506,7 @@ internal sealed record FinanzErgebnis(
     string Zeitraum,
     int SimulierteTage,
     IReadOnlyList<FinanzTagespunkt> Tagespunkte,
+    IReadOnlyList<Tagesergebnis> Tagesergebnisse,
     int Gesamtnachfrage,
     int GesamtBehandelt,
     double Gesamtgewinn,

@@ -50,7 +50,10 @@
     "AnzahlBehandlungsraeumeArzt": 2,
     "FlaecheBehandlungsraumArztQuadratmeter": 18.0,
     "FlaecheWartezimmerQuadratmeter": 30.0,
-    "WeitereFixkostenProTag": 800.0
+    "InfrastrukturProTag": 250.0,
+    "MedizinischesMaterialProTag": 400.0,
+    "Geräte-LeasingProTag": 100.0,
+    "SonstigeFixkostenProTag": 150.0
   },
   "Versicherung": {
     "AnteilPrivatversichert": 0.20,

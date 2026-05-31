@@ -210,7 +210,10 @@ namespace simSharpSimulation
         public int AnzahlBehandlungsraeumeArzt { get; set; }
         public double FlaecheBehandlungsraumArztQuadratmeter { get; set; }
         public double FlaecheWartezimmerQuadratmeter { get; set; }
-        public double WeitereFixkostenProTag { get; set; }
+        public double InfrastrukturProTag { get; set; }
+        public double MedizinischesMaterialProTag { get; set; }
+        public double GeräteLeasingProTag { get; set; }
+        public double SonstigeFixkostenProTag { get; set; }
 
         public double BerechneMietkostenProTag()
         {

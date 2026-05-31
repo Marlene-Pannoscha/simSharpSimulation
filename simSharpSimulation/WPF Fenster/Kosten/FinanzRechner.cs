@@ -139,7 +139,10 @@ public static class FinanzRechner
             behandlungsmix);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
+        double umsatz = umsatzverteilung.Gesamtumsatz;
+        Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
+        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, umsatz / Math.Max(1, behandeltePatienten));
+        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
 
     public static Tagesergebnis BerechneTagesergebnis(
@@ -162,7 +165,10 @@ public static class FinanzRechner
             behandlungsmix);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
+        double umsatz = umsatzverteilung.Gesamtumsatz;
+        Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
+        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, umsatz / Math.Max(1, behandeltePatienten));
+        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
 
     public static Tagesergebnis BerechneZeitraumergebnis(int anzahlAerzte, int behandeltePatienten, int arbeitstage)
@@ -180,8 +186,48 @@ public static class FinanzRechner
             behandlungsmix);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
+        double umsatz = umsatzverteilung.Gesamtumsatz;
+        Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
+        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, umsatz / Math.Max(1, behandeltePatienten));
+        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
+
+    private static BreakEvenPoint BerechneBreakEvenPoint(Tageskosten kosten, double durchschnittsumsatzProPatient)
+    {
+        if (durchschnittsumsatzProPatient <= 0)
+            return new BreakEvenPoint { Patienten = int.MaxValue, Tage = double.MaxValue };
+
+        double variableKostenProPatient = kosten.Behandlungskosten / Math.Max(1, kosten.Gesamtkosten > 0 ? (int)(kosten.Gesamtkosten / durchschnittsumsatzProPatient) : 1);
+        double deckungsbeitragProPatient = durchschnittsumsatzProPatient - variableKostenProPatient;
+
+        if (deckungsbeitragProPatient <= 0)
+            return new BreakEvenPoint { Patienten = int.MaxValue, Tage = double.MaxValue };
+
+        int breakEvenPatienten = (int)Math.Ceiling(kosten.Fixkosten / deckungsbeitragProPatient);
+        double breakEvenTage = kosten.Fixkosten / (durchschnittsumsatzProPatient * breakEvenPatienten - kosten.Behandlungskosten);
+
+        return new BreakEvenPoint
+        {
+            Patienten = breakEvenPatienten,
+            Tage = breakEvenTage
+        };
+    }
+
+    private static Kostenstruktur BerechneKostenstruktur(Tageskosten kosten, double umsatz)
+    {
+        if (umsatz == 0) return new Kostenstruktur();
+
+        return new Kostenstruktur
+        {
+            PersonalkostenAnteil = kosten.Personalkosten / umsatz,
+            MietkostenAnteil = kosten.Mietkosten / umsatz,
+            InfrastrukturkostenAnteil = kosten.Infrastrukturkosten / umsatz,
+            MaterialkostenAnteil = kosten.MedizinischesMaterialkosten / umsatz,
+            SonstigeFixkostenAnteil = kosten.SonstigeFixkosten / umsatz,
+            BehandlungskostenAnteil = kosten.Behandlungskosten / umsatz
+        };
+    }
+
 
     private static double BehandlungskostenFuer(PatientenTyp typ)
     {
@@ -213,13 +259,15 @@ public static class FinanzRechner
         double mietkostenProQuadratmeterProMonat = GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
         double mietkostenProTag = (mietkostenProQuadratmeterProMonat * gesamtflaeche * 12) / 365.0;
 
-        double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
-
         return new Tageskosten(
             arztlohn,
             schwesterlohn,
             rezeptionlohn,
-            fixkosten,
+            mietkostenProTag,
+            Finanzen.Fixkosten.InfrastrukturProTag,
+            Finanzen.Fixkosten.MedizinischesMaterialProTag,
+            Finanzen.Fixkosten.GeräteLeasingProTag,
+            Finanzen.Fixkosten.SonstigeFixkostenProTag,
             behandlungsmix.Gesamtkosten);
     }
 
@@ -227,11 +275,13 @@ public static class FinanzRechner
         Tageskosten kosten,
         Versicherungsverteilung versicherungen,
         Umsatzverteilung umsatzverteilung,
-        Behandlungsmix behandlungsmix)
+        Behandlungsmix behandlungsmix,
+        Kostenstruktur kostenstruktur,
+        BreakEvenPoint breakEven)
     {
         double umsatz = umsatzverteilung.Gesamtumsatz;
         double gewinn = umsatz - kosten.Gesamtkosten;
-        return new Tagesergebnis(umsatz, gewinn, kosten, versicherungen, umsatzverteilung, behandlungsmix);
+        return new Tagesergebnis(umsatz, gewinn, kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
 
     private static Dictionary<TKey, int> VerteileGanzzahlen<TKey>(
@@ -269,11 +319,31 @@ public readonly record struct Tageskosten(
     double Arztlohn,
     double Schwesterlohn,
     double Rezeptionlohn,
-    double Fixkosten,
+    double Mietkosten,
+    double Infrastrukturkosten,
+    double MedizinischesMaterialkosten,
+    double SonstigeFixkosten,
     double Behandlungskosten)
 {
-    public double Gesamtkosten => Arztlohn + Schwesterlohn + Rezeptionlohn + Fixkosten + Behandlungskosten;
+    public double Gesamtkosten => Personalkosten + Fixkosten + Behandlungskosten;
     public double Personalkosten => Arztlohn + Schwesterlohn + Rezeptionlohn;
+    public double Fixkosten => Mietkosten + Infrastrukturkosten + MedizinischesMaterialkosten + SonstigeFixkosten;
+}
+
+public readonly record struct Kostenstruktur
+{
+    public double PersonalkostenAnteil { get; init; }
+    public double MietkostenAnteil { get; init; }
+    public double InfrastrukturkostenAnteil { get; init; }
+    public double MaterialkostenAnteil { get; init; }
+    public double SonstigeFixkostenAnteil { get; init; }
+    public double BehandlungskostenAnteil { get; init; }
+}
+
+public readonly record struct BreakEvenPoint
+{
+    public int Patienten { get; init; }
+    public double Tage { get; init; }
 }
 
 public readonly record struct Tagesergebnis(
@@ -282,7 +352,9 @@ public readonly record struct Tagesergebnis(
     Tageskosten Kosten,
     Versicherungsverteilung Versicherungen,
     Umsatzverteilung Umsatzverteilung,
-    Behandlungsmix Behandlungsmix);
+    Behandlungsmix Behandlungsmix,
+    Kostenstruktur Kostenstruktur,
+    BreakEvenPoint BreakEven);
 
 public readonly record struct Versicherungsverteilung(
     int PrivatPatienten,
