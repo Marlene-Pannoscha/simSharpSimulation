@@ -397,10 +397,11 @@ internal static class FinanzVisualisierung
             kostenstruktur.MietkostenAnteil,
             kostenstruktur.InfrastrukturkostenAnteil,
             kostenstruktur.MaterialkostenAnteil,
+            kostenstruktur.GeraeteLeasingAnteil,
             kostenstruktur.SonstigeFixkostenAnteil,
             kostenstruktur.BehandlungskostenAnteil
         };
-        string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Sonstige", "Behandlung" };
+        string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung" };
 
         var pie = plot.AddPie(values);
         pie.SliceLabels = labels;
