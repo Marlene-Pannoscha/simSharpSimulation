@@ -7,7 +7,38 @@
     "ArbeitsstundenProTag": 8
   },
   "Fixkosten": {
-    "MietkostenProQuadratmeterProTag": 10,
+    "MietkostenAufteilung": [
+      {
+        "MinFlaeche": 0,
+        "MaxFlaeche": 79.99,
+        "KostenProQm": 7.00
+      },
+      {
+        "MinFlaeche": 80,
+        "MaxFlaeche": 99.99,
+        "KostenProQm": 6.90
+      },
+      {
+        "MinFlaeche": 100,
+        "MaxFlaeche": 119.99,
+        "KostenProQm": 6.75
+      },
+      {
+        "MinFlaeche": 120,
+        "MaxFlaeche": 129.99,
+        "KostenProQm": 6.65
+      },
+      {
+        "MinFlaeche": 130,
+        "MaxFlaeche": 149.99,
+        "KostenProQm": 6.40
+      },
+      {
+        "MinFlaeche": 150,
+        "MaxFlaeche": 10000,
+        "KostenProQm": 6.32
+      }
+    ],
     "AnzahlBehandlungsraeumeSchwester": 3,
     "FlaecheBehandlungsraumSchwesterQuadratmeter": 12.0,
     "AnzahlBehandlungsraeumeArzt": 2,

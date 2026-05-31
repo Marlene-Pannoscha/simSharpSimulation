@@ -102,6 +102,15 @@ internal static class FinanzVisualisierung
         int intervalle = tagespunkte.Count;
         double durchschnittGewinn = intervalle > 0 ? gesamtgewinn / intervalle : 0.0;
 
+        var fixkosten = KonfigurationJsonExport.Finanzen.Fixkosten;
+        double gesamtflaeche = fixkosten.AnzahlBehandlungsraeumeSchwester * fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
+                             + fixkosten.AnzahlBehandlungsraeumeArzt * fixkosten.FlaecheBehandlungsraumArztQuadratmeter
+                             + fixkosten.FlaecheWartezimmerQuadratmeter;
+
+        double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
+        double gesamtMietkostenProTag = (mietkostenProQm * gesamtflaeche * 12) / 365.0;
+        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.WeitereFixkostenProTag;
+
         return new FinanzErgebnis(
             normalisierterZeitraum,
             tage.Count,
@@ -110,7 +119,11 @@ internal static class FinanzVisualisierung
             gesamtBehandelt,
             gesamtgewinn,
             durchschnittGewinn,
-            saisonGewinn);
+            saisonGewinn,
+            gesamtflaeche,
+            mietkostenProQm,
+            gesamtMietkostenProTag,
+            gesamtkostenFix);
     }
 
     public static (string PatientenPfad, string GewinnPfad) ErzeugeDiagramme(
@@ -457,7 +470,11 @@ internal sealed record FinanzErgebnis(
     int GesamtBehandelt,
     double Gesamtgewinn,
     double DurchschnittlicherGewinnProEinheit,
-    IReadOnlyDictionary<string, double> SaisonGewinn)
+    IReadOnlyDictionary<string, double> SaisonGewinn,
+    double Gesamtflaeche,
+    double MietkostenProQm,
+    double GesamtMietkostenProTag,
+    double GesamtkostenFix)
 {
     // Bequeme Projektionen fuer UI und Berichte, damit dort keine Summenlogik dupliziert wird.
     public IReadOnlyList<string> Achsenwerte => Tagespunkte.Select(p => p.Label).ToList();

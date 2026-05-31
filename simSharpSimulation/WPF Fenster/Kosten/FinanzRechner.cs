@@ -8,14 +8,13 @@ public static class FinanzRechner
     private static FinanzKonfigurationJson Finanzen => KonfigurationJsonExport.Finanzen;
     private static double AnteilGesetzlichVersichert => 1.0 - Finanzen.Versicherung.AnteilPrivatversichert;
 
-    public static double BerechneArztlohn(int anzahlAerzte, int behandeltePatienten)
+    public static double BerechneArztlohn(int anzahlAerzte)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
-        double grundlohn = BerechneArztGrundlohn(anzahlAerzte);
-        double variablerAnteil = behandeltePatienten * Finanzen.Personal.ArztLohnProPatient;
-        return grundlohn + variablerAnteil;
+        return anzahlAerzte
+            * Finanzen.Personal.ArztLohnProStunde
+            * Finanzen.Personal.ArbeitsstundenProTag;
     }
 
     public static double BerechneSchwesterlohn(int anzahlSchwestern)
@@ -103,25 +102,45 @@ public static class FinanzRechner
             behandlungsmix);
     }
 
-    public static Tageskosten BerechneTageskosten(
+    private static double GetMietkostenProQuadratmeterProMonat(double flaeche)
+    {
+        var MietAufteilung = Finanzen.Fixkosten.MietkostenAufteilung
+            .FirstOrDefault(s => flaeche >= s.MinFlaeche && flaeche <= s.MaxFlaeche);
+
+        if (MietAufteilung != null)
+        {
+            return MietAufteilung.KostenProQm;
+        }
+
+        // Fallback, falls keine MietAufteilung passt (sollte durch die Konfiguration nicht passieren)
+        return 0.0;
+    }
+
+    private static Tageskosten BerechneKosten(
         int anzahlAerzte,
         int anzahlSchwestern,
         int anzahlRezeptionisten,
-        int behandeltePatienten)
+        int behandeltePatienten,
+        Behandlungsmix behandlungsmix)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlSchwestern, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(anzahlRezeptionisten, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
+        double arztlohn = BerechneArztlohn(anzahlAerzte);
+        double schwesterlohn = BerechneSchwesterlohn(anzahlSchwestern);
+        double rezeptionlohn = BerechneRezeptionlohn(anzahlRezeptionisten);
+        double personalkosten = arztlohn + schwesterlohn + rezeptionlohn;
 
-        Behandlungsmix behandlungsmix = BerechneBehandlungsmix(behandeltePatienten);
-        return BerechneKosten(
-            anzahlAerzte,
-            anzahlSchwestern,
-            anzahlRezeptionisten,
-            behandeltePatienten,
-            arbeitstage: 1,
-            behandlungsmix);
+        double gesamtflaeche = Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester * Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
+                             + Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt * Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter
+                             + Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter;
+
+        double mietkostenProQuadratmeterProMonat = GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
+        double mietkostenProTag = (mietkostenProQuadratmeterProMonat * gesamtflaeche * 12) / 365.0;
+
+        double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
+
+        return new Tageskosten(
+            personalkosten,
+            fixkosten,
+            behandlungsmix.Gesamtkosten);
     }
 
     public static Tagesergebnis BerechneTagesergebnis(int anzahlAerzte, int behandeltePatienten)
@@ -214,27 +233,26 @@ public static class FinanzRechner
         int anzahlSchwestern,
         int anzahlRezeptionisten,
         int behandeltePatienten,
-        int arbeitstage,
         Behandlungsmix behandlungsmix)
     {
-        double arztlohn = (BerechneArztGrundlohn(anzahlAerzte) * arbeitstage)
-            + (behandeltePatienten * Finanzen.Personal.ArztLohnProPatient);
-        double schwesterlohn = BerechneSchwesterlohn(anzahlSchwestern) * arbeitstage;
-        double rezeptionlohn = BerechneRezeptionlohn(anzahlRezeptionisten) * arbeitstage;
-        double fixkosten = BerechneFixkosten() * arbeitstage;
-        double gesamtkosten = arztlohn
-            + schwesterlohn
-            + rezeptionlohn
-            + fixkosten
-            + behandlungsmix.Gesamtkosten;
+        double arztlohn = BerechneArztlohn(anzahlAerzte, behandeltePatienten);
+        double schwesterlohn = BerechneSchwesterlohn(anzahlSchwestern);
+        double rezeptionlohn = BerechneRezeptionlohn(anzahlRezeptionisten);
+        double personalkosten = arztlohn + schwesterlohn + rezeptionlohn;
+
+        double gesamtflaeche = Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester * Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
+                             + Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt * Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter
+                             + Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter;
+
+        double mietkostenProQuadratmeterProMonat = GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
+        double mietkostenProTag = (mietkostenProQuadratmeterProMonat * gesamtflaeche * 12) / 365.0;
+
+        double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
 
         return new Tageskosten(
-            arztlohn,
-            schwesterlohn,
-            rezeptionlohn,
+            personalkosten,
             fixkosten,
-            behandlungsmix.Gesamtkosten,
-            gesamtkosten);
+            behandlungsmix.Gesamtkosten);
     }
 
     private static Tagesergebnis ErstelleErgebnis(
@@ -280,9 +298,7 @@ public static class FinanzRechner
 }
 
 public readonly record struct Tageskosten(
-    double Arztlohn,
-    double Schwesterlohn,
-    double Rezeptionlohn,
+    double Personalkosten,
     double Fixkosten,
     double Behandlungskosten,
     double Gesamtkosten);
@@ -322,4 +338,14 @@ public readonly record struct Behandlungsmix(
     // Dient fuer aggregierte Auswertungen ueber alle Behandlungsarten hinweg.
     public int GesamtPatienten => KurzPatienten + MittelPatienten + LangPatienten;
     public double Gesamtkosten => KurzKosten + MittelKosten + LangKosten;
+}
+
+public readonly record struct FinanzErgebnis
+{
+    public double DurchschnittlicherGewinnProEinheit { get; init; }
+    public double DurchschnittBehandeltePatientenProTag { get; init; }
+    public double Gesamtflaeche { get; init; }
+    public double MietkostenProQm { get; init; }
+    public double GesamtMietkostenProTag { get; init; }
+    public double GesamtkostenFix { get; init; }
 }

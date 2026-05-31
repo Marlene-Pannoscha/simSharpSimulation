@@ -203,17 +203,13 @@ namespace simSharpSimulation
 
     internal sealed class FixkostenJson
     {
-        public double MietkostenProQuadratmeterProTag { get; set; } = 8.5;
-        public int AnzahlBehandlungsraeumeSchwester { get; set; } = 3;
-        public double FlaecheBehandlungsraumSchwesterQuadratmeter { get; set; } = 12.0;
-        public int AnzahlBehandlungsraeumeArzt { get; set; } = 2;
-        public double FlaecheBehandlungsraumArztQuadratmeter { get; set; } = 18.0;
-        public double FlaecheWartezimmerQuadratmeter { get; set; } = 30.0;
-
-        [JsonIgnore]
-        public int AnzahlBehandlungsraeumeGesamt => AnzahlBehandlungsraeumeSchwester + AnzahlBehandlungsraeumeArzt;
-
-        public double WeitereFixkostenProTag { get; set; } = 450.0;
+        public List<MietkostenMietAufteilung> MietkostenAufteilung { get; set; }
+        public int AnzahlBehandlungsraeumeSchwester { get; set; }
+        public double FlaecheBehandlungsraumSchwesterQuadratmeter { get; set; }
+        public int AnzahlBehandlungsraeumeArzt { get; set; }
+        public double FlaecheBehandlungsraumArztQuadratmeter { get; set; }
+        public double FlaecheWartezimmerQuadratmeter { get; set; }
+        public double WeitereFixkostenProTag { get; set; }
 
         public double BerechneMietkostenProTag()
         {
@@ -223,6 +219,13 @@ namespace simSharpSimulation
 
             return MietkostenProQuadratmeterProTag * Math.Max(flaecheGesamt, 0.0);
         }
+    }
+
+    internal sealed class MietkostenMietAufteilung
+    {
+        public double MinFlaeche { get; set; }
+        public double MaxFlaeche { get; set; }
+        public double KostenProQm { get; set; }
     }
 
     internal sealed class VersicherungsKostenJson

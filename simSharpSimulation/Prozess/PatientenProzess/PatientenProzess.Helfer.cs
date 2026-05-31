@@ -1,4 +1,25 @@
-using System.Collections.Generic;
+using SimSharp;
+
+namespace simSharpSimulation;
+
+internal static class PatientenProzessHelfer
+{
+    internal static int BestimmePrioritaet(PatientenTyp typ)
+    {
+        return typ switch
+        {
+            PatientenTyp.Kurz => 3,
+            PatientenTyp.Mittel => 2,
+            PatientenTyp.Lang => 1,
+            _ => 1
+        };
+    }
+
+    internal static double AktuelleMinuten(Simulation env)
+    {
+        return (env.Now - env.StartDate).TotalMinutes;
+    }
+}using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System;

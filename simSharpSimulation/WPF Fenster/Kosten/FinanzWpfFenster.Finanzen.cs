@@ -62,6 +62,12 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
         sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.DurchschnittBehandeltePatientenProTag.ToString("N1", DeCulture)}");
         sb.AppendLine();
+        sb.AppendLine("Praxisdetails");
+        sb.AppendLine($"Gesamtfläche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m²");
+        sb.AppendLine($"Mietkosten pro m²/Monat: {FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm)}");
+        sb.AppendLine($"Gesamtmietkosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag)}");
+        sb.AppendLine($"Fixkosten (Miete + Weitere): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtkostenFix)}");
+        sb.AppendLine();
         sb.AppendLine("Versicherung");
         sb.AppendLine($"Privat ({privatAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.PrivatPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzPrivat)}");
         sb.AppendLine($"Gesetzlich ({gesetzlichAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.GesetzlichPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzGesetzlich)}");

@@ -1,12 +1,22 @@
-namespace simSharpSimulation
-{
-    internal sealed class SchwesterKonfiguration : PersonenKonfiguration
-    {
-        public static int ANZAHL_SCHWESTERN { get; internal set; } = 3;
-        public static double MITTLERE_BEHANDLUNGSDAUER { get; internal set; } = 4.6;
+using System.Text.Json;
 
-        public override int Anzahl => ANZAHL_SCHWESTERN;
-        public override double MittlereServicezeit => MITTLERE_BEHANDLUNGSDAUER;
-        public override string Beschreibung => "Schwestern in der Klinik";
+namespace simSharpSimulation;
+
+public static class SchwesterKonfiguration
+{
+    private static readonly SchwesterKonfigurationJson Konfiguration = LadeKonfiguration();
+
+    public static int ANZAHL_SCHWESTERN => Konfiguration.Anzahl;
+
+    private static SchwesterKonfigurationJson LadeKonfiguration()
+    {
+        string jsonString = KonfigurationJsonExport.Schwester;
+        var config = JsonSerializer.Deserialize<SchwesterKonfigurationJson>(jsonString);
+        return config ?? throw new InvalidOperationException("Schwester-Konfiguration konnte nicht geladen werden.");
     }
+}
+
+internal sealed class SchwesterKonfigurationJson
+{
+    public int Anzahl { get; set; }
 }
