@@ -108,7 +108,8 @@ internal static class FinanzVisualisierung
                              + fixkosten.FlaecheWartezimmerQuadratmeter;
 
         double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
-        double gesamtMietkostenProTag = (mietkostenProQm * gesamtflaeche * 12) / 365.0;
+        double gesamtMietkostenMonat = mietkostenProQm * gesamtflaeche;
+        double gesamtMietkostenProTag = (gesamtMietkostenMonat * 12) / 365.0;
         double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.WeitereFixkostenProTag;
 
         return new FinanzErgebnis(
@@ -223,13 +224,14 @@ internal static class FinanzVisualisierung
     private static int SimuliereTaeglicheNachfrage(int tagImJahr, Random rnd)
     {
         string saison = GetSeasonFromDay(tagImJahr);
+        var saisonfaktoren = KonfigurationJsonExport.Finanzen.Saisonfaktoren;
         // Saisonfaktoren verschieben die erwartete Nachfrage ueber das Jahr hinweg.
         double saisonfaktor = saison switch
         {
-            "Winter" => 1.20,
-            "Fruehling" => 1.00,
-            "Sommer" => 0.80,
-            "Herbst" => 1.05,
+            "Winter" => saisonfaktoren.Winter,
+            "Fruehling" => saisonfaktoren.Fruehling,
+            "Sommer" => saisonfaktoren.Sommer,
+            "Herbst" => saisonfaktoren.Herbst,
             _ => 1.0,
         };
 

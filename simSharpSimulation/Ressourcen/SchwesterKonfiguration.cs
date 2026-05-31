@@ -1,22 +1,9 @@
-using System.Text.Json;
-
-namespace simSharpSimulation;
-
-public static class SchwesterKonfiguration
+namespace simSharpSimulation
 {
-    private static readonly SchwesterKonfigurationJson Konfiguration = LadeKonfiguration();
-
-    public static int ANZAHL_SCHWESTERN => Konfiguration.Anzahl;
-
-    private static SchwesterKonfigurationJson LadeKonfiguration()
+    public static class SchwesterKonfiguration
     {
-        string jsonString = KonfigurationJsonExport.Schwester;
-        var config = JsonSerializer.Deserialize<SchwesterKonfigurationJson>(jsonString);
-        return config ?? throw new InvalidOperationException("Schwester-Konfiguration konnte nicht geladen werden.");
+        // Werte werden von KonfigurationJsonExport.LadeAlle() gesetzt.
+        public static int ANZAHL_SCHWESTERN { get; set; }
+        public static double MITTLERE_BEHANDLUNGSDAUER { get; set; }
     }
-}
-
-internal sealed class SchwesterKonfigurationJson
-{
-    public int Anzahl { get; set; }
 }

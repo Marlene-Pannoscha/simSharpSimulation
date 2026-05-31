@@ -24,6 +24,10 @@ internal sealed partial class FinanzWpfFenster : Window
     private Image finanzenImage = null!;
     private Image gewinnImage = null!;
     private readonly TextBlock statusTextBlock;
+    // Kennzahlen Anzeige (wird unter 'Raeume und Flaechen' angezeigt)
+    private TextBox mietkostenProQmTextBox = null!;
+    private TextBox gesamtFlaecheTextBox = null!;
+    private TextBox gesamtMietkostenTextBox = null!;
     
     // Hit/Miss Tab-Steuerelemente
     private TextBox hitMissErgebnisTextBox = null!;
@@ -94,6 +98,31 @@ internal sealed partial class FinanzWpfFenster : Window
             raeumeGrid,
             "Wartezimmerflaeche (m2)",
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
+
+        // Zeige berechnete Kennzahlen unter den Eingaben an (anfangs aus der geladenen Konfiguration)
+        double initialGesamtFlaeche = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester * KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
+            + KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt * KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter
+            + KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter;
+        double initialMietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(initialGesamtFlaeche);
+        double initialGesamtMietkostenProTag = (initialMietkostenProQm * initialGesamtFlaeche * 12) / 365.0;
+
+        mietkostenProQmTextBox = ErzeugeParameterTextBox(FinanzVisualisierung.FormatEuro(initialMietkostenProQm));
+        mietkostenProQmTextBox.IsReadOnly = true;
+        mietkostenProQmTextBox.BorderThickness = new Thickness(0);
+        mietkostenProQmTextBox.Background = Brushes.Transparent;
+        FuegeParameterZeile(raeumeGrid, "Mietkosten pro m²/Monat", mietkostenProQmTextBox);
+
+        gesamtFlaecheTextBox = ErzeugeParameterTextBox(initialGesamtFlaeche.ToString("N2", DeCulture) + " m²");
+        gesamtFlaecheTextBox.IsReadOnly = true;
+        gesamtFlaecheTextBox.BorderThickness = new Thickness(0);
+        gesamtFlaecheTextBox.Background = Brushes.Transparent;
+        FuegeParameterZeile(raeumeGrid, "Gesamtfläche", gesamtFlaecheTextBox);
+
+        gesamtMietkostenTextBox = ErzeugeParameterTextBox(FinanzVisualisierung.FormatEuro(initialGesamtMietkostenProTag));
+        gesamtMietkostenTextBox.IsReadOnly = true;
+        gesamtMietkostenTextBox.BorderThickness = new Thickness(0);
+        gesamtMietkostenTextBox.Background = Brushes.Transparent;
+        FuegeParameterZeile(raeumeGrid, "Gesamtmietkosten pro Tag", gesamtMietkostenTextBox);
         Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
         Grid.SetColumn(raeumeBox, 2);
         eingabeGrid.Children.Add(raeumeBox);
@@ -276,6 +305,18 @@ internal sealed partial class FinanzWpfFenster : Window
             ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad);
             finanzenImage.Source = LadeBild(finanzenPfad);
             gewinnImage.Source = LadeBild(gewinnPfad);
+
+            // Aktualisiere die Kennzahlen-Anzeige im Eingabebereich
+            try
+            {
+                mietkostenProQmTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm);
+                gesamtFlaecheTextBox.Text = ergebnis.Gesamtflaeche.ToString("N2", DeCulture) + " m²";
+                gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag);
+            }
+            catch
+            {
+                // Ignoriere UI-Update-Fehler (sollte nicht passieren)
+            }
             
             // Hit/Miss Tab aktualisieren
             hitMissErgebnisTextBox.Text = ErzeugeHitMissErgebnisText(anzahlHit, anzahlMiss, hitMissPfad);

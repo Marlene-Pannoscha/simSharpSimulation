@@ -190,6 +190,7 @@ namespace simSharpSimulation
         public FixkostenJson Fixkosten { get; set; } = new();
         public VersicherungsKostenJson Versicherung { get; set; } = new();
         public BehandlungskostenJson Behandlungskosten { get; set; } = new();
+        public SaisonfaktorenJson Saisonfaktoren { get; set; } = new();
     }
 
     internal sealed class PersonalKostenJson
@@ -203,7 +204,7 @@ namespace simSharpSimulation
 
     internal sealed class FixkostenJson
     {
-        public List<MietkostenMietAufteilung> MietkostenAufteilung { get; set; }
+        public List<MietkostenMietAufteilung> MietkostenAufteilung { get; set; } = new();
         public int AnzahlBehandlungsraeumeSchwester { get; set; }
         public double FlaecheBehandlungsraumSchwesterQuadratmeter { get; set; }
         public int AnzahlBehandlungsraeumeArzt { get; set; }
@@ -217,7 +218,10 @@ namespace simSharpSimulation
                 + (AnzahlBehandlungsraeumeArzt * FlaecheBehandlungsraumArztQuadratmeter)
                 + FlaecheWartezimmerQuadratmeter;
 
-            return MietkostenProQuadratmeterProTag * Math.Max(flaecheGesamt, 0.0);
+            // Bestimme geeigneten Preis pro Quadratmeter aus der Aufteilung.
+            var aufteilung = MietkostenAufteilung?.FirstOrDefault(s => flaecheGesamt >= s.MinFlaeche && flaecheGesamt <= s.MaxFlaeche);
+            double kostenProQm = aufteilung?.KostenProQm ?? MietkostenAufteilung?.LastOrDefault()?.KostenProQm ?? 0.0;
+            return kostenProQm * Math.Max(flaecheGesamt, 0.0);
         }
     }
 
@@ -240,5 +244,13 @@ namespace simSharpSimulation
         public double Kurz { get; set; } = 18.0;
         public double Mittel { get; set; } = 35.0;
         public double Lang { get; set; } = 60.0;
+    }
+
+    internal sealed class SaisonfaktorenJson
+    {
+        public double Winter { get; set; }
+        public double Fruehling { get; set; }
+        public double Sommer { get; set; }
+        public double Herbst { get; set; }
     }
 }

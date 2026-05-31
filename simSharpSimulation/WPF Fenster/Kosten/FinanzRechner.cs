@@ -8,13 +8,20 @@ public static class FinanzRechner
     private static FinanzKonfigurationJson Finanzen => KonfigurationJsonExport.Finanzen;
     private static double AnteilGesetzlichVersichert => 1.0 - Finanzen.Versicherung.AnteilPrivatversichert;
 
-    public static double BerechneArztlohn(int anzahlAerzte)
+    public static double BerechneArztlohn(int anzahlAerzte, int behandeltePatienten)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(anzahlAerzte, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(behandeltePatienten, 0);
 
-        return anzahlAerzte
+        // Fixer Stundenlohn pro Arzt pro Tag
+        double stundenlohnKomponente = anzahlAerzte
             * Finanzen.Personal.ArztLohnProStunde
             * Finanzen.Personal.ArbeitsstundenProTag;
+
+        // Variable Vergütung pro behandeltetem Patienten (z. B. Fallpauschale oder Bonus)
+        double proPatientKomponente = behandeltePatienten * Finanzen.Personal.ArztLohnProPatient;
+
+        return stundenlohnKomponente + proPatientKomponente;
     }
 
     public static double BerechneSchwesterlohn(int anzahlSchwestern)
@@ -98,11 +105,10 @@ public static class FinanzRechner
             SchwesterKonfiguration.ANZAHL_SCHWESTERN,
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
             behandeltePatienten,
-            arbeitstage: 1,
             behandlungsmix);
     }
 
-    private static double GetMietkostenProQuadratmeterProMonat(double flaeche)
+    internal static double GetMietkostenProQuadratmeterProMonat(double flaeche)
     {
         var MietAufteilung = Finanzen.Fixkosten.MietkostenAufteilung
             .FirstOrDefault(s => flaeche >= s.MinFlaeche && flaeche <= s.MaxFlaeche);
@@ -116,32 +122,7 @@ public static class FinanzRechner
         return 0.0;
     }
 
-    private static Tageskosten BerechneKosten(
-        int anzahlAerzte,
-        int anzahlSchwestern,
-        int anzahlRezeptionisten,
-        int behandeltePatienten,
-        Behandlungsmix behandlungsmix)
-    {
-        double arztlohn = BerechneArztlohn(anzahlAerzte);
-        double schwesterlohn = BerechneSchwesterlohn(anzahlSchwestern);
-        double rezeptionlohn = BerechneRezeptionlohn(anzahlRezeptionisten);
-        double personalkosten = arztlohn + schwesterlohn + rezeptionlohn;
-
-        double gesamtflaeche = Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester * Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
-                             + Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt * Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter
-                             + Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter;
-
-        double mietkostenProQuadratmeterProMonat = GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
-        double mietkostenProTag = (mietkostenProQuadratmeterProMonat * gesamtflaeche * 12) / 365.0;
-
-        double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
-
-        return new Tageskosten(
-            personalkosten,
-            fixkosten,
-            behandlungsmix.Gesamtkosten);
-    }
+    // BerechneKosten: Implementierung weiter unten mit voller Tageskosten-Signatur.
 
     public static Tagesergebnis BerechneTagesergebnis(int anzahlAerzte, int behandeltePatienten)
     {
@@ -155,7 +136,6 @@ public static class FinanzRechner
             SchwesterKonfiguration.ANZAHL_SCHWESTERN,
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
             behandeltePatienten,
-            arbeitstage: 1,
             behandlungsmix);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
@@ -179,7 +159,6 @@ public static class FinanzRechner
             anzahlSchwestern,
             anzahlRezeptionisten,
             behandeltePatienten,
-            arbeitstage: 1,
             behandlungsmix);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
@@ -198,23 +177,10 @@ public static class FinanzRechner
             SchwesterKonfiguration.ANZAHL_SCHWESTERN,
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
             behandeltePatienten,
-            arbeitstage,
             behandlungsmix);
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
         return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix);
-    }
-
-    private static double BerechneArztGrundlohn(int anzahlAerzte)
-    {
-        return anzahlAerzte
-            * Finanzen.Personal.ArztLohnProStunde
-            * Finanzen.Personal.ArbeitsstundenProTag;
-    }
-
-    private static double BerechneFixkosten()
-    {
-        return KonfigurationJsonExport.MietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
     }
 
     private static double BehandlungskostenFuer(PatientenTyp typ)
@@ -250,7 +216,9 @@ public static class FinanzRechner
         double fixkosten = mietkostenProTag + Finanzen.Fixkosten.WeitereFixkostenProTag;
 
         return new Tageskosten(
-            personalkosten,
+            arztlohn,
+            schwesterlohn,
+            rezeptionlohn,
             fixkosten,
             behandlungsmix.Gesamtkosten);
     }
@@ -298,10 +266,15 @@ public static class FinanzRechner
 }
 
 public readonly record struct Tageskosten(
-    double Personalkosten,
+    double Arztlohn,
+    double Schwesterlohn,
+    double Rezeptionlohn,
     double Fixkosten,
-    double Behandlungskosten,
-    double Gesamtkosten);
+    double Behandlungskosten)
+{
+    public double Gesamtkosten => Arztlohn + Schwesterlohn + Rezeptionlohn + Fixkosten + Behandlungskosten;
+    public double Personalkosten => Arztlohn + Schwesterlohn + Rezeptionlohn;
+}
 
 public readonly record struct Tagesergebnis(
     double Umsatz,
@@ -340,12 +313,4 @@ public readonly record struct Behandlungsmix(
     public double Gesamtkosten => KurzKosten + MittelKosten + LangKosten;
 }
 
-public readonly record struct FinanzErgebnis
-{
-    public double DurchschnittlicherGewinnProEinheit { get; init; }
-    public double DurchschnittBehandeltePatientenProTag { get; init; }
-    public double Gesamtflaeche { get; init; }
-    public double MietkostenProQm { get; init; }
-    public double GesamtMietkostenProTag { get; init; }
-    public double GesamtkostenFix { get; init; }
-}
+

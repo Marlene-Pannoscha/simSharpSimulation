@@ -1,22 +1,10 @@
-using System.Text.Json;
-
-namespace simSharpSimulation;
-
-public static class RezeptionKonfiguration
+namespace simSharpSimulation
 {
-    private static readonly RezeptionKonfigurationJson Konfiguration = LadeKonfiguration();
-
-    public static int ANZAHL_REZEPTIONISTEN => Konfiguration.Anzahl;
-
-    private static RezeptionKonfigurationJson LadeKonfiguration()
+    public static class RezeptionKonfiguration
     {
-        string jsonString = KonfigurationJsonExport.Rezeption;
-        var config = JsonSerializer.Deserialize<RezeptionKonfigurationJson>(jsonString);
-        return config ?? throw new InvalidOperationException("Rezeption-Konfiguration konnte nicht geladen werden.");
+        // Werte werden von KonfigurationJsonExport.LadeAlle() gesetzt.
+        public static int ANZAHL_REZEPTIONISTEN { get; set; }
+        public static double MITTELREZEPTIONSZEIT { get; set; }
+        public static double VARIATIONSKOEFFIZIENT_REZEPTION { get; set; }
     }
-}
-
-internal sealed class RezeptionKonfigurationJson
-{
-    public int Anzahl { get; set; }
 }

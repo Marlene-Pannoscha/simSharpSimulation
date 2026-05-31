@@ -65,7 +65,7 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine("Praxisdetails");
         sb.AppendLine($"Gesamtfläche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m²");
         sb.AppendLine($"Mietkosten pro m²/Monat: {FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm)}");
-        sb.AppendLine($"Gesamtmietkosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag)}");
+        sb.AppendLine($"Gesamtmietkosten pro Monat: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag * 30)}");
         sb.AppendLine($"Fixkosten (Miete + Weitere): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtkostenFix)}");
         sb.AppendLine();
         sb.AppendLine("Versicherung");
@@ -79,15 +79,15 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FinanzVisualisierung.FormatEuro(behandlungsmix.Gesamtkosten)}");
         sb.AppendLine();
         sb.AppendLine("Kostenstruktur pro Tag");
-        sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, durchschnittPatientenProTagGerundet))}");
+        int durchschnittBehandelteProTag = (int)Math.Round(ergebnis.DurchschnittBehandeltePatientenProTag);
+        sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, durchschnittBehandelteProTag))}");
         sb.AppendLine($"Schwestern: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN))}");
         sb.AppendLine($"Rezeption: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN))}");
         sb.AppendLine($"Zimmer: {KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester} Schwester / {KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt} Arzt");
         sb.AppendLine($"Fläche: {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString("N1", DeCulture)} m² Schwester / {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString("N1", DeCulture)} m² Arzt");
         sb.AppendLine($"Wartezimmerfläche: {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString("N1", DeCulture)} m²");
-        double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
-        sb.AppendLine($"Mietkosten Räume: {FinanzVisualisierung.FormatEuro(mietkostenProTag)}");
-        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(mietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
+        sb.AppendLine($"Mietkosten Räume: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag)}");
+        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtkostenFix)}");
         sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");
