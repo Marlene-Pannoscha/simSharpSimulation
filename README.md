@@ -69,14 +69,16 @@ dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimula
 Das WPF-Fenster wird programmatisch in C# aufgebaut und enthaelt mehrere Tabs:
 
 - `Uebersicht`: kompakte Simulationskennzahlen, Wartezeiten, Patienten-Typen und Tagesfinanzen.
+- `Konfiguration`: Detailwerte fuer Raeume, Flaechen, Infrastruktur und Leasing.
 - `Finanzen`: Umsatz, Kosten, Gewinn, Break-even-Anzeige und Diagramme.
 - `Hit/Miss Analyse`: behandelte und nicht behandelte Nachfrage inklusive Diagramm.
 - `Wartezeiten`: Textauswertung sowie Tabellen fuer Warteschlangen, Auslastung, Bereiche, Wartezeiten und Behandlungszeiten.
 - `Prognose`: Prognosebericht und Diagramme zu Trefferquote, Restzeit und Abbruchgruenden.
 
-Im oberen Eingabebereich koennen Personal, Raeume, Flaechen, Infrastruktur,
-Geraete-Leasing und der Auswertungszeitraum angepasst werden. Die berechneten
-Mietkennzahlen werden direkt im Fenster aktualisiert.
+Im oberen Eingabebereich bleiben Personal, Zeitraum, Startbutton und eine
+kompakte Raum-/Kostenuebersicht sichtbar. Die Detailwerte fuer Raeume,
+Flaechen, Infrastruktur und Geraete-Leasing liegen im Tab `Konfiguration`.
+Die berechneten Mietkennzahlen werden direkt im Fenster aktualisiert.
 
 ## Ausgaben und Dateien
 

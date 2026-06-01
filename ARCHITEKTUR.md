@@ -243,7 +243,8 @@ in C# aufgebaut.
 `FinanzWpfFenster.cs` enthaelt:
 
 - Fenstergrundlayout
-- Eingabebereich fuer Personal, Raeume, Kosten und Zeitraum
+- kompakter Eingabebereich fuer Personal, Zeitraum, Startbutton und Raum-/Kostenuebersicht
+- Konfiguration-Tab fuer die Detailwerte zu Raeumen, Flaechen und Fixkosten
 - Startbutton und Eventhandler
 - zentrale UI-Helfer fuer Textboxen, Bildcontainer, Parametergruppen und Tabs
 - Laden von PNG-Dateien in WPF-Images
@@ -252,6 +253,8 @@ in C# aufgebaut.
 
 - `FinanzWpfFenster.SimulationsUebersicht.cs`
   - zeigt kompakte Simulationskennzahlen und Tagesfinanzen.
+- `FinanzWpfFenster.cs`
+  - enthaelt den Konfiguration-Tab fuer Raeume, Flaechen, Infrastruktur und Leasing.
 - `FinanzWpfFenster.Finanzen.cs`
   - zeigt Finanzbericht, Break-even-Anzeige und Diagramme.
 - `FinanzWpfFenster.HitMiss.cs`

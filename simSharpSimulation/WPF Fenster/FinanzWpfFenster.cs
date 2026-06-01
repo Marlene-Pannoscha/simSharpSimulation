@@ -32,7 +32,8 @@ internal sealed partial class FinanzWpfFenster : Window
     private Button? exportFinanzenButton;
 
     private readonly TextBlock statusTextBlock;
-    // Kennzahlen Anzeige (wird unter 'Raeume und Flaechen' angezeigt)
+    // Kennzahlen Anzeige (wird im Konfiguration-Tab angezeigt)
+    private TextBlock raeumeKurzinfoTextBlock = new TextBlock();
     private TextBox mietkostenProQmTextBox = null!;
     private TextBox gesamtFlaecheTextBox = null!;
     private TextBox gesamtMietkostenTextBox = null!;
@@ -97,63 +98,18 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetColumn(personalBox, 0);
         eingabeGrid.Children.Add(personalBox);
 
-        Grid raeumeGrid = ErzeugeParameterGrid();
-        behandlungsraeumeSchwesterTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Schwesterzimmer",
-            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture));
-        behandlungsflaecheSchwesterTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Flaeche je Schwesterzimmer (m2)",
-            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture));
-        behandlungsraeumeArztTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Arztzimmer",
-            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture));
-        behandlungsflaecheArztTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Flaeche je Arztzimmer (m2)",
-            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture));
-        wartezimmerflaecheTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Wartezimmerflaeche (m2)",
-            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
-        infrastrukturProTagTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Infrastruktur pro Tag",
-            KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag.ToString(CultureInfo.InvariantCulture));
-        geraeteLeasingProTagTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Geraete-Leasing pro Tag",
-            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag.ToString(CultureInfo.InvariantCulture));
+        UIElement konfigurationTabInhalt = ErstelleKonfigurationTab();
 
-        // Zeige berechnete Kennzahlen unter den Eingaben an (anfangs aus der geladenen Konfiguration)
-        double initialGesamtFlaeche = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester * KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
-            + KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt * KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter
-            + KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter;
-        double initialMietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(initialGesamtFlaeche);
-        double initialGesamtMietkostenProTag = (initialMietkostenProQm * initialGesamtFlaeche * 12) / 365.0;
-
-        mietkostenProQmTextBox = ErzeugeParameterTextBox(FinanzVisualisierung.FormatEuro(initialMietkostenProQm));
-        mietkostenProQmTextBox.IsReadOnly = true;
-        mietkostenProQmTextBox.BorderThickness = new Thickness(0);
-        mietkostenProQmTextBox.Background = Brushes.Transparent;
-        FuegeParameterZeile(raeumeGrid, "Mietkosten pro m2/Monat", mietkostenProQmTextBox);
-
-        gesamtFlaecheTextBox = ErzeugeParameterTextBox(initialGesamtFlaeche.ToString("N2", DeCulture) + " m2");
-        gesamtFlaecheTextBox.IsReadOnly = true;
-        gesamtFlaecheTextBox.BorderThickness = new Thickness(0);
-        gesamtFlaecheTextBox.Background = Brushes.Transparent;
-        FuegeParameterZeile(raeumeGrid, "Gesamtflaeche", gesamtFlaecheTextBox);
-
-        gesamtMietkostenTextBox = ErzeugeParameterTextBox(FinanzVisualisierung.FormatEuro(initialGesamtMietkostenProTag));
-        gesamtMietkostenTextBox.IsReadOnly = true;
-        gesamtMietkostenTextBox.BorderThickness = new Thickness(0);
-        gesamtMietkostenTextBox.Background = Brushes.Transparent;
-        FuegeParameterZeile(raeumeGrid, "Gesamtmietkosten pro Tag", gesamtMietkostenTextBox);
-        Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
-        Grid.SetColumn(raeumeBox, 2);
-        eingabeGrid.Children.Add(raeumeBox);
+        raeumeKurzinfoTextBlock = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = TextFarbe,
+            LineHeight = 20
+        };
+        Border raeumeKurzinfoBox = ErzeugeParameterGruppe("Raeume und Kosten", raeumeKurzinfoTextBlock);
+        Grid.SetColumn(raeumeKurzinfoBox, 2);
+        eingabeGrid.Children.Add(raeumeKurzinfoBox);
+        AktualisiereRaeumeKurzinfo();
 
         Grid aktionenGrid = ErzeugeParameterGrid();
 
@@ -223,6 +179,13 @@ internal sealed partial class FinanzWpfFenster : Window
             Content = ErstelleSimulationsUebersichtTab()
         };
         tabControl.Items.Add(uebersichtTab);
+
+        TabItem konfigurationTab = new()
+        {
+            Header = "Konfiguration",
+            Content = konfigurationTabInhalt
+        };
+        tabControl.Items.Add(konfigurationTab);
         
         TabItem finanzenTab = new()
         {
@@ -261,6 +224,143 @@ internal sealed partial class FinanzWpfFenster : Window
         AktualisiereSimulationsUebersicht(null);
         AktualisiereWartezeitenTab(null);
         AktualisierePrognoseTab();
+    }
+
+    private UIElement ErstelleKonfigurationTab()
+    {
+        Grid inhaltGrid = new()
+        {
+            Margin = new Thickness(10)
+        };
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        Grid raeumeGrid = ErzeugeParameterGrid();
+        behandlungsraeumeSchwesterTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Schwesterzimmer",
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture));
+        behandlungsflaecheSchwesterTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Flaeche je Schwesterzimmer (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        behandlungsraeumeArztTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Arztzimmer",
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture));
+        behandlungsflaecheArztTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Flaeche je Arztzimmer (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        wartezimmerflaecheTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Wartezimmerflaeche (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
+
+        gesamtFlaecheTextBox = ErzeugeKennzahlTextBox();
+        FuegeParameterZeile(raeumeGrid, "Gesamtflaeche", gesamtFlaecheTextBox);
+
+        Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
+        Grid.SetColumn(raeumeBox, 0);
+        inhaltGrid.Children.Add(raeumeBox);
+
+        Grid kostenGrid = ErzeugeParameterGrid();
+        infrastrukturProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Infrastruktur pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag.ToString(CultureInfo.InvariantCulture));
+        geraeteLeasingProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Geraete-Leasing pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag.ToString(CultureInfo.InvariantCulture));
+
+        mietkostenProQmTextBox = ErzeugeKennzahlTextBox();
+        FuegeParameterZeile(kostenGrid, "Mietkosten pro m2/Monat", mietkostenProQmTextBox);
+
+        gesamtMietkostenTextBox = ErzeugeKennzahlTextBox();
+        FuegeParameterZeile(kostenGrid, "Gesamtmietkosten pro Tag", gesamtMietkostenTextBox);
+
+        Border kostenBox = ErzeugeParameterGruppe("Fixkosten und Kennzahlen", kostenGrid);
+        Grid.SetColumn(kostenBox, 2);
+        inhaltGrid.Children.Add(kostenBox);
+
+        RegistriereRaeumeKurzinfoAktualisierung();
+        AktualisiereRaeumeKurzinfo();
+
+        return new ScrollViewer
+        {
+            Content = inhaltGrid,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+    }
+
+    private void RegistriereRaeumeKurzinfoAktualisierung()
+    {
+        TextChangedEventHandler handler = (_, _) => AktualisiereRaeumeKurzinfo();
+        behandlungsraeumeSchwesterTextBox.TextChanged += handler;
+        behandlungsflaecheSchwesterTextBox.TextChanged += handler;
+        behandlungsraeumeArztTextBox.TextChanged += handler;
+        behandlungsflaecheArztTextBox.TextChanged += handler;
+        wartezimmerflaecheTextBox.TextChanged += handler;
+        infrastrukturProTagTextBox.TextChanged += handler;
+        geraeteLeasingProTagTextBox.TextChanged += handler;
+    }
+
+    private void AktualisiereRaeumeKurzinfo()
+    {
+        if (!TryParseKurzinfoInt(behandlungsraeumeSchwesterTextBox.Text, out int schwesterZimmer) ||
+            !TryParseKurzinfoDouble(behandlungsflaecheSchwesterTextBox.Text, out double flaecheSchwester) ||
+            !TryParseKurzinfoInt(behandlungsraeumeArztTextBox.Text, out int arztZimmer) ||
+            !TryParseKurzinfoDouble(behandlungsflaecheArztTextBox.Text, out double flaecheArzt) ||
+            !TryParseKurzinfoDouble(wartezimmerflaecheTextBox.Text, out double flaecheWartezimmer) ||
+            !TryParseKurzinfoDouble(infrastrukturProTagTextBox.Text, out double infrastrukturProTag) ||
+            !TryParseKurzinfoDouble(geraeteLeasingProTagTextBox.Text, out double leasingProTag))
+        {
+            raeumeKurzinfoTextBlock.Text = "Konfiguration unvollstaendig.\nDetails im Tab Konfiguration pruefen.";
+            return;
+        }
+
+        double gesamtFlaeche = schwesterZimmer * flaecheSchwester
+            + arztZimmer * flaecheArzt
+            + flaecheWartezimmer;
+        double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtFlaeche);
+        double gesamtMietkostenProTag = (mietkostenProQm * gesamtFlaeche * 12) / 365.0;
+
+        if (gesamtFlaecheTextBox is not null)
+            gesamtFlaecheTextBox.Text = gesamtFlaeche.ToString("N2", DeCulture) + " m2";
+        if (mietkostenProQmTextBox is not null)
+            mietkostenProQmTextBox.Text = FinanzVisualisierung.FormatEuro(mietkostenProQm);
+        if (gesamtMietkostenTextBox is not null)
+            gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(gesamtMietkostenProTag);
+
+        raeumeKurzinfoTextBlock.Text =
+            $"Raeume: {schwesterZimmer.ToString("N0", DeCulture)} Schwesterzimmer, {arztZimmer.ToString("N0", DeCulture)} Arztzimmer\n" +
+            $"Flaeche: {gesamtFlaeche.ToString("N2", DeCulture)} m2\n" +
+            $"Miete/Tag: {FinanzVisualisierung.FormatEuro(gesamtMietkostenProTag)}\n" +
+            $"Infrastruktur + Leasing/Tag: {FinanzVisualisierung.FormatEuro(infrastrukturProTag + leasingProTag)}";
+    }
+
+    private static bool TryParseKurzinfoInt(string? input, out int value)
+    {
+        return int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ||
+            int.TryParse(input, NumberStyles.Integer, DeCulture, out value);
+    }
+
+    private static bool TryParseKurzinfoDouble(string? input, out double value)
+    {
+        return double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
+            double.TryParse(input, NumberStyles.Float, DeCulture, out value);
+    }
+
+    private static TextBox ErzeugeKennzahlTextBox()
+    {
+        TextBox textBox = ErzeugeParameterTextBox(string.Empty);
+        textBox.IsReadOnly = true;
+        textBox.BorderThickness = new Thickness(0);
+        textBox.Background = Brushes.Transparent;
+        return textBox;
     }
 
     public static void StarteFenster()
@@ -385,6 +485,7 @@ internal sealed partial class FinanzWpfFenster : Window
                 mietkostenProQmTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm);
                 gesamtFlaecheTextBox.Text = ergebnis.Gesamtflaeche.ToString("N2", DeCulture) + " m2";
                 gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag);
+                AktualisiereRaeumeKurzinfo();
             }
             catch
             {
