@@ -633,7 +633,7 @@ internal static class FinanzVisualisierung
         pie.LegendLabels = legendLabels;
 
         string verlustHinweis = mitGewinn ? string.Empty : $", Verlust: {FormatEuro(Math.Abs(gewinn))}";
-        plot.Title($"Kostenstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})", size: 18);
+        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})", size: 18);
         plot.Legend(location: Alignment.LowerRight);
         plot.SaveFig(outputPfad);
     }
