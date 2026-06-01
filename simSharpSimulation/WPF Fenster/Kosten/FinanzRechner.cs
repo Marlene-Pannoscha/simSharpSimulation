@@ -141,7 +141,7 @@ public static class FinanzRechner
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
         double umsatz = umsatzverteilung.Gesamtumsatz;
         Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
-        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, umsatz / Math.Max(1, behandeltePatienten));
+        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, behandeltePatienten, umsatz / Math.Max(1, behandeltePatienten));
         return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
 
@@ -167,7 +167,7 @@ public static class FinanzRechner
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
         double umsatz = umsatzverteilung.Gesamtumsatz;
         Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
-        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, umsatz / Math.Max(1, behandeltePatienten));
+        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, behandeltePatienten, umsatz / Math.Max(1, behandeltePatienten));
         return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
 
@@ -188,23 +188,27 @@ public static class FinanzRechner
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
         double umsatz = umsatzverteilung.Gesamtumsatz;
         Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
-        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, umsatz / Math.Max(1, behandeltePatienten));
+        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, behandeltePatienten, umsatz / Math.Max(1, behandeltePatienten));
         return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
     }
 
-    private static BreakEvenPoint BerechneBreakEvenPoint(Tageskosten kosten, double durchschnittsumsatzProPatient)
+    internal static BreakEvenPoint BerechneBreakEvenPoint(
+        Tageskosten kosten,
+        double behandeltePatientenProTag,
+        double durchschnittsumsatzProPatient)
     {
-        if (durchschnittsumsatzProPatient <= 0)
+        if (durchschnittsumsatzProPatient <= 0 || behandeltePatientenProTag <= 0)
             return new BreakEvenPoint { Patienten = int.MaxValue, Tage = double.MaxValue };
 
-        double variableKostenProPatient = kosten.Behandlungskosten / Math.Max(1, kosten.Gesamtkosten > 0 ? (int)(kosten.Gesamtkosten / durchschnittsumsatzProPatient) : 1);
+        double variableKostenProPatient = Finanzen.Personal.ArztLohnProPatient + kosten.Behandlungskosten / behandeltePatientenProTag;
         double deckungsbeitragProPatient = durchschnittsumsatzProPatient - variableKostenProPatient;
 
         if (deckungsbeitragProPatient <= 0)
             return new BreakEvenPoint { Patienten = int.MaxValue, Tage = double.MaxValue };
 
-        int breakEvenPatienten = (int)Math.Ceiling(kosten.Fixkosten / deckungsbeitragProPatient);
-        double breakEvenTage = kosten.Fixkosten / (durchschnittsumsatzProPatient * breakEvenPatienten - kosten.Behandlungskosten);
+        double fixeTageskosten = kosten.Gesamtkosten - variableKostenProPatient * behandeltePatientenProTag;
+        int breakEvenPatienten = Math.Max(0, (int)Math.Ceiling(fixeTageskosten / deckungsbeitragProPatient));
+        double breakEvenTage = breakEvenPatienten / behandeltePatientenProTag;
 
         return new BreakEvenPoint
         {

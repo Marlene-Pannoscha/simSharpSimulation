@@ -273,6 +273,19 @@ internal static class FinanzVisualisierung
 
     public static string FormatEuro(double wert) => string.Format(DeCulture, "{0:N2} EUR", wert);
 
+    public static string FormatBreakEven(BreakEvenPoint breakEven, double aktuellePatientenProTag)
+    {
+        if (breakEven.Patienten == int.MaxValue || double.IsInfinity(breakEven.Tage) || double.IsNaN(breakEven.Tage))
+            return "Break-Even: nicht erreichbar";
+
+        double differenz = aktuellePatientenProTag - breakEven.Patienten;
+        string differenzText = differenz >= 0
+            ? $"+{differenz.ToString("N1", DeCulture)} Patienten/Tag"
+            : $"{differenz.ToString("N1", DeCulture)} Patienten/Tag";
+
+        return $"Break-Even: {breakEven.Patienten} Patienten/Tag ({breakEven.Tage.ToString("N2", DeCulture)} Tage bei aktueller Auslastung, Differenz {differenzText})";
+    }
+
     // Generiert den gleichen Textbericht wie die WPF-Ansicht (für Konsolen-Ausgabe oder Tests).
     public static string GenerateErgebnisReportText(FinanzErgebnis ergebnis, string finanzenPfad, string gewinnPfad, string kostenstrukturPfad)
     {
@@ -289,6 +302,7 @@ internal static class FinanzVisualisierung
         sb.AppendLine($"Durchschnitt Kosten pro Tag: {FormatEuro(ergebnis.DurchschnittlicheKostenProTag)}");
         sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
         sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.DurchschnittBehandeltePatientenProTag.ToString("N1", DeCulture)}");
+        sb.AppendLine(FormatBreakEven(ergebnis.BreakEven, ergebnis.DurchschnittBehandeltePatientenProTag));
         sb.AppendLine();
         sb.AppendLine("Praxisdetails");
         sb.AppendLine($"Gesamtfläche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m²");
@@ -743,6 +757,22 @@ internal sealed record FinanzErgebnis(
     public double GesamtBehandlungskosten => Tagesergebnisse.Sum(t => t.Kosten.Behandlungskosten);
     public double DurchschnittlicherUmsatzProTag => SimulierteTage > 0 ? GesamtUmsatz / SimulierteTage : 0.0;
     public double DurchschnittlicheKostenProTag => SimulierteTage > 0 ? Gesamtkosten / SimulierteTage : 0.0;
+    public Tageskosten DurchschnittlicheTageskosten => SimulierteTage > 0
+        ? new Tageskosten(
+            Tagesergebnisse.Sum(t => t.Kosten.Arztlohn) / SimulierteTage,
+            Tagesergebnisse.Sum(t => t.Kosten.Schwesterlohn) / SimulierteTage,
+            Tagesergebnisse.Sum(t => t.Kosten.Rezeptionlohn) / SimulierteTage,
+            GesamtMietkosten / SimulierteTage,
+            GesamtInfrastrukturkosten / SimulierteTage,
+            GesamtMaterialkosten / SimulierteTage,
+            GesamtLeasingkosten / SimulierteTage,
+            GesamtSonstigeFixkosten / SimulierteTage,
+            GesamtBehandlungskosten / SimulierteTage)
+        : new Tageskosten(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public BreakEvenPoint BreakEven => FinanzRechner.BerechneBreakEvenPoint(
+        DurchschnittlicheTageskosten,
+        DurchschnittBehandeltePatientenProTag,
+        GesamtBehandelt > 0 ? GesamtUmsatz / GesamtBehandelt : 0.0);
     public Versicherungsverteilung VersicherungenGesamt =>
         new(
             Tagespunkte.Sum(p => p.Versicherungen.PrivatPatienten),

@@ -70,8 +70,6 @@ internal sealed partial class FinanzWpfFenster
 
     private string ErzeugeErgebnisText(FinanzErgebnis ergebnis, string finanzenPfad, string gewinnPfad, string kostenstrukturPfad)
     {
-        Tagesergebnis tagesergebnis = ergebnis.Tagesergebnisse.FirstOrDefault();
-
         Versicherungsverteilung versicherungen = ergebnis.VersicherungenGesamt;
         Umsatzverteilung umsatzverteilung = ergebnis.UmsatzverteilungGesamt;
         Behandlungsmix behandlungsmix = ergebnis.BehandlungsmixGesamt;
@@ -85,12 +83,10 @@ internal sealed partial class FinanzWpfFenster
             SonstigeFixkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0,
             BehandlungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0,
         };
-        BreakEvenPoint breakEven = tagesergebnis.BreakEven;
+        BreakEvenPoint breakEven = ergebnis.BreakEven;
 
         double privatAnteilProzent = KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert * 100.0;
         double gesetzlichAnteilProzent = (1.0 - KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert) * 100.0;
-        int durchschnittPatientenProTagGerundet = (int)Math.Round(ergebnis.DurchschnittBehandeltePatientenProTag);
-
         // Der Bericht fasst die Simulation kompakt fuer die linke Textspalte zusammen.
         StringBuilder sb = new();
         sb.AppendLine("Ergebnis");
@@ -104,6 +100,7 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Durchschnitt Kosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicheKostenProTag)}");
         sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
         sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.DurchschnittBehandeltePatientenProTag.ToString("N1", DeCulture)}");
+        sb.AppendLine(FinanzVisualisierung.FormatBreakEven(ergebnis.BreakEven, ergebnis.DurchschnittBehandeltePatientenProTag));
         sb.AppendLine();
         sb.AppendLine("Praxisdetails");
         sb.AppendLine($"Gesamtfläche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m²");
@@ -149,7 +146,7 @@ internal sealed partial class FinanzWpfFenster
         // Update Break-Even Ticker
         if (breakEvenTicker != null)
         {
-            breakEvenTicker.Text = $"Break-Even: {breakEven.Patienten} Patienten oder nach {breakEven.Tage:N1} Tagen";
+            breakEvenTicker.Text = FinanzVisualisierung.FormatBreakEven(breakEven, ergebnis.DurchschnittBehandeltePatientenProTag);
         }
 
         return sb.ToString();

@@ -51,6 +51,13 @@ internal sealed partial class FinanzWpfFenster : Window
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");
     private const double ErgebnisSpaltenBreite = 360;
     private const double SpaltenAbstand = 12;
+    private static readonly Brush FensterHintergrund = new SolidColorBrush(Color.FromRgb(246, 248, 251));
+    private static readonly Brush FlaechenHintergrund = Brushes.White;
+    private static readonly Brush DezenteFlaeche = new SolidColorBrush(Color.FromRgb(241, 245, 249));
+    private static readonly Brush RandFarbe = new SolidColorBrush(Color.FromRgb(214, 221, 230));
+    private static readonly Brush TextFarbe = new SolidColorBrush(Color.FromRgb(31, 41, 55));
+    private static readonly Brush SekundaerTextFarbe = new SolidColorBrush(Color.FromRgb(88, 99, 113));
+    private static readonly Brush AkzentFarbe = new SolidColorBrush(Color.FromRgb(37, 99, 235));
 
     public FinanzWpfFenster()
     {
@@ -61,22 +68,26 @@ internal sealed partial class FinanzWpfFenster : Window
         MinWidth = 1100;
         MinHeight = 700;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Background = FensterHintergrund;
+        FontFamily = new FontFamily("Segoe UI");
+        FontSize = 13;
 
         Grid root = new();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.Margin = new Thickness(12);
+        root.Margin = new Thickness(14);
 
         Grid eingabeGrid = new()
         {
-            Margin = new Thickness(0, 0, 0, 4)
+            Margin = new Thickness(0, 0, 0, 6),
+            MinWidth = 1040
         };
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.8, GridUnitType.Star) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(240) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
 
         Grid personalGrid = ErzeugeParameterGrid();
         aerzteTextBox = FuegeParameterZeile(personalGrid, "Aerzte", ArztKonfiguration.ANZAHL_AERZTE.ToString(CultureInfo.InvariantCulture));
@@ -127,13 +138,13 @@ internal sealed partial class FinanzWpfFenster : Window
         mietkostenProQmTextBox.IsReadOnly = true;
         mietkostenProQmTextBox.BorderThickness = new Thickness(0);
         mietkostenProQmTextBox.Background = Brushes.Transparent;
-        FuegeParameterZeile(raeumeGrid, "Mietkosten pro m²/Monat", mietkostenProQmTextBox);
+        FuegeParameterZeile(raeumeGrid, "Mietkosten pro m2/Monat", mietkostenProQmTextBox);
 
-        gesamtFlaecheTextBox = ErzeugeParameterTextBox(initialGesamtFlaeche.ToString("N2", DeCulture) + " m²");
+        gesamtFlaecheTextBox = ErzeugeParameterTextBox(initialGesamtFlaeche.ToString("N2", DeCulture) + " m2");
         gesamtFlaecheTextBox.IsReadOnly = true;
         gesamtFlaecheTextBox.BorderThickness = new Thickness(0);
         gesamtFlaecheTextBox.Background = Brushes.Transparent;
-        FuegeParameterZeile(raeumeGrid, "Gesamtfläche", gesamtFlaecheTextBox);
+        FuegeParameterZeile(raeumeGrid, "Gesamtflaeche", gesamtFlaecheTextBox);
 
         gesamtMietkostenTextBox = ErzeugeParameterTextBox(FinanzVisualisierung.FormatEuro(initialGesamtMietkostenProTag));
         gesamtMietkostenTextBox.IsReadOnly = true;
@@ -161,11 +172,13 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Content = "Simulation starten",
             Padding = new Thickness(14, 7, 14, 7),
-            Background = new SolidColorBrush(Color.FromRgb(33, 150, 243)),
+            Background = AkzentFarbe,
             Foreground = Brushes.White,
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Margin = new Thickness(0, 12, 0, 0)
+            Margin = new Thickness(0, 12, 0, 0),
+            BorderThickness = new Thickness(0),
+            MinHeight = 34
         };
         startenButton.Click += SimulationStarten_Click;
         aktionenGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -178,20 +191,31 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetColumn(aktionenBox, 4);
         eingabeGrid.Children.Add(aktionenBox);
 
-        Grid.SetRow(eingabeGrid, 0);
-        root.Children.Add(eingabeGrid);
+        ScrollViewer eingabeScrollViewer = new()
+        {
+            Content = eingabeGrid,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        Grid.SetRow(eingabeScrollViewer, 0);
+        root.Children.Add(eingabeScrollViewer);
 
         statusTextBlock = new TextBlock
         {
             Text = "Bereit.",
-            Margin = new Thickness(0, 8, 0, 8),
-            Foreground = Brushes.DimGray
+            Margin = new Thickness(2, 8, 0, 10),
+            Foreground = SekundaerTextFarbe
         };
         Grid.SetRow(statusTextBlock, 1);
         root.Children.Add(statusTextBlock);
 
         // TabControl mit Tabs: Uebersicht, Finanzen, Hit/Miss, Wartezeiten, Prognose
-        TabControl tabControl = new();
+        TabControl tabControl = new()
+        {
+            Background = Brushes.Transparent,
+            BorderBrush = RandFarbe,
+            BorderThickness = new Thickness(1)
+        };
 
         TabItem uebersichtTab = new()
         {
@@ -338,6 +362,10 @@ internal sealed partial class FinanzWpfFenster : Window
             {
                 ergebnisTextBox.Text = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
             }
+            if (breakEvenTicker != null)
+            {
+                breakEvenTicker.Text = FinanzVisualisierung.FormatBreakEven(ergebnis.BreakEven, ergebnis.DurchschnittBehandeltePatientenProTag);
+            }
             if (finanzenImage != null)
             {
                 finanzenImage.Source = LadeBild(finanzenPfad);
@@ -355,7 +383,7 @@ internal sealed partial class FinanzWpfFenster : Window
             try
             {
                 mietkostenProQmTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm);
-                gesamtFlaecheTextBox.Text = ergebnis.Gesamtflaeche.ToString("N2", DeCulture) + " m²";
+                gesamtFlaecheTextBox.Text = ergebnis.Gesamtflaeche.ToString("N2", DeCulture) + " m2";
                 gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag);
             }
             catch
@@ -427,8 +455,9 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Text = titel,
             FontWeight = FontWeights.SemiBold,
-            FontSize = 18,
-            Margin = new Thickness(8, 6, 8, 4)
+            FontSize = 16,
+            Foreground = TextFarbe,
+            Margin = new Thickness(12, 10, 12, 6)
         };
         DockPanel.SetDock(header, Dock.Top);
         panel.Children.Add(header);
@@ -436,15 +465,16 @@ internal sealed partial class FinanzWpfFenster : Window
         image = new Image
         {
             Stretch = Stretch.Uniform,
-            Margin = new Thickness(8)
+            Margin = new Thickness(12)
         };
         panel.Children.Add(image);
 
         return new Border
         {
-            BorderBrush = Brushes.LightGray,
+            BorderBrush = RandFarbe,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
+            CornerRadius = new CornerRadius(6),
+            Background = FlaechenHintergrund,
             Child = panel
         };
     }
@@ -452,6 +482,7 @@ internal sealed partial class FinanzWpfFenster : Window
     private static Grid ErzeugeGeteiltesTabGrid()
     {
         Grid inhaltGrid = new();
+        inhaltGrid.Margin = new Thickness(10);
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ErgebnisSpaltenBreite) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(SpaltenAbstand) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -469,7 +500,11 @@ internal sealed partial class FinanzWpfFenster : Window
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             FontFamily = new FontFamily("Consolas"),
             FontSize = 13,
-            Padding = new Thickness(8)
+            Padding = new Thickness(10),
+            Background = FlaechenHintergrund,
+            Foreground = TextFarbe,
+            BorderBrush = RandFarbe,
+            BorderThickness = new Thickness(1)
         };
     }
 
@@ -481,7 +516,7 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Text = titel,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brushes.DimGray,
+            Foreground = SekundaerTextFarbe,
             Margin = new Thickness(0, 0, 0, 8)
         };
         DockPanel.SetDock(header, Dock.Top);
@@ -490,11 +525,11 @@ internal sealed partial class FinanzWpfFenster : Window
 
         return new Border
         {
-            BorderBrush = Brushes.Gainsboro,
+            BorderBrush = RandFarbe,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
+            CornerRadius = new CornerRadius(6),
             Padding = new Thickness(12),
-            Background = Brushes.WhiteSmoke,
+            Background = FlaechenHintergrund,
             Child = panel
         };
     }
@@ -503,7 +538,7 @@ internal sealed partial class FinanzWpfFenster : Window
     {
         Grid grid = new();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(124) });
         return grid;
     }
 
@@ -523,6 +558,8 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Text = labelText,
             VerticalAlignment = VerticalAlignment.Center,
+            Foreground = TextFarbe,
+            TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 3, 12, 3)
         };
         Grid.SetRow(label, row);
@@ -543,7 +580,9 @@ internal sealed partial class FinanzWpfFenster : Window
             MinHeight = 30,
             Padding = new Thickness(8, 3, 8, 3),
             HorizontalContentAlignment = HorizontalAlignment.Right,
-            VerticalContentAlignment = VerticalAlignment.Center
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Background = Brushes.White,
+            BorderBrush = RandFarbe
         };
     }
 
