@@ -150,6 +150,9 @@ Im WPF-Fenster koennen mehrere Werte zur Laufzeit angepasst werden:
 
 Diese Eingaben werden vor der Simulation validiert und dann in die globalen
 Konfigurationswerte uebernommen.
+Die Raum- und Flaechenwerte werden im Tab `Konfiguration` bearbeitet. Dort
+lassen sich die Anzahl der Arzt- und Schwesterzimmer, die Flaechen je Zimmer
+und die Wartezimmerflaeche anpassen.
 
 ## 6. Datensammlung
 

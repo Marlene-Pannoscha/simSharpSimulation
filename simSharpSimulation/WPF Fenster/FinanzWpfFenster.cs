@@ -232,9 +232,23 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Margin = new Thickness(10)
         };
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        TextBlock hinweisText = new()
+        {
+            Text = "Raeume und Flaechen koennen hier angepasst werden. Die Kurzuebersicht oben aktualisiert sich automatisch.",
+            Foreground = SekundaerTextFarbe,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(2, 0, 2, 0)
+        };
+        Grid.SetRow(hinweisText, 0);
+        Grid.SetColumnSpan(hinweisText, 3);
+        inhaltGrid.Children.Add(hinweisText);
 
         Grid raeumeGrid = ErzeugeParameterGrid();
         behandlungsraeumeSchwesterTextBox = FuegeParameterZeile(
@@ -262,6 +276,7 @@ internal sealed partial class FinanzWpfFenster : Window
         FuegeParameterZeile(raeumeGrid, "Gesamtflaeche", gesamtFlaecheTextBox);
 
         Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
+        Grid.SetRow(raeumeBox, 2);
         Grid.SetColumn(raeumeBox, 0);
         inhaltGrid.Children.Add(raeumeBox);
 
@@ -282,6 +297,7 @@ internal sealed partial class FinanzWpfFenster : Window
         FuegeParameterZeile(kostenGrid, "Gesamtmietkosten pro Tag", gesamtMietkostenTextBox);
 
         Border kostenBox = ErzeugeParameterGruppe("Fixkosten und Kennzahlen", kostenGrid);
+        Grid.SetRow(kostenBox, 2);
         Grid.SetColumn(kostenBox, 2);
         inhaltGrid.Children.Add(kostenBox);
 
@@ -339,7 +355,8 @@ internal sealed partial class FinanzWpfFenster : Window
             $"Raeume: {schwesterZimmer.ToString("N0", DeCulture)} Schwesterzimmer, {arztZimmer.ToString("N0", DeCulture)} Arztzimmer\n" +
             $"Flaeche: {gesamtFlaeche.ToString("N2", DeCulture)} m2\n" +
             $"Miete/Tag: {FinanzVisualisierung.FormatEuro(gesamtMietkostenProTag)}\n" +
-            $"Infrastruktur + Leasing/Tag: {FinanzVisualisierung.FormatEuro(infrastrukturProTag + leasingProTag)}";
+            $"Infrastruktur + Leasing/Tag: {FinanzVisualisierung.FormatEuro(infrastrukturProTag + leasingProTag)}\n" +
+            "Details im Tab Konfiguration anpassen.";
     }
 
     private static bool TryParseKurzinfoInt(string? input, out int value)

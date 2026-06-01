@@ -78,7 +78,9 @@ Das WPF-Fenster wird programmatisch in C# aufgebaut und enthaelt mehrere Tabs:
 Im oberen Eingabebereich bleiben Personal, Zeitraum, Startbutton und eine
 kompakte Raum-/Kostenuebersicht sichtbar. Die Detailwerte fuer Raeume,
 Flaechen, Infrastruktur und Geraete-Leasing liegen im Tab `Konfiguration`.
-Die berechneten Mietkennzahlen werden direkt im Fenster aktualisiert.
+Dort koennen die Anzahl der Raeume, die Flaechen je Raum und die
+Wartezimmerflaeche angepasst werden. Die berechneten Mietkennzahlen werden
+direkt im Fenster aktualisiert.
 
 ## Ausgaben und Dateien
 
