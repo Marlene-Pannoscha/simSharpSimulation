@@ -60,7 +60,7 @@ internal sealed partial class FinanzWpfFenster
         Grid.SetRow(gewinnBorder, 2);
         bilderGrid.Children.Add(gewinnBorder);
 
-        Border kostenstrukturBorder = ErzeugeBildContainer("Kostenstruktur", out kostenstrukturImage);
+        Border kostenstrukturBorder = ErzeugeBildContainer("Kosten und Gewinnstruktur", out kostenstrukturImage);
         Grid.SetRow(kostenstrukturBorder, 4);
         bilderGrid.Children.Add(kostenstrukturBorder);
 
