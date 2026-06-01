@@ -225,7 +225,7 @@ namespace simSharpSimulation
             // Bestimme geeigneten Preis pro Quadratmeter aus der Aufteilung.
             var aufteilung = MietkostenAufteilung?.FirstOrDefault(s => flaecheGesamt >= s.MinFlaeche && flaecheGesamt <= s.MaxFlaeche);
             double kostenProQm = aufteilung?.KostenProQm ?? MietkostenAufteilung?.LastOrDefault()?.KostenProQm ?? 0.0;
-            return kostenProQm * Math.Max(flaecheGesamt, 0.0);
+            return (kostenProQm * Math.Max(flaecheGesamt, 0.0) * 12.0) / 365.0;
         }
     }
 

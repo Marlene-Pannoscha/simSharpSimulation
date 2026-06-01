@@ -553,44 +553,58 @@ internal static class FinanzVisualisierung
         // Etwas schmalere Grafik, damit sie besser in die WPF-Ansicht passt
         Plot plot = new(820, 620);
 
-        // Build a pie that represents the distribution over the COMPLETE selected period
-        // (Jahr oder Saison), so chart and text always use identical totals.
         double umsatz = ergebnis.GesamtUmsatz;
         double gewinn = ergebnis.Gesamtgewinn;
+        bool mitGewinn = gewinn >= 0.0;
+        double basis = mitGewinn ? umsatz : ergebnis.Gesamtkosten;
+        string basisLabel = mitGewinn ? "Umsatz" : "Gesamtkosten";
 
-        // Build amounts exactly from the same projections used in the left text column so values match 1:1
-        double[] amounts = {
+        List<double> amounts = new()
+        {
             ergebnis.GesamtPersonalkosten,
             ergebnis.GesamtMietkosten,
             ergebnis.GesamtInfrastrukturkosten,
             ergebnis.GesamtMaterialkosten,
             ergebnis.GesamtLeasingkosten,
             ergebnis.GesamtSonstigeFixkosten,
-            ergebnis.GesamtBehandlungskosten,
-            // include profit so percentages relative to Umsatz become meaningful
-            Math.Max(0.0, ergebnis.Gesamtgewinn)
+            ergebnis.GesamtBehandlungskosten
         };
 
-        string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung", "Gewinn" };
+        List<string> labels = new() { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung" };
+        List<Color> farben = new()
+        {
+            Color.FromArgb(52, 152, 219),
+            Color.FromArgb(155, 89, 182),
+            Color.FromArgb(46, 204, 113),
+            Color.FromArgb(241, 196, 15),
+            Color.FromArgb(231, 76, 60),
+            Color.FromArgb(149, 165, 166),
+            Color.FromArgb(52, 73, 94)
+        };
 
-        var pie = plot.AddPie(amounts);
-        // Disable ScottPlot-internal slice percentages; we render percentages in the legend relative to Umsatz.
-        pie.SliceLabels = labels;
+        if (mitGewinn)
+        {
+            amounts.Add(gewinn);
+            labels.Add("Gewinn");
+            farben.Add(Color.FromArgb(230, 126, 34));
+        }
+
+        bool hatWerte = amounts.Sum() > 0.0;
+        if (!hatWerte)
+        {
+            amounts = new List<double> { 1.0 };
+            labels = new List<string> { "Keine Werte" };
+            farben = new List<Color> { Color.LightGray };
+            basis = 0.0;
+        }
+
+        var pie = plot.AddPie(amounts.ToArray());
+        // Disable ScottPlot-internal slice percentages; the legend uses the same basis as the slices.
+        pie.SliceLabels = labels.ToArray();
         pie.ShowPercentages = false;
         pie.ShowLabels = false;
         pie.ShowValues = false;
-
-        // Farben: dezente, aber unterscheidbare Palette
-        pie.SliceFillColors = new[] {
-            Color.FromArgb(52, 152, 219),   // blau
-            Color.FromArgb(155, 89, 182),   // violett
-            Color.FromArgb(46, 204, 113),   // gruen
-            Color.FromArgb(241, 196, 15),   // gelb
-            Color.FromArgb(231, 76, 60),    // rot
-            Color.FromArgb(149, 165, 166),  // grau
-            Color.FromArgb(52, 73, 94),     // dunkel
-            Color.FromArgb(230, 126, 34)
-        };
+        pie.SliceFillColors = farben.ToArray();
 
         // Leicht auseinanderziehen, damit Beschriftungen besser lesbar sind
         pie.Explode = true;
@@ -598,14 +612,14 @@ internal static class FinanzVisualisierung
         // Labels/Prozente auf den Slices sind deaktiviert, damit das Diagramm ruhig und lesbar bleibt.
         pie.Size = 0.70;
         pie.SliceLabelPosition = 0.92;
-        pie.SliceLabelColors = Enumerable.Repeat(Color.Black, amounts.Length).ToArray();
+        pie.SliceLabelColors = Enumerable.Repeat(Color.Black, amounts.Count).ToArray();
 
-        // Create legend labels that include absolute amounts and percentages relative to Umsatz
         string[] legendLabels = labels.Select((lab, i) =>
-            $"{lab}: {FormatEuro(amounts[i])} ({(umsatz > 0 ? amounts[i] / umsatz : 0.0):P2})").ToArray();
+            $"{lab}: {FormatEuro(hatWerte ? amounts[i] : 0.0)} ({(basis > 0 ? amounts[i] / basis : 0.0):P2})").ToArray();
         pie.LegendLabels = legendLabels;
 
-        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Basis: Umsatz)", size: 18);
+        string verlustHinweis = mitGewinn ? string.Empty : $", Verlust: {FormatEuro(Math.Abs(gewinn))}";
+        plot.Title($"Kostenstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})", size: 18);
         plot.Legend(location: Alignment.LowerRight);
         plot.SaveFig(outputPfad);
     }

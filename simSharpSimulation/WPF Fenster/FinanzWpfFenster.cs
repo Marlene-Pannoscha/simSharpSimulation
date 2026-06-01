@@ -24,6 +24,8 @@ internal sealed partial class FinanzWpfFenster : Window
     private TextBox behandlungsraeumeArztTextBox = new TextBox();
     private TextBox behandlungsflaecheArztTextBox = new TextBox();
     private TextBox wartezimmerflaecheTextBox = new TextBox();
+    private TextBox infrastrukturProTagTextBox = new TextBox();
+    private TextBox geraeteLeasingProTagTextBox = new TextBox();
     private ComboBox zeitraumComboBox = new ComboBox();
 
     private Button? exportButton;
@@ -38,6 +40,7 @@ internal sealed partial class FinanzWpfFenster : Window
     // Hit/Miss Tab-Steuerelemente
     private TextBox hitMissErgebnisTextBox = null!;
     private Image hitMissImage = null!;
+    private TextBox simulationsUebersichtTextBox = null!;
     private TextBox wartezeitenTextBox = null!;
     private DataGrid warteschlangenDataGrid = null!;
     private DataGrid bereicheDataGrid = null!;
@@ -104,6 +107,14 @@ internal sealed partial class FinanzWpfFenster : Window
             raeumeGrid,
             "Wartezimmerflaeche (m2)",
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        infrastrukturProTagTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Infrastruktur pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag.ToString(CultureInfo.InvariantCulture));
+        geraeteLeasingProTagTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Geraete-Leasing pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag.ToString(CultureInfo.InvariantCulture));
 
         // Zeige berechnete Kennzahlen unter den Eingaben an (anfangs aus der geladenen Konfiguration)
         double initialGesamtFlaeche = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester * KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter
@@ -179,10 +190,16 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetRow(statusTextBlock, 1);
         root.Children.Add(statusTextBlock);
 
-        // TabControl mit Tabs: Finanzen, Hit/Miss, Wartezeiten, Prognose
+        // TabControl mit Tabs: Uebersicht, Finanzen, Hit/Miss, Wartezeiten, Prognose
         TabControl tabControl = new();
+
+        TabItem uebersichtTab = new()
+        {
+            Header = "Uebersicht",
+            Content = ErstelleSimulationsUebersichtTab()
+        };
+        tabControl.Items.Add(uebersichtTab);
         
-        // Tab 1: Finanzen
         TabItem finanzenTab = new()
         {
             Header = "Finanzen",
@@ -217,6 +234,7 @@ internal sealed partial class FinanzWpfFenster : Window
 
         Content = root;
 
+        AktualisiereSimulationsUebersicht(null);
         AktualisiereWartezeitenTab(null);
         AktualisierePrognoseTab();
     }
@@ -277,6 +295,12 @@ internal sealed partial class FinanzWpfFenster : Window
             if (!TryParseDouble(wartezimmerflaecheTextBox.Text, 1.0, 1000.0, out double flaecheWartezimmer, out string wartezimmerFlaecheFehler))
                 throw new InvalidOperationException(wartezimmerFlaecheFehler);
 
+            if (!TryParseDouble(infrastrukturProTagTextBox.Text, 0.0, 100000.0, out double infrastrukturProTag, out string infrastrukturFehler))
+                throw new InvalidOperationException(infrastrukturFehler);
+
+            if (!TryParseDouble(geraeteLeasingProTagTextBox.Text, 0.0, 100000.0, out double geraeteLeasingProTag, out string leasingFehler))
+                throw new InvalidOperationException(leasingFehler);
+
             if (anzahlSchwesterZimmer + anzahlArztZimmer <= 0)
                 throw new InvalidOperationException("Bitte mindestens ein Behandlungszimmer insgesamt angeben.");
 
@@ -289,6 +313,8 @@ internal sealed partial class FinanzWpfFenster : Window
             KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt = anzahlArztZimmer;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter = flaecheArzt;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter = flaecheWartezimmer;
+            KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag = infrastrukturProTag;
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag = geraeteLeasingProTag;
 
             string zeitraum = zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
 
@@ -342,6 +368,7 @@ internal sealed partial class FinanzWpfFenster : Window
             hitMissImage.Source = LadeBild(hitMissPfad);
 
             AktualisiereWartezeitenTab(simulationsDaten);
+            AktualisiereSimulationsUebersicht(simulationsDaten);
             AktualisierePrognoseTab();
             
             statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
