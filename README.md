@@ -1,21 +1,36 @@
 # simSharpSimulation
 
-## Projektordner öffnen
+Simulation einer Arztpraxis mit SimSharp. Das Projekt kann als Konsolenprogramm
+oder mit einem zusaetzlichen WPF-Fenster fuer Finanz-, Wartezeiten- und
+Prognoseauswertungen gestartet werden.
+
+## Projektordner oeffnen
 
 Wechsle zuerst in den C#-Projektordner:
 
 ```powershell
-cd c:\home\simSharpSimulation\simSharpSimulation
+cd c:\uni\simSharpSimulation\simSharpSimulation
 ```
 
 ## Voraussetzungen
 
-- Windows (für den WPF-Fenstermodus)
-- .NET SDK (empfohlen: .NET 10)
+- Windows fuer den WPF-Fenstermodus
+- .NET SDK, empfohlen: .NET 10
+- NuGet-Pakete aus der Projektdatei:
+  - `SimSharp`
+  - `MathNet.Numerics`
+  - `ScottPlot`
 
-## Pakete installieren (falls nötig)
+## Pakete installieren
 
-Wenn die Pakete noch nicht vorhanden sind, installiere sie im Projektordner:
+Normalerweise reicht ein Restore/Build, weil die Pakete in der `.csproj`
+eingetragen sind:
+
+```powershell
+dotnet restore
+```
+
+Falls Pakete manuell nachinstalliert werden muessen:
 
 ```powershell
 dotnet add package SimSharp
@@ -29,41 +44,74 @@ dotnet add package ScottPlot
 dotnet build
 ```
 
-## Programm ausführen
+## Programm ausfuehren
 
-### 1) Standard-Simulation (Konsole)
+### Standard-Simulation in der Konsole
 
 ```powershell
 dotnet run
 ```
 
-### 2) Finanz-WPF (extra Fenster)
+### Finanz- und Auswertungsfenster starten
 
 ```powershell
 dotnet run -- --finanz-wpf
 ```
 
-### Alternativ von außerhalb des Projektordners
+### Alternativ von ausserhalb des Projektordners
 
 ```powershell
-dotnet run --project c:\home\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --finanz-wpf
+dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --finanz-wpf
 ```
 
-## Anmerkungen zum Gesamtprogramm
+## WPF-Fenster
 
-- **Kennzahlen-Definitionen (für Auswertung):**
-	- `Wartezeit Rezeption`: Zeit bis Start der Rezeption
-	- `Wartezeit Schwester`: Zeit bis Start des Schwester-Prozesses
-	- `Wartezeit Arzt`: Zeit bis Start der Arzt-Behandlung
-	- `Gesamtprozesszeit`: Eintritt in die Klinik bis Verlassen der Klinik
-- **Patienten-IDs** sind pro Tag eindeutig, damit Trace- und Zeitachsen-Auswertungen stabil bleiben.
-- **Trace-Datei** wird als `klinik_trace.txt` im Projektordner gespeichert.
-- **Standard-Diagramme** werden in `simSharpSimulation/images/` gespeichert.
-- **Finanz-Diagramme** (WPF) werden in `simSharpSimulation/Kosten/images/` gespeichert.
-- **Mietkosten** in der Finanzansicht berechnen sich aus Schwesterzimmern, Arztzimmern und der Wartezimmerfläche.
-- **Bewegungs-Events im Trace** folgen dem Muster:
-	- `geht_*` = Start einer Bewegung
-	- `betritt_*` = Ankunft am Ziel nach Bewegungszeit
-	- Zeiten: Eingang→Rezeption 5s, interne Wege 10s, Arzt→Ausgang 15s, Rezeption→Ausgang 5s
+Das WPF-Fenster wird programmatisch in C# aufgebaut und enthaelt mehrere Tabs:
 
+- `Uebersicht`: kompakte Simulationskennzahlen, Wartezeiten, Patienten-Typen und Tagesfinanzen.
+- `Finanzen`: Umsatz, Kosten, Gewinn, Break-even-Anzeige und Diagramme.
+- `Hit/Miss Analyse`: behandelte und nicht behandelte Nachfrage inklusive Diagramm.
+- `Wartezeiten`: Textauswertung sowie Tabellen fuer Warteschlangen, Auslastung, Bereiche, Wartezeiten und Behandlungszeiten.
+- `Prognose`: Prognosebericht und Diagramme zu Trefferquote, Restzeit und Abbruchgruenden.
+
+Im oberen Eingabebereich koennen Personal, Raeume, Flaechen, Infrastruktur,
+Geraete-Leasing und der Auswertungszeitraum angepasst werden. Die berechneten
+Mietkennzahlen werden direkt im Fenster aktualisiert.
+
+## Ausgaben und Dateien
+
+- `klinik_trace.txt`: Trace-Datei der Simulation.
+- `prognose_report.txt`: Textbericht fuer die Prognoseauswertung.
+- `prognose_daten.json`: Datengrundlage fuer die Prognosediagramme.
+- `simSharpSimulation/images/`: Standard-Diagramme der Simulation.
+- `simSharpSimulation/WPF Fenster/Prognose/images/`: Prognose-Diagramme.
+
+Finanz- und weitere Diagramme werden beim Starten der Simulation aus dem WPF-
+Fenster aktualisiert und anschliessend in den Tabs angezeigt.
+
+## Kennzahlen
+
+- `Wartezeit Rezeption`: Zeit bis Start der Rezeption.
+- `Wartezeit Schwester`: Zeit bis Start des Schwester-Prozesses.
+- `Wartezeit Arzt`: Zeit bis Start der Arzt-Behandlung.
+- `Gesamtprozesszeit`: Eintritt in die Klinik bis Verlassen der Klinik.
+- `Hit`: Patient konnte behandelt werden.
+- `Miss`: Patient konnte wegen begrenzter Tageskapazitaet nicht behandelt werden.
+
+Die Patienten-IDs sind pro Tag eindeutig, damit Trace- und Zeitachsen-
+Auswertungen stabil bleiben.
+
+## Trace-Events
+
+Bewegungs-Events im Trace folgen diesem Muster:
+
+- `geht_*`: Start einer Bewegung.
+- `betritt_*`: Ankunft am Ziel nach Bewegungszeit.
+
+Aktuelle Wegezeiten:
+
+- Eingang zu Rezeption: 5 Sekunden
+- interne Wege: 10 Sekunden
+- Arzt zu Ausgang: 15 Sekunden
+- Rezeption zu Ausgang: 5 Sekunden
 
