@@ -310,7 +310,7 @@ internal sealed partial class FinanzWpfFenster : Window
             // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
             if (ergebnisTextBox != null)
             {
-                ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
+                ergebnisTextBox.Text = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
             }
             if (finanzenImage != null)
             {

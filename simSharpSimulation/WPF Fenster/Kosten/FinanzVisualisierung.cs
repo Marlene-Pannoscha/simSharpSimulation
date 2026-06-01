@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Globalization;
+using System.Text;
 using System.IO;
 using MathNet.Numerics.Distributions;
 using ScottPlot;
@@ -38,6 +39,9 @@ internal static class FinanzVisualisierung
         int gesamteNachfrage = 0;
         int gesamtBehandelt = 0;
 
+        // Keep the raw daily Tagesergebnisse so we can correctly aggregate them when converting to months.
+        List<Tagesergebnis> alleTagesergebnisse = new();
+
         // Jeder Tag wird separat simuliert und danach je nach Zeitraum direkt gespeichert oder aggregiert.
         for (int index = 0; index < tage.Count; index++)
         {
@@ -51,6 +55,9 @@ internal static class FinanzVisualisierung
                 anzahlSchwestern,
                 RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
                 behandeltePatientenTag);
+
+            // store the raw daily result for later correct aggregation
+            alleTagesergebnisse.Add(tagesergebnis);
 
             FinanzTagespunkt tagespunkt = new(
                 (index + 1).ToString(CultureInfo.InvariantCulture),
@@ -112,11 +119,109 @@ internal static class FinanzVisualisierung
         double gesamtMietkostenProTag = (gesamtMietkostenMonat * 12) / 365.0;
         double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.InfrastrukturProTag + fixkosten.MedizinischesMaterialProTag + fixkosten.GeraeteLeasingProTag + fixkosten.SonstigeFixkostenProTag;
 
-        var tagesergebnisse = tagespunkte.Select(p => FinanzRechner.BerechneTagesergebnis(
-            anzahlAerzte,
-            anzahlSchwestern,
-            RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
-            p.BehandeltePatienten)).ToList();
+        List<Tagesergebnis> tagesergebnisse;
+        if (aggregiereNachMonat)
+        {
+            // Aggregate the raw daily Tagesergebnisse into monthly Gesamtwerte so cost components are summed correctly.
+            string[] monate =
+            {
+                "Januar", "Februar", "Maerz", "April", "Mai", "Juni",
+                "Juli", "August", "September", "Oktober", "November", "Dezember"
+            };
+
+            tagesergebnisse = new List<Tagesergebnis>(monate.Length);
+            for (int m = 0; m < monate.Length; m++)
+            {
+                string monat = monate[m];
+                // find indices of days that belong to this month
+                var indices = Enumerable.Range(0, tage.Count).Where(i => GetMonthFromDay(tage[i]) == monat).ToList();
+
+                if (!indices.Any())
+                {
+                    // empty month -> zeroed result
+                    Tageskosten zeroKosten = new(0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    tagesergebnisse.Add(new Tagesergebnis(0, 0, zeroKosten, new Versicherungsverteilung(0, 0), new Umsatzverteilung(0, 0), new Behandlungsmix(0, 0, 0, 0, 0, 0), new Kostenstruktur(), new BreakEvenPoint()));
+                    continue;
+                }
+
+                double sumUmsatz = 0.0;
+                double sumGewinn = 0.0;
+                double sumArzt = 0.0;
+                double sumSchwester = 0.0;
+                double sumRezeption = 0.0;
+                double sumMiete = 0.0;
+                double sumInfrastruktur = 0.0;
+                double sumMaterial = 0.0;
+                double sumLeasing = 0.0;
+                double sumSonstige = 0.0;
+                double sumBehandlungskosten = 0.0;
+                int sumPrivat = 0;
+                int sumGesetzlich = 0;
+                double sumUmsatzPrivat = 0.0;
+                double sumUmsatzGesetzlich = 0.0;
+                int sumKurz = 0; int sumMittel = 0; int sumLang = 0;
+                double sumKurzKosten = 0; double sumMittelKosten = 0; double sumLangKosten = 0;
+
+                foreach (int idx in indices)
+                {
+                    var dr = alleTagesergebnisse[idx];
+                    sumUmsatz += dr.Umsatz;
+                    sumGewinn += dr.Gewinn;
+                    sumArzt += dr.Kosten.Arztlohn;
+                    sumSchwester += dr.Kosten.Schwesterlohn;
+                    sumRezeption += dr.Kosten.Rezeptionlohn;
+                    sumMiete += dr.Kosten.Mietkosten;
+                    sumInfrastruktur += dr.Kosten.Infrastrukturkosten;
+                    sumMaterial += dr.Kosten.MedizinischesMaterialkosten;
+                    sumLeasing += dr.Kosten.GeraeteLeasingKosten;
+                    sumSonstige += dr.Kosten.SonstigeFixkosten;
+                    sumBehandlungskosten += dr.Kosten.Behandlungskosten;
+                    sumPrivat += dr.Versicherungen.PrivatPatienten;
+                    sumGesetzlich += dr.Versicherungen.GesetzlichPatienten;
+                    sumUmsatzPrivat += dr.Umsatzverteilung.UmsatzPrivat;
+                    sumUmsatzGesetzlich += dr.Umsatzverteilung.UmsatzGesetzlich;
+                    sumKurz += dr.Behandlungsmix.KurzPatienten;
+                    sumMittel += dr.Behandlungsmix.MittelPatienten;
+                    sumLang += dr.Behandlungsmix.LangPatienten;
+                    sumKurzKosten += dr.Behandlungsmix.KurzKosten;
+                    sumMittelKosten += dr.Behandlungsmix.MittelKosten;
+                    sumLangKosten += dr.Behandlungsmix.LangKosten;
+                }
+
+                Tageskosten gesamtKosten = new(
+                    sumArzt,
+                    sumSchwester,
+                    sumRezeption,
+                    sumMiete,
+                    sumInfrastruktur,
+                    sumMaterial,
+                    sumLeasing,
+                    sumSonstige,
+                    sumBehandlungskosten);
+
+                Versicherungsverteilung vers = new(sumPrivat, sumGesetzlich);
+                Umsatzverteilung umv = new(sumUmsatzPrivat, sumUmsatzGesetzlich);
+                Behandlungsmix bm = new(sumKurz, sumMittel, sumLang, sumKurzKosten, sumMittelKosten, sumLangKosten);
+                // Berechne Kostenstruktur-Anteile manuell (FinanzRechner.BerechneKostenstruktur ist nicht öffentlich)
+                double sumPersonalkosten = sumArzt + sumSchwester + sumRezeption;
+                Kostenstruktur ks = new()
+                {
+                    PersonalkostenAnteil = sumUmsatz > 0 ? sumPersonalkosten / sumUmsatz : 0.0,
+                    MietkostenAnteil = sumUmsatz > 0 ? sumMiete / sumUmsatz : 0.0,
+                    InfrastrukturkostenAnteil = sumUmsatz > 0 ? sumInfrastruktur / sumUmsatz : 0.0,
+                    MaterialkostenAnteil = sumUmsatz > 0 ? sumMaterial / sumUmsatz : 0.0,
+                    GeraeteLeasingAnteil = sumUmsatz > 0 ? sumLeasing / sumUmsatz : 0.0,
+                    SonstigeFixkostenAnteil = sumUmsatz > 0 ? sumSonstige / sumUmsatz : 0.0,
+                    BehandlungskostenAnteil = sumUmsatz > 0 ? sumBehandlungskosten / sumUmsatz : 0.0
+                };
+
+                tagesergebnisse.Add(new Tagesergebnis(sumUmsatz, sumGewinn, gesamtKosten, vers, umv, bm, ks, new BreakEvenPoint()));
+            }
+        }
+        else
+        {
+            tagesergebnisse = new List<Tagesergebnis>(alleTagesergebnisse);
+        }
 
         return new FinanzErgebnis(
             normalisierterZeitraum,
@@ -167,6 +272,65 @@ internal static class FinanzVisualisierung
     }
 
     public static string FormatEuro(double wert) => string.Format(DeCulture, "{0:N2} EUR", wert);
+
+    // Generiert den gleichen Textbericht wie die WPF-Ansicht (für Konsolen-Ausgabe oder Tests).
+    public static string GenerateErgebnisReportText(FinanzErgebnis ergebnis, string finanzenPfad, string gewinnPfad, string kostenstrukturPfad)
+    {
+        // Reuse the formatting and labels used in the WPF view so console and WPF are identical.
+        StringBuilder sb = new();
+        sb.AppendLine("Ergebnis");
+        sb.AppendLine(new string('=', 50));
+        sb.AppendLine($"Zeitraum: {ergebnis.Zeitraum}");
+        sb.AppendLine($"Simulierte Tage: {ergebnis.SimulierteTage}");
+        sb.AppendLine($"Gesamtumsatz: {FormatEuro(ergebnis.GesamtUmsatz)}");
+        sb.AppendLine($"Gesamtkosten: {FormatEuro(ergebnis.Gesamtkosten)}");
+        sb.AppendLine($"Gesamtgewinn: {FormatEuro(ergebnis.Gesamtgewinn)}");
+        sb.AppendLine($"Durchschnitt Umsatz pro Tag: {FormatEuro(ergebnis.DurchschnittlicherUmsatzProTag)}");
+        sb.AppendLine($"Durchschnitt Kosten pro Tag: {FormatEuro(ergebnis.DurchschnittlicheKostenProTag)}");
+        sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
+        sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.DurchschnittBehandeltePatientenProTag.ToString("N1", DeCulture)}");
+        sb.AppendLine();
+        sb.AppendLine("Praxisdetails");
+        sb.AppendLine($"Gesamtfläche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m²");
+        sb.AppendLine($"Mietkosten pro m²/Monat: {FormatEuro(ergebnis.MietkostenProQm)}");
+        sb.AppendLine($"Gesamtmietkosten pro Tag: {FormatEuro(ergebnis.GesamtMietkostenProTag)}");
+        double gesamtMietkostenMonat = ergebnis.MietkostenProQm * ergebnis.Gesamtflaeche;
+        sb.AppendLine($"Gesamtmietkosten pro Monat: {FormatEuro(gesamtMietkostenMonat)}");
+        sb.AppendLine($"Gesamtmietkosten pro Jahr: {FormatEuro(gesamtMietkostenMonat * 12)}");
+        sb.AppendLine();
+        sb.AppendLine("Kostenstruktur (Basis: Umsatz)");
+        sb.AppendLine($"Personalkosten: {FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Infrastruktur: {FormatEuro(ergebnis.GesamtInfrastrukturkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Medizinisches Material: {FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Geräte-Leasing: {FormatEuro(ergebnis.GesamtLeasingkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Sonstige Fixkosten: {FormatEuro(ergebnis.GesamtSonstigeFixkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Behandlungskosten: {FormatEuro(ergebnis.GesamtBehandlungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Gewinn: {FormatEuro(ergebnis.Gesamtgewinn)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine();
+        sb.AppendLine("Saisonaler Gewinn (im gewählten Zeitraum)");
+        foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
+        {
+            double saisonWert = ergebnis.SaisonGewinn.TryGetValue(saison, out double wert) ? wert : 0.0;
+            sb.AppendLine($"{saison}: {FormatEuro(saisonWert)}");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Versicherung");
+        sb.AppendLine($"Privat: {ergebnis.VersicherungenGesamt.PrivatPatienten} Patienten / {FormatEuro(ergebnis.UmsatzverteilungGesamt.UmsatzPrivat)}");
+        sb.AppendLine($"Gesetzlich: {ergebnis.VersicherungenGesamt.GesetzlichPatienten} Patienten / {FormatEuro(ergebnis.UmsatzverteilungGesamt.UmsatzGesetzlich)}");
+        sb.AppendLine();
+        sb.AppendLine("Behandlungsdauer");
+        sb.AppendLine($"Kurz: {ergebnis.BehandlungsmixGesamt.KurzPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.KurzKosten)}");
+        sb.AppendLine($"Mittel: {ergebnis.BehandlungsmixGesamt.MittelPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.MittelKosten)}");
+        sb.AppendLine($"Lang: {ergebnis.BehandlungsmixGesamt.LangPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.LangKosten)}");
+        sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FormatEuro(ergebnis.BehandlungsmixGesamt.Gesamtkosten)}");
+        sb.AppendLine();
+        sb.AppendLine("Dateien");
+        sb.AppendLine($"- Finanzen: {finanzenPfad}");
+        sb.AppendLine($"- Gewinn: {gewinnPfad}");
+        sb.AppendLine($"- Kostenstruktur: {kostenstrukturPfad}");
+        return sb.ToString();
+    }
 
     private static string NormalisiereZeitraum(string? zeitraum)
     {
@@ -394,6 +558,7 @@ internal static class FinanzVisualisierung
         double umsatz = ergebnis.GesamtUmsatz;
         double gewinn = ergebnis.Gesamtgewinn;
 
+        // Build amounts exactly from the same projections used in the left text column so values match 1:1
         double[] amounts = {
             ergebnis.GesamtPersonalkosten,
             ergebnis.GesamtMietkosten,
@@ -402,16 +567,16 @@ internal static class FinanzVisualisierung
             ergebnis.GesamtLeasingkosten,
             ergebnis.GesamtSonstigeFixkosten,
             ergebnis.GesamtBehandlungskosten,
-            // include profit so the pie represents the whole revenue
-            Math.Max(0.0, gewinn)
+            // include profit so percentages relative to Umsatz become meaningful
+            Math.Max(0.0, ergebnis.Gesamtgewinn)
         };
 
         string[] labels = { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung", "Gewinn" };
 
         var pie = plot.AddPie(amounts);
-        // Keep the pie clean: no direct slice text, legend will contain all details.
+        // Disable ScottPlot-internal slice percentages; we render percentages in the legend relative to Umsatz.
         pie.SliceLabels = labels;
-        pie.ShowPercentages = true;
+        pie.ShowPercentages = false;
         pie.ShowLabels = false;
         pie.ShowValues = false;
 
@@ -424,7 +589,7 @@ internal static class FinanzVisualisierung
             Color.FromArgb(231, 76, 60),    // rot
             Color.FromArgb(149, 165, 166),  // grau
             Color.FromArgb(52, 73, 94),     // dunkel
-            Color.FromArgb(230, 126, 34)    // orange (Gewinn)
+            Color.FromArgb(230, 126, 34)
         };
 
         // Leicht auseinanderziehen, damit Beschriftungen besser lesbar sind
@@ -436,12 +601,11 @@ internal static class FinanzVisualisierung
         pie.SliceLabelColors = Enumerable.Repeat(Color.Black, amounts.Length).ToArray();
 
         // Create legend labels that include absolute amounts and percentages relative to Umsatz
-        double total = amounts.Sum(); // should equal Umsatz (or Umsatz - negative profit handled above)
         string[] legendLabels = labels.Select((lab, i) =>
             $"{lab}: {FormatEuro(amounts[i])} ({(umsatz > 0 ? amounts[i] / umsatz : 0.0):P2})").ToArray();
         pie.LegendLabels = legendLabels;
 
-        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Anteil am Umsatz)", size: 18);
+        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Basis: Umsatz)", size: 18);
         plot.Legend(location: Alignment.LowerRight);
         plot.SaveFig(outputPfad);
     }

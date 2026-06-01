@@ -1,7 +1,7 @@
 {
   "Personal": {
     "ArztLohnProPatient": 30.0,
-    "ArztLohnProStunde": 70.0,
+    "ArztLohnProStunde": 60.0,
     "SchwesterLohnProStunde": 35.0,
     "RezeptionLohnProStunde": 22.0,
     "ArbeitsstundenProTag": 8
@@ -41,7 +41,7 @@
       },
       {
         "MinFlaeche": 150,
-        "MaxFlaeche": 10000,
+        "MaxFlaeche": 300,
         "KostenProQm": 6.32
       }
     ],

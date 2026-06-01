@@ -108,17 +108,21 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine("Praxisdetails");
         sb.AppendLine($"Gesamtfläche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m²");
         sb.AppendLine($"Mietkosten pro m²/Monat: {FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm)}");
-        sb.AppendLine($"Gesamtmietkosten pro Monat: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag * 30)}");
+        // Zeige Mietkosten eindeutig: pro Tag, pro Monat (auf Basis m² * Preis/Monat) und pro Jahr
+        sb.AppendLine($"Gesamtmietkosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag)}");
+        double gesamtMietkostenMonat = ergebnis.MietkostenProQm * ergebnis.Gesamtflaeche; // exakter Monatswert
+        sb.AppendLine($"Gesamtmietkosten pro Monat: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat)}");
+        sb.AppendLine($"Gesamtmietkosten pro Jahr: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat * 12)}");
         sb.AppendLine();
-        sb.AppendLine("Kostenstruktur (Anteil am Umsatz)");
-        sb.AppendLine($"Personalkosten: {kostenstruktur.PersonalkostenAnteil:P2}");
-        sb.AppendLine($"Mietkosten: {kostenstruktur.MietkostenAnteil:P2}");
-        sb.AppendLine($"Infrastruktur: {kostenstruktur.InfrastrukturkostenAnteil:P2}");
-        sb.AppendLine($"Medizinisches Material: {kostenstruktur.MaterialkostenAnteil:P2}");
-        sb.AppendLine($"Geräte-Leasing: {kostenstruktur.GeraeteLeasingAnteil:P2}");
-        sb.AppendLine($"Sonstige Fixkosten: {kostenstruktur.SonstigeFixkostenAnteil:P2}");
-        sb.AppendLine($"Behandlungskosten: {kostenstruktur.BehandlungskostenAnteil:P2}");
-        sb.AppendLine($"Gewinn: {(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2}");
+        sb.AppendLine("Kosten-und Gewinn-struktur (von Umsatz)");
+        sb.AppendLine($"Personalkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Infrastruktur: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtInfrastrukturkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Medizinisches Material: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Geräte-Leasing: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtLeasingkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Sonstige Fixkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtSonstigeFixkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Behandlungskosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtBehandlungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Gewinn: {FinanzVisualisierung.FormatEuro(ergebnis.Gesamtgewinn)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine();
         sb.AppendLine("Saisonaler Gewinn (im gewählten Zeitraum)");
         foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
