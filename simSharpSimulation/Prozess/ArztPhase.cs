@@ -39,8 +39,7 @@ namespace simSharpSimulation
         public static IEnumerable<Event> DurchlaufeArzt(
             Simulation env,
             int patientId,
-            PriorityResource arzt,
-            int arztId,
+            BeweglicherArztPool aerzte,
             PatientenTyp patientenTyp,
             double ankunftszeit,
             bool hatTermin,

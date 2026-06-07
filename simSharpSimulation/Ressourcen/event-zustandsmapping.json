@@ -45,6 +45,7 @@
 
   "geht_zum_arzt": { "von": "IN_KLINIK", "zu": "WEG_ZUM_ARZT" },
   "betritt_arztzimmer": { "von": "WEG_ZUM_ARZT", "zu": "WARTET_ARZT" },
+  "betritt_arzt_warteschlange": { "von": "WARTET_ARZT", "zu": "WARTET_ARZT" },
   "startet_arzt_behandlung": { "von": "WARTET_ARZT", "zu": "IN_ARZT" },
     "prognose_pruefung": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },
     "prognose_abbruch": { "von": "IN_KLINIK", "zu": "IN_KLINIK" },

@@ -16,7 +16,7 @@ namespace simSharpSimulation
             if (behandlungszeiten == null || behandlungszeiten.Count == 0)
                 return;
 
-            var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == typ);
+            var typInfo = PatientenKonfiguration.HoleTypInfo(typ);
             double erwartungswert = typInfo.BehandlungszeitArzt;
             double variationskoeffizient = typInfo.VariationskoeffizientArzt;
             double sigma = Math.Sqrt(Math.Log(1 + Math.Pow(variationskoeffizient, 2)));

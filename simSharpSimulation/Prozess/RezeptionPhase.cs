@@ -1,7 +1,6 @@
 using SimSharp;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace simSharpSimulation
 {
@@ -131,10 +130,7 @@ namespace simSharpSimulation
 
         private static bool IstRezeptionFrei(Resource rezeption)
         {
-            var usersProperty = rezeption.GetType().GetProperty("Users", BindingFlags.NonPublic | BindingFlags.Instance);
-            var usersCollection = usersProperty?.GetValue(rezeption) as IReadOnlyCollection<Request>;
-            int aktiveNutzer = usersCollection?.Count ?? 0;
-            return aktiveNutzer < RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN;
+            return rezeption.Remaining > 0;
         }
     }
 }

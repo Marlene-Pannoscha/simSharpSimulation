@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+
 namespace simSharpSimulation
 {
     public enum PatientenTyp
@@ -28,6 +31,26 @@ namespace simSharpSimulation
             (PatientenTyp.Mittel, 0.6, 7.0, 0.4, 5.0, 0.3, 35.0),
             (PatientenTyp.Lang, 0.1, 15.0, 0.3, 10.0, 0.2, 60.0)
         };
+
+        public static PatientenTyp WaehlePatientenTyp(Random rnd)
+        {
+            double rand = rnd.NextDouble();
+            double kumulierteWahrscheinlichkeit = 0.0;
+
+            foreach (var typInfo in TYPEN_VERTEILUNG)
+            {
+                kumulierteWahrscheinlichkeit += typInfo.Wahrscheinlichkeit;
+                if (rand <= kumulierteWahrscheinlichkeit)
+                    return typInfo.Typ;
+            }
+
+            return PatientenTyp.Mittel;
+        }
+
+        public static (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double VariationskoeffizientArzt, double BehandlungszeitSchwester, double VariationskoeffizientSchwester, double Behandlungskosten) HoleTypInfo(PatientenTyp typ)
+        {
+            return TYPEN_VERTEILUNG.First(t => t.Typ == typ);
+        }
 
         public override int Anzahl => ANZAHL_PATIENTEN_TAG;
         public override double MittlereServicezeit => ERWARTUNGSWERT;
