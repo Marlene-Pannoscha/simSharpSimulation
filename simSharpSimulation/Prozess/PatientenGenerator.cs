@@ -20,6 +20,8 @@ namespace simSharpSimulation
             int patientIdStart,
             Func<Simulation, int, Resource, BeweglicherSchwesterPool, BeweglicherArztPool, IEnumerable<Event>> patientFactory)
         {
+            double aufnahmeStoppMinuten = BerechneAufnahmeStoppZeitpunkt();
+
             // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
             // drawIndex sorgt bei gleichen Zeiten für eine stabile (FIFO-)Reihenfolge.
             var ankunftszeiten = new List<(double zeit, int drawIndex)>();
@@ -81,9 +83,26 @@ namespace simSharpSimulation
                     yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
 
                 // Startet den individuellen Ablauf für genau diesen Patienten.
+                if (ankunftszeit >= aufnahmeStoppMinuten)
+                {
+                    double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientCount);
+                    daten.LogEvent(nowMinutes, "abgewiesen_vor_klinik_wegen_aufnahmeprognose", patientCount);
+                    patientCount++;
+                    continue;
+                }
+
                 env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
                 patientCount++;
             }
+        }
+
+        private static double BerechneAufnahmeStoppZeitpunkt()
+        {
+            return Math.Max(
+                0.0,
+                SimulationKonfiguration.SIMULATIONSDAUER -
+                SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
         }
     }
 }

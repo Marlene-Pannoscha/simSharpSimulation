@@ -15,10 +15,10 @@ namespace simSharpSimulation
         {
             return typ switch
             {
-                PatientenTyp.Kurz => 3,
+                PatientenTyp.Kurz => 1,
                 PatientenTyp.Mittel => 2,
-                PatientenTyp.Lang => 1,
-                _ => 1
+                PatientenTyp.Lang => 3,
+                _ => 3
             };
         }
 
@@ -38,69 +38,66 @@ namespace simSharpSimulation
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
-            if (!direktZurSchwester)
+            bool schwesterSofortVerfuegbar = schwestern.IstFrei;
+            bool betrittWarteschlange = !direktZurSchwester || !schwesterSofortVerfuegbar;
+
+            if (betrittWarteschlange)
             {
                 daten.LogEvent(nowMinutes, "betritt_schwester_warteschlange", patientId);
             }
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
 
-            while (schwester.Remaining <= 0)
+            bool brichtWartenAb = false;
+            using (Request req = schwestern.FordereMitarbeiterAn(GetPriority(patientenTyp)))
             {
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double restMinuten = schichtEndeMinuten - nowMinutes;
-                if (restMinuten <= 0)
-                {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
-                Event schwesterVerfuegbar = schwester.WhenAny();
+                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
                 Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return schwesterVerfuegbar | schichtEnde;
+                yield return req | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!schwesterVerfuegbar.IsProcessed)
+                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
+                    brichtWartenAb = true;
+                }
+                else
+                {
+                    int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    if (betrittWarteschlange)
+                    {
+                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_schwester", patientId);
+                    }
+
+                    daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
+                    yield return env.Timeout(interneBewegungsdauer);
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(nowMinutes, "betritt_schwesterzimmer", patientId);
+                    daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
+
+                    double wartezeitSchwester = nowMinutes - ankunftszeit;
+                    daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
+
+                    daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+                    yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
+                    schwestern.GibMitarbeiterZurueck(schwesterId);
                 }
             }
 
-            using (Request req = schwester.Request(priority: GetPriority(patientenTyp)))
+            if (brichtWartenAb)
             {
-                // Request abgeschlossen: Patient hat die Schwester zugewiesen bekommen.
-                // Behandlung darf auch nach Schichtende zu Ende gefuehrt werden.
-                yield return req;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!direktZurSchwester)
-                {
-                    daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
-                }
-
-                daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
-                yield return env.Timeout(interneBewegungsdauer);
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "betritt_schwesterzimmer", patientId);
-                daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
-
-                double wartezeitSchwester = nowMinutes - ankunftszeit;
-                daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
-
-                daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
-                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis))
+                    yield return ev;
             }
         }
 
@@ -108,7 +105,7 @@ namespace simSharpSimulation
             Simulation env,
             SimulationsDaten daten,
             int patientId,
-            int schwesterId,
+            int? schwesterId,
             TimeSpan interneBewegungsdauer,
             BehandlungsPhaseErgebnis ergebnis)
         {

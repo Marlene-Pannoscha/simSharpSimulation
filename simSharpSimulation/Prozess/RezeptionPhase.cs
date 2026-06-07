@@ -18,7 +18,7 @@ namespace simSharpSimulation
             double ankunftszeit,
             bool hatTermin,
             bool behandlungBereitsFertig,
-            TimeSpan interneBewegungsdauer,
+            TimeSpan wegZumAusgang,
             double behandlungsdauer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
@@ -37,73 +37,58 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
+                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis))
                     yield return ev;
                 yield break;
             }
 
-            while (rezeption.Remaining <= 0)
-            {
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                double restMinuten = schichtEndeMinuten - nowMinutes;
-                if (restMinuten <= 0)
-                {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
-                Event rezeptionVerfuegbar = rezeption.WhenAny();
-                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return rezeptionVerfuegbar | schichtEnde;
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!rezeptionVerfuegbar.IsProcessed)
-                {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-            }
-
+            bool brichtWartenAb = false;
             using (Request req = rezeption.Request())
             {
-                yield return req;
+                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
+                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return req | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (nowMinutes > schichtEndeMinuten)
+                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
-                if (!rezeptionWarFrei)
-                {
-                    daten.LogEvent(nowMinutes, "rezeption_frei", patientId);
-                }
-
-                daten.LogEvent(nowMinutes, "betritt_rezeption", patientId);
-                daten.LogEvent(nowMinutes, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
-                daten.LogEvent(nowMinutes, "startet_rezeption", patientId);
-
-                double wartezeitRezeption = nowMinutes - ankunftszeit;
-                daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
-
-                daten.ErfasseRezeptionBehandlungszeit(behandlungsdauer, hatTermin);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
-                if (behandlungBereitsFertig)
-                {
-                    daten.LogEvent(nowMinutes, "macht_folgetermin_aus_oder_rezept", patientId);
+                    brichtWartenAb = true;
                 }
                 else
                 {
-                    daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
+                    if (!rezeptionWarFrei)
+                    {
+                        daten.LogEvent(nowMinutes, "rezeption_frei", patientId);
+                    }
+
+                    daten.LogEvent(nowMinutes, "betritt_rezeption", patientId);
+                    daten.LogEvent(nowMinutes, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
+                    daten.LogEvent(nowMinutes, "startet_rezeption", patientId);
+
+                    double wartezeitRezeption = nowMinutes - ankunftszeit;
+                    daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
+
+                    daten.ErfasseRezeptionBehandlungszeit(behandlungsdauer, hatTermin);
+
+                    yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
+                    if (behandlungBereitsFertig)
+                    {
+                        daten.LogEvent(nowMinutes, "macht_folgetermin_aus_oder_rezept", patientId);
+                    }
+                    else
+                    {
+                        daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
+                    }
                 }
+            }
+
+            if (brichtWartenAb)
+            {
+                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis))
+                    yield return ev;
             }
         }
 

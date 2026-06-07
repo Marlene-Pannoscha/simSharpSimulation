@@ -22,7 +22,14 @@ namespace simSharpSimulation
 
         public int Anzahl { get; }
 
+        public int Frei => ressource.Remaining;
+
         public bool IstFrei => ressource.Remaining > 0;
+
+        public Event WennMitarbeiterVerfuegbar()
+        {
+            return ressource.WhenAny();
+        }
 
         public Request FordereMitarbeiterAn(int prioritaet)
         {

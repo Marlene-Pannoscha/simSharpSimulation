@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -71,6 +72,7 @@ namespace simSharpSimulation
             string prognoseJsonPfad = "prognose_daten.json";
             daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
             Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
+            FuehreAufnahmeprognoseMatplotlibAus(prognoseJsonPfad);
 
             Console.WriteLine();
             Console.WriteLine(daten.ErzeugePrognoseReportText());
@@ -167,6 +169,85 @@ namespace simSharpSimulation
             Console.WriteLine($"Behandlungskosten: {finanzen.Kosten.Behandlungskosten:F2} €");
             Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
             Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
+        }
+
+        private static void FuehreAufnahmeprognoseMatplotlibAus(string prognoseJsonPfad)
+        {
+            try
+            {
+                string projektOrdner = ErmittleProjektOrdner();
+                string skriptPfad = Path.Combine(projektOrdner, "Diagramm", "aufnahmeprognose_matplotlib.py");
+                string outputOrdner = Path.Combine(projektOrdner, "images");
+                Directory.CreateDirectory(outputOrdner);
+                string outputPfad = Path.Combine(outputOrdner, "aufnahmeprognose_matplotlib.png");
+
+                if (!File.Exists(skriptPfad))
+                {
+                    Console.WriteLine($"--- Matplotlib-Skript nicht gefunden: {skriptPfad} ---");
+                    return;
+                }
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "python",
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+                startInfo.ArgumentList.Add(skriptPfad);
+                startInfo.ArgumentList.Add(Path.GetFullPath(prognoseJsonPfad));
+                startInfo.ArgumentList.Add(outputPfad);
+
+                using Process process = Process.Start(startInfo)
+                    ?? throw new InvalidOperationException("Python-Prozess konnte nicht gestartet werden.");
+                string standardOutput = process.StandardOutput.ReadToEnd();
+                string standardError = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode == 0)
+                {
+                    Console.WriteLine($"--- Matplotlib-Aufnahmeprognose gespeichert: {outputPfad} ---");
+                    return;
+                }
+
+                Console.WriteLine($"--- Matplotlib-Aufnahmeprognose konnte nicht erzeugt werden (ExitCode {process.ExitCode}). ---");
+                if (!string.IsNullOrWhiteSpace(standardOutput))
+                    Console.WriteLine(standardOutput.Trim());
+                if (!string.IsNullOrWhiteSpace(standardError))
+                    Console.WriteLine(standardError.Trim());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"--- Matplotlib-Aufnahmeprognose uebersprungen: {ex.Message} ---");
+            }
+        }
+
+        private static string ErmittleProjektOrdner()
+        {
+            string? viaCwd = FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
+            if (!string.IsNullOrEmpty(viaCwd))
+                return viaCwd;
+
+            string? viaBase = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj");
+            if (!string.IsNullOrEmpty(viaBase))
+                return viaBase;
+
+            return Directory.GetCurrentDirectory();
+        }
+
+        private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
+        {
+            DirectoryInfo? current = new(startPfad);
+            while (current != null)
+            {
+                if (File.Exists(Path.Combine(current.FullName, dateiname)))
+                    return current.FullName;
+
+                current = current.Parent;
+            }
+
+            return null;
         }
 
     }

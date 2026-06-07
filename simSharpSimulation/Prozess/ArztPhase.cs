@@ -17,10 +17,10 @@ namespace simSharpSimulation
             // kurze Faelle schneller abarbeiten kann und die Warteschlange beweglich bleibt.
             return typ switch
             {
-                PatientenTyp.Kurz => 3,
+                PatientenTyp.Kurz => 1,
                 PatientenTyp.Mittel => 2,
-                PatientenTyp.Lang => 1,
-                _ => 1
+                PatientenTyp.Lang => 3,
+                _ => 3
             };
         }
 
@@ -56,78 +56,64 @@ namespace simSharpSimulation
             // fuer diesen Tag ueberhaupt noch offen ist.
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
+                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
 
-            // Schritt A3: Solange kein Arzt frei ist, warten wir solange, bis
-            // entweder ein Arzt verfuegbar wird oder die Schicht endet.
-            while (arzt.Remaining <= 0)
+            // Schritt A3: Der Request wird sofort gestellt, damit die PriorityResource
+            // die Reihenfolge nach Prioritaet und FIFO korrekt verwalten kann.
+            bool brichtWartenAb = false;
+            using (Request req = aerzte.FordereMitarbeiterAn(GetPriority(patientenTyp)))
             {
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Berechne verbleibende Zeit bis Schichtende und warte entweder
-                // auf einen freien Arzt oder auf das Erreichen des Schichtendes.
-                double restMinuten = schichtEndeMinuten - nowMinutes;
-                if (restMinuten <= 0)
-                {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
-                }
-
-                Event arztVerfuegbar = arzt.WhenAny();
+                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
                 Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return arztVerfuegbar | schichtEnde;
+                yield return req | schichtEnde;
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Wenn das Schichtende zuerst eintrat, verlässt der Patient die Klinik.
-                if (!arztVerfuegbar.IsProcessed)
+                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
-                        yield return ev;
-                    yield break;
+                    brichtWartenAb = true;
+                }
+                else
+                {
+                    int arztId = aerzte.UebernehmeFreienMitarbeiter();
+
+                    // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
+                    daten.ErfasseArztBehandlungBegonnen(env.StartDate);
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    // Patient verlaesst das Wartezimmer, sobald der Arzt frei ist.
+                    daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
+
+                    // Weg zum Arzt (interne Bewegung).
+                    daten.LogEvent(nowMinutes, "geht_zum_arzt", patientId);
+                    yield return env.Timeout(interneBewegungsdauer);
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(nowMinutes, "betritt_arztzimmer", patientId);
+
+                    // Arztbehandlung beginnt.
+                    daten.LogEvent(nowMinutes, "startet_arzt_behandlung", patientId, arztId: arztId);
+
+                    // Wartezeit erfassen.
+                    double wartezeitArzt = nowMinutes - ankunftszeit;
+                    daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
+
+                    daten.ErfasseArztBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+
+                    yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+
+                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
+                    aerzte.GibMitarbeiterZurueck(arztId);
                 }
             }
 
-            // Schritt A4: Erst wenn ein Arzt verfuegbar ist, wird der eigentliche Request erstellt.
-            // Dadurch vermeiden wir offene Requests, die spaeter kuenstlich aus internen Queues
-            // entfernt werden muessten.
-            using (Request req = arzt.Request(priority: GetPriority(patientenTyp)))
+            if (brichtWartenAb)
             {
-
-                // Request abgeschlossen: Patient hat den Arzt zugewiesen bekommen.
-                // Selbst wenn die Schicht inzwischen geendet hat, darf die Behandlung
-                // weiterlaufen — Patient wird fertig behandelt.
-                yield return req;
-
-                // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
-                daten.ErfasseArztBehandlungBegonnen(env.StartDate);
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                // Patient verlaesst das Wartezimmer, sobald der Arzt frei ist.
-                daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
-
-                // Weg zum Arzt (interne Bewegung).
-                daten.LogEvent(nowMinutes, "geht_zum_arzt", patientId);
-                yield return env.Timeout(interneBewegungsdauer);
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "betritt_arztzimmer", patientId);
-
-                // Arztbehandlung beginnt.
-                daten.LogEvent(nowMinutes, "startet_arzt_behandlung", patientId, arztId: arztId);
-
-                // Wartezeit erfassen.
-                double wartezeitArzt = nowMinutes - ankunftszeit;
-                daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
-
-                daten.ErfasseArztBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
-
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
+                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis))
+                    yield return ev;
             }
         }
 
@@ -135,7 +121,7 @@ namespace simSharpSimulation
             Simulation env,
             SimulationsDaten daten,
             int patientId,
-            int arztId,
+            int? arztId,
             TimeSpan interneBewegungsdauer,
             BehandlungsPhaseErgebnis ergebnis)
         {

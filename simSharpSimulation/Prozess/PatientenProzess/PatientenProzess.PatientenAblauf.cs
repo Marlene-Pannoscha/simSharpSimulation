@@ -61,6 +61,14 @@ namespace simSharpSimulation
                     schwesterWartezimmerdauer) +
                 BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
                 BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer, zweiteRezeptionsdauer);
+
+            if (!DarfPatientNachAufnahmeprognoseNochRein(env, patientId))
+            {
+                foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, TimeSpan.Zero))
+                    yield return ev;
+                yield break;
+            }
+
             if (!ErfassePrognoseCheckpoint(env, patientId, "Ankunft", erwarteteRestzeitAbAnkunft))
             {
                 foreach (var ev in BrichWegenPrognoseAb(env, patientId, "Ankunft", TimeSpan.Zero))
@@ -75,11 +83,14 @@ namespace simSharpSimulation
             double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
 
             var ersteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, eingangZurRezeptionDauer, ersteRezeptionsdauer, daten, ersteRezeptionErgebnis))
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rezeptionZumAusgangDauer, ersteRezeptionsdauer, daten, ersteRezeptionErgebnis))
                 yield return ev;
 
             if (ersteRezeptionErgebnis.PatientHatKlinikVerlassen)
+            {
+                EntferneAktivePatientenPrognose(patientId);
                 yield break;
+            }
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
             bool brauchtVorbereitung = false;
@@ -106,16 +117,12 @@ namespace simSharpSimulation
                     }
                     else
                     {
-                        // Schritt P4.9B: Keine Schwester frei -> zuerst ins Wartezimmer.
+                        // Keine Schwester frei: Der Weg ins Wartezimmer folgt nach dem NachRezeption-Checkpoint.
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
 
                         // Schritt P4.9C: Der Weg ins Wartezimmer ist eine interne Bewegung.
-                        yield return env.Timeout(interneBewegungsdauer);
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer", patientId);
 
                         // Schritt P4.10B: Terminpatienten warten im Schnitt kürzer im Wartezimmer.
-                        yield return env.Timeout(TimeSpan.FromMinutes(schwesterWartezimmerdauer));
 
                         // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
@@ -147,16 +154,12 @@ namespace simSharpSimulation
                     }
                     else
                     {
-                        // Keine Schwester frei -> zuerst ins Wartezimmer.
+                        // Keine Schwester frei: Der Weg ins Wartezimmer folgt nach dem NachRezeption-Checkpoint.
                         daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer", patientId);
 
                         // Schritt P4.9D: Auch der Weg ins Wartezimmer ist eine interne Bewegung.
-                        yield return env.Timeout(interneBewegungsdauer);
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer", patientId);
 
                         // Ohne Termin warten Patienten im Schnitt länger im Wartezimmer auf die Schwester.
-                        yield return env.Timeout(TimeSpan.FromMinutes(schwesterWartezimmerdauer));
 
                         // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
                     }
@@ -171,6 +174,13 @@ namespace simSharpSimulation
 
             // Schritt P4.10: Falls Schwester nicht übersprungen wird,
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
+            if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+            {
+                foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, rezeptionZumAusgangDauer))
+                    yield return ev;
+                yield break;
+            }
+
             if (!ErfassePrognoseCheckpoint(
                 env,
                 patientId,
@@ -192,6 +202,14 @@ namespace simSharpSimulation
 
             if (!ueberspringeSchwester)
             {
+                if (!direktZurSchwester)
+                {
+                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_schwester", patientId);
+                    yield return env.Timeout(interneBewegungsdauer);
+                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer_schwester", patientId);
+                    yield return env.Timeout(TimeSpan.FromMinutes(schwesterWartezimmerdauer));
+                }
+
                 if (!ErfassePrognoseCheckpoint(
                     env,
                     patientId,
@@ -206,7 +224,6 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                var (schwesterRes, schwesterId) = WaehleRessource(schwestern);
                 var schwesterErgebnis = new BehandlungsPhaseErgebnis();
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
@@ -224,7 +241,17 @@ namespace simSharpSimulation
                     yield return ev;
 
                 if (schwesterErgebnis.PatientHatKlinikVerlassen)
+                {
+                    EntferneAktivePatientenPrognose(patientId);
                     yield break;
+                }
+
+                if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+                {
+                    foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, interneBewegungsdauer))
+                        yield return ev;
+                    yield break;
+                }
 
                 if (!ErfassePrognoseCheckpoint(
                     env,
@@ -254,6 +281,13 @@ namespace simSharpSimulation
 
             yield return env.Timeout(TimeSpan.FromMinutes(arztWartezimmerdauer));
 
+            if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+            {
+                foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, interneBewegungsdauer))
+                    yield return ev;
+                yield break;
+            }
+
             if (!ErfassePrognoseCheckpoint(
                 env,
                 patientId,
@@ -269,13 +303,22 @@ namespace simSharpSimulation
 
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
-            var (arztRes, arztId) = WaehleRessource(aerzte);
             var arztErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, arztRes, arztId, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis))
                 yield return ev;
 
             if (arztErgebnis.PatientHatKlinikVerlassen)
+            {
+                EntferneAktivePatientenPrognose(patientId);
                 yield break;
+            }
+
+            if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+            {
+                foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, arztZumAusgangDauer))
+                    yield return ev;
+                yield break;
+            }
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
             bool gehtNachArztZurRezeption = rnd.NextDouble() < WahrscheinlichkeitNachArztZurRezeption;
@@ -302,11 +345,14 @@ namespace simSharpSimulation
                 yield return env.Timeout(interneBewegungsdauer);
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 var zweiteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
-                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, interneBewegungsdauer, zweiteRezeptionsdauer, daten, zweiteRezeptionErgebnis))
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rezeptionZumAusgangDauer, zweiteRezeptionsdauer, daten, zweiteRezeptionErgebnis))
                     yield return ev;
 
                 if (zweiteRezeptionErgebnis.PatientHatKlinikVerlassen)
+                {
+                    EntferneAktivePatientenPrognose(patientId);
                     yield break;
+                }
 
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
                 yield return env.Timeout(rezeptionZumAusgangDauer);
@@ -326,6 +372,7 @@ namespace simSharpSimulation
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
             daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
             daten.SchliessePrognosen(patientId, nowMinutes);
+            EntferneAktivePatientenPrognose(patientId);
         }
     }
 }
