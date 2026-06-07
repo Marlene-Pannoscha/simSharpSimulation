@@ -44,7 +44,7 @@ namespace simSharpSimulation
             double ankunftszeit,
             bool hatTermin,
             TimeSpan interneBewegungsdauer,
-            Random rnd,
+            double behandlungsdauer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
@@ -56,7 +56,7 @@ namespace simSharpSimulation
             // fuer diesen Tag ueberhaupt noch offen ist.
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -71,7 +71,7 @@ namespace simSharpSimulation
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -84,7 +84,7 @@ namespace simSharpSimulation
                 // Wenn das Schichtende zuerst eintrat, verlässt der Patient die Klinik.
                 if (!arztVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichArztWartenAb(env, daten, patientId, arztId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -104,6 +104,7 @@ namespace simSharpSimulation
                 // HIT: Ab hier hat der Patient den Arzt tatsaechlich erreicht.
                 daten.ErfasseArztBehandlungBegonnen(env.StartDate);
 
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 // Patient verlaesst das Wartezimmer, sobald der Arzt frei ist.
                 daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_fuer_arzt", patientId);
 
@@ -121,22 +122,9 @@ namespace simSharpSimulation
                 double wartezeitArzt = nowMinutes - ankunftszeit;
                 daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
 
-                // Behandlungsdauer nach Patienten-Typ.
-                var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
-                double mittlereDauer = typInfo.BehandlungszeitArzt;
-                double variationskoeffizient = typInfo.VariationskoeffizientArzt;
+                daten.ErfasseArztBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
 
-                // Log-Normalverteilung fuer realistischere Zeiten:
-                // viele Werte liegen nahe am Mittelwert, einige dauern deutlich laenger.
-                // Umrechnung von Mittelwert und Variationskoeffizient in die Parameter mu und sigma der Lognormalverteilung
-                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
-                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
-
-                double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
-                daten.ErfasseArztBehandlungszeit(dauer, hatTermin, patientenTyp);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(dauer));
+                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_arzt_behandlung", patientId, arztId: arztId);
@@ -149,7 +137,6 @@ namespace simSharpSimulation
             int patientId,
             int arztId,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             // Diese Hilfsmethode haelt den Abbruchpfad an einer Stelle zusammen,
@@ -165,6 +152,7 @@ namespace simSharpSimulation
 
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, nowMinutes);
             ergebnis.MarkiereKlinikVerlassen();
         }
     }

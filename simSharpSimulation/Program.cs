@@ -63,6 +63,17 @@ namespace simSharpSimulation
             traceWithHeader.Insert(0, "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId");
             File.WriteAllLines("klinik_trace.txt", traceWithHeader);
             Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
+
+            string prognosePfad = "prognose_report.txt";
+            daten.SchreibePrognoseReport(prognosePfad);
+            Console.WriteLine($"--- Prognose-Report gespeichert: {prognosePfad} ---");
+
+            string prognoseJsonPfad = "prognose_daten.json";
+            daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
+            Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
+
+            Console.WriteLine();
+            Console.WriteLine(daten.ErzeugePrognoseReportText());
             
             double avgWartezeit = daten.DurchschnittlicheWartezeitArzt;
             double avgSchwesternWartezeit = daten.DurchschnittlicheWartezeitSchwester;

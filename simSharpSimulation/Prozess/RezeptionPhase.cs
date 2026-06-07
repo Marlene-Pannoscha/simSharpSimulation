@@ -19,7 +19,7 @@ namespace simSharpSimulation
             bool hatTermin,
             bool behandlungBereitsFertig,
             TimeSpan interneBewegungsdauer,
-            Random rnd,
+            double behandlungsdauer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
@@ -37,7 +37,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -48,7 +48,7 @@ namespace simSharpSimulation
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -60,7 +60,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!rezeptionVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -73,7 +73,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (nowMinutes > schichtEndeMinuten)
                 {
-                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -90,17 +90,9 @@ namespace simSharpSimulation
                 double wartezeitRezeption = nowMinutes - ankunftszeit;
                 daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
 
-                double mittlereDauer = RezeptionKonfiguration.MITTELREZEPTIONSZEIT;
-                double variationskoeffizient = RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION;
+                daten.ErfasseRezeptionBehandlungszeit(behandlungsdauer, hatTermin);
 
-                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
-                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
-
-                double dauer = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
-                daten.ErfasseRezeptionBehandlungszeit(dauer, hatTermin);
-
-                yield return env.Timeout(TimeSpan.FromMinutes(dauer));
+                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
@@ -113,7 +105,27 @@ namespace simSharpSimulation
                     daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
                 }
             }
-            // Die Ressource wird hier durch 'using' automatisch freigegeben.
+        }
+
+        private static IEnumerable<Event> BrichRezeptionWartenAb(
+            Simulation env,
+            SimulationsDaten daten,
+            int patientId,
+            TimeSpan interneBewegungsdauer,
+            BehandlungsPhaseErgebnis ergebnis)
+        {
+            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
+            daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
+            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_rezeption", patientId);
+
+            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
+            yield return env.Timeout(interneBewegungsdauer);
+
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, nowMinutes);
+            ergebnis.MarkiereKlinikVerlassen();
         }
 
         private static bool IstRezeptionFrei(Resource rezeption)

@@ -30,9 +30,8 @@ namespace simSharpSimulation
             double ankunftszeit,
             bool hatTermin,
             bool direktZurSchwester,
-            bool pruefeVorbereitungNachZimmer,
             TimeSpan interneBewegungsdauer,
-            Random rnd,
+            double behandlungsdauer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis)
         {
@@ -46,7 +45,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
                     yield return ev;
                 yield break;
             }
@@ -57,7 +56,7 @@ namespace simSharpSimulation
                 double restMinuten = schichtEndeMinuten - nowMinutes;
                 if (restMinuten <= 0)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -69,7 +68,7 @@ namespace simSharpSimulation
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!schwesterVerfuegbar.IsProcessed)
                 {
-                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, wegenFeierabend: true, ergebnis))
+                    foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, schwesterId, interneBewegungsdauer, ergebnis))
                         yield return ev;
                     yield break;
                 }
@@ -81,6 +80,7 @@ namespace simSharpSimulation
                 // Behandlung darf auch nach Schichtende zu Ende gefuehrt werden.
                 yield return req;
 
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 if (!direktZurSchwester)
                 {
                     daten.LogEvent(nowMinutes, "verlaesst_wartezimmer", patientId);
@@ -96,17 +96,8 @@ namespace simSharpSimulation
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
                 daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
 
-                var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
-                double mittlereDauer = typInfo.BehandlungszeitSchwester;
-                double variationskoeffizient = typInfo.VariationskoeffizientSchwester;
-
-                double varianz = Math.Pow(variationskoeffizient * mittlereDauer, 2);
-                double mu = Math.Log(mittlereDauer) - 0.5 * Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2));
-                double sigma = Math.Sqrt(Math.Log(1 + varianz / Math.Pow(mittlereDauer, 2)));
-
-                double dauerBehandlung = MathNet.Numerics.Distributions.LogNormal.Sample(rnd, mu, sigma);
-                daten.ErfasseSchwesterBehandlungszeit(dauerBehandlung, hatTermin, patientenTyp);
-                yield return env.Timeout(TimeSpan.FromMinutes(dauerBehandlung));
+                daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
@@ -119,7 +110,6 @@ namespace simSharpSimulation
             int patientId,
             int schwesterId,
             TimeSpan interneBewegungsdauer,
-            bool wegenFeierabend,
             BehandlungsPhaseErgebnis ergebnis)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
@@ -132,6 +122,7 @@ namespace simSharpSimulation
 
             nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, nowMinutes);
             ergebnis.MarkiereKlinikVerlassen();
         }
     }
