@@ -37,6 +37,7 @@ namespace simSharpSimulation
         public List<double> RezeptionsWartezeiten { get; } = new();
         public List<double> RezeptionsWartezeitenMitTermin { get; } = new();
         public List<double> RezeptionsWartezeitenOhneTermin { get; } = new();
+        public List<double> RezeptionsBehandlungszeiten { get; } = new();
         public List<double> RezeptionsBehandlungszeitenMitTermin { get; } = new();
         public List<double> RezeptionsBehandlungszeitenOhneTermin { get; } = new();
 
@@ -210,6 +211,7 @@ namespace simSharpSimulation
 
         public void ErfasseRezeptionBehandlungszeit(double dauerRezeption, bool hatTermin)
         {
+            RezeptionsBehandlungszeiten.Add(dauerRezeption);
             FuegeNachTerminHinzu(
                 dauerRezeption,
                 hatTermin,

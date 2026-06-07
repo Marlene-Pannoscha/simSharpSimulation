@@ -5,23 +5,20 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
-    // Dateirolle: Diagramm 10 - Schwester-Behandlungszeiten je Patiententyp (Histogramm + Lognormal PDF/CDF).
+    // Dateirolle: Rezeption-Prozesszeiten als Histogramm mit Lognormal PDF/CDF.
     internal static partial class GenerateDiagramme
     {
-        // Diagramm: Schwester-Behandlungszeiten je Patiententyp
-        private static void ErzeugeSchwesterBehandlungszeitenPdfCdfDiagramm(
-            IReadOnlyList<double> behandlungszeiten,
-            PatientenTyp typ)
+        private static void ErzeugeRezeptionBehandlungszeitenPdfCdfDiagramm(
+            IReadOnlyList<double> behandlungszeiten)
         {
             if (behandlungszeiten == null || behandlungszeiten.Count == 0)
                 return;
 
-            var typInfo = PatientenKonfiguration.HoleTypInfo(typ);
-            double erwartungswert = typInfo.BehandlungszeitSchwester;
-            double variationskoeffizient = typInfo.VariationskoeffizientSchwester;
+            double erwartungswert = RezeptionKonfiguration.MITTELREZEPTIONSZEIT;
+            double variationskoeffizient = RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION;
             double sigma = Math.Sqrt(Math.Log(1 + Math.Pow(variationskoeffizient, 2)));
-
             double mu = Math.Log(erwartungswert) - 0.5 * Math.Pow(sigma, 2);
+
             double maxZeit = Math.Max(behandlungszeiten.Max(), erwartungswert * 3.0);
             maxZeit = Math.Max(maxZeit, 1.0);
             double minZeit = 1e-6;
@@ -42,27 +39,27 @@ namespace simSharpSimulation
             var (counts, centers, binWidth) = BuildHistogram(behandlungszeiten, bins, 0, maxZeit);
             var bars = plot.AddBar(counts, centers);
             bars.BarWidth = binWidth * 0.9;
-            bars.FillColor = Color.PeachPuff;
+            bars.FillColor = Color.MediumPurple;
             bars.BorderColor = Color.Black;
             bars.Label = "Histogramm";
 
             double scale = behandlungszeiten.Count * binWidth;
-            plot.AddScatter(x, pdf.Select(v => v * scale).ToArray(), color: Color.DarkOrange, lineWidth: 3, label: "PDF (Lognormal)");
+            plot.AddScatter(x, pdf.Select(v => v * scale).ToArray(), color: Color.Indigo, lineWidth: 3, label: "PDF (Lognormal)");
 
             var axisRight = plot.AddAxis(ScottPlot.Renderable.Edge.Right);
             var cdfLine = plot.AddScatter(x, cdf, color: Color.DarkRed, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 3, label: "CDF (Lognormal)");
             cdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            plot.Title($"Schwester-Behandlungszeiten {typ} (Lognormal)");
-            plot.XLabel("Behandlungszeit in Minuten");
+            plot.Title("Rezeption-Prozesszeiten (Lognormal)");
+            plot.XLabel("Prozesszeit in Minuten");
             plot.YLabel("Anzahl der Patienten");
             axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");
             plot.Legend(location: ScottPlot.Alignment.UpperLeft);
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
 
-            string outputPath = ErzeugeOutputPfad($"schwester_behandlungszeiten_{typ.ToString().ToLowerInvariant()}_pdf_cdf.png");
+            string outputPath = ErzeugeOutputPfad("rezeption_behandlungszeiten_pdf_cdf.png");
             plot.SaveFig(outputPath);
-            Console.WriteLine($"--- Diagramm 10 gespeichert (Schwester, Typ {typ}): {outputPath} ---");
+            Console.WriteLine($"--- Diagramm 11 gespeichert (Rezeption-Prozesszeiten): {outputPath} ---");
         }
     }
 }
