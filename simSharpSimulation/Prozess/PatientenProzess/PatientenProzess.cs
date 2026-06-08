@@ -45,16 +45,8 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
-                var aerzte = new List<PriorityResource>();
-                for (int i = 0; i < ArztKonfiguration.ANZAHL_AERZTE; i++)
-                {
-                    aerzte.Add(new PriorityResource(env, capacity: 1));
-                }
-                var schwestern = new List<PriorityResource>();
-                for (int i = 0; i < SchwesterKonfiguration.ANZAHL_SCHWESTERN; i++)
-                {
-                    schwestern.Add(new PriorityResource(env, capacity: 1));
-                }
+                var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
+                var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten

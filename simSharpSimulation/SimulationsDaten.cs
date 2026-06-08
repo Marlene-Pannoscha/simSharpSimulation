@@ -60,6 +60,8 @@ namespace simSharpSimulation
         private readonly Dictionary<int, List<PrognosePruefung>> prognoseOffen = new();
         private readonly List<PrognoseErgebnis> prognoseErgebnisse = new();
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
+        private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
+        private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -74,6 +76,7 @@ namespace simSharpSimulation
         public int AnzahlPrognosePruefungen { get; private set; }
         public int AnzahlPrognoseRichtig { get; private set; }
         public int AnzahlPrognoseAbbruch { get; private set; }
+        public int AnzahlPrognoseAufnahmeAbgewiesen { get; private set; }
 
         // Abgeleitete Kennzahlen
         public double DurchschnittlicheWartezeitArzt => MittelwertOder0(Wartezeiten);
@@ -176,6 +179,35 @@ namespace simSharpSimulation
             AnzahlPrognoseAbbruch++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
             prognoseAbbrueche.Add(new PrognoseAbbruchPunkt(zeitpunktMinuten, phase));
+        }
+
+        public void ErfassePrognoseAufnahmepruefung(DateTime tag, double zeitpunktMinuten, int aufnahmeKapazitaet)
+        {
+            prognoseAufnahmePruefungen.Add(new PrognoseAufnahmePruefung(tag.Date, zeitpunktMinuten, aufnahmeKapazitaet));
+        }
+
+        public void ErfassePrognoseAufnahmeZugelassen(DateTime tag, double zeitpunktMinuten, int patientId, int restKapazitaet)
+        {
+            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(
+                tag.Date,
+                zeitpunktMinuten,
+                patientId,
+                true,
+                restKapazitaet));
+        }
+
+        public void ErfassePrognoseAufnahmeAbgewiesen(DateTime tag, double zeitpunktMinuten, int patientId)
+        {
+            AnzahlAbgebrochenMiss++;
+            AnzahlPrognoseAufnahmeAbgewiesen++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+            prognoseAbbrueche.Add(new PrognoseAbbruchPunkt(zeitpunktMinuten, "Aufnahmeprognose"));
+            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(
+                tag.Date,
+                zeitpunktMinuten,
+                patientId,
+                false,
+                0));
         }
 
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
@@ -308,6 +340,7 @@ namespace simSharpSimulation
             sb.AppendLine($"Richtig (±20 %): {AnzahlPrognoseRichtig.ToString("N0", culture)}");
             sb.AppendLine($"Trefferquote: {PrognoseTrefferquote.ToString("N2", culture)} %");
             sb.AppendLine($"Prognose-Abbrüche: {AnzahlPrognoseAbbruch.ToString("N0", culture)}");
+            sb.AppendLine($"Aufnahmeprognose-Abweisungen: {AnzahlPrognoseAufnahmeAbgewiesen.ToString("N0", culture)}");
             sb.AppendLine();
 
             var nachPhase = prognoseErgebnisse
@@ -379,6 +412,7 @@ namespace simSharpSimulation
                 Abbruchgruende = new
                 {
                     Prognose = AnzahlPrognoseAbbruch,
+                    Aufnahmeprognose = AnzahlPrognoseAufnahmeAbgewiesen,
                     RezeptionFeierabend = AnzahlNichtBehandeltRezeptionFeierabend,
                     SchwesterFeierabend = AnzahlNichtBehandeltSchwesterFeierabend,
                     ArztFeierabend = AnzahlNichtBehandeltArztFeierabend
@@ -398,6 +432,20 @@ namespace simSharpSimulation
                 {
                     a.ZeitpunktMinuten,
                     a.Phase
+                }),
+                AufnahmeprognosePruefungen = prognoseAufnahmePruefungen.Select(p => new
+                {
+                    Tag = p.Tag.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    p.ZeitpunktMinuten,
+                    p.AufnahmeKapazitaet
+                }),
+                AufnahmeprognoseEntscheidungen = prognoseAufnahmeEntscheidungen.Select(e => new
+                {
+                    Tag = e.Tag.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    e.ZeitpunktMinuten,
+                    e.PatientId,
+                    e.Zugelassen,
+                    e.RestKapazitaet
                 })
             };
 
@@ -455,7 +503,9 @@ namespace simSharpSimulation
             string dateiPfad = ErmittleRessourcenDateiPfad("event-zustandsmapping.json");
 
             string json = File.ReadAllText(dateiPfad);
-            var jsonDaten = JsonSerializer.Deserialize<Dictionary<string, EventZustandsEintrag>>(json);
+            var jsonDaten = JsonSerializer.Deserialize<Dictionary<string, EventZustandsEintrag>>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (jsonDaten is null || jsonDaten.Count == 0)
             {
@@ -556,6 +606,18 @@ namespace simSharpSimulation
         private sealed record PrognoseAbbruchPunkt(
             double ZeitpunktMinuten,
             string Phase);
+
+        private sealed record PrognoseAufnahmePruefung(
+            DateTime Tag,
+            double ZeitpunktMinuten,
+            int AufnahmeKapazitaet);
+
+        private sealed record PrognoseAufnahmeEntscheidung(
+            DateTime Tag,
+            double ZeitpunktMinuten,
+            int PatientId,
+            bool Zugelassen,
+            int RestKapazitaet);
     }
 
     internal readonly record struct TagesHitMissPunkt(string Label, int Hit, int Miss);

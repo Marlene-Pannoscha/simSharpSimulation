@@ -1,5 +1,6 @@
 {
   "wartet_vor_oeffnung": { "von": "AUSSERHALB", "zu": "AUSSERHALB" },
+  "abgewiesen_vor_klinik_wegen_aufnahmeprognose": { "von": "AUSSERHALB", "zu": "AUSSERHALB" },
   "betritt_klinik": { "von": "AUSSERHALB", "zu": "IN_KLINIK" },
   "geht_zur_rezeption": { "von": "IN_KLINIK", "zu": "WEG_ZUR_REZEPTION" },
   "betritt_rezeption_warteschlange": { "von": "WEG_ZUR_REZEPTION", "zu": "WARTET_REZEPTION" },
@@ -33,6 +34,9 @@
   "beendet_schwester_prozess": { "von": "IN_SCHWESTER", "zu": "IN_KLINIK" },
   "bricht_ab_und_verlaesst_klinik_wegen_wartezeit_schwester": { "von": "WARTET_SCHWESTER", "zu": "IN_KLINIK" },
   "bricht_ab_wegen_feierabend_schwester": { "von": "WARTET_SCHWESTER", "zu": "IN_KLINIK" },
+  "geht_ins_wartezimmer_schwester": { "von": "IN_KLINIK", "zu": "WEG_ZUM_WARTEZIMMER_SCHWESTER" },
+  "betritt_wartezimmer_schwester": { "von": "WEG_ZUM_WARTEZIMMER_SCHWESTER", "zu": "IM_WARTEZIMMER_SCHWESTER" },
+  "verlaesst_wartezimmer_schwester": { "von": "IM_WARTEZIMMER_SCHWESTER", "zu": "WEG_ZUR_SCHWESTER" },
 
   "geht_ins_wartezimmer": { "von": "IN_KLINIK", "zu": "WEG_ZUM_WARTEZIMMER_ARZT" },
   "betritt_wartezimmer": { "von": "WEG_ZUM_WARTEZIMMER_ARZT", "zu": "IM_WARTEZIMMER_ARZT" },

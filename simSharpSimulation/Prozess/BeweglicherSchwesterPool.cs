@@ -24,6 +24,11 @@ namespace simSharpSimulation
 
         public bool IstFrei => ressource.Remaining > 0;
 
+        public Event WennMitarbeiterFreiWird()
+        {
+            return ressource.WhenAny();
+        }
+
         public Request FordereMitarbeiterAn(int prioritaet)
         {
             return ressource.Request(priority: prioritaet);
