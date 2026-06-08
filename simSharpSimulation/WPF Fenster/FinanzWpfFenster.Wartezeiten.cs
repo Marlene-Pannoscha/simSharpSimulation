@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace simSharpSimulation;
 
@@ -16,40 +17,37 @@ internal sealed partial class FinanzWpfFenster
         Grid.SetRow(wartezeitenTextBox, 0);
         inhaltGrid.Children.Add(wartezeitenTextBox);
 
-        Grid tabellenGrid = new();
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
-        tabellenGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        StackPanel tabellenPanel = new()
+        {
+            Orientation = Orientation.Vertical
+        };
 
         Border warteschlangenBorder = ErzeugeTabellenContainer("Warteschlangen: Patientenanzahl", out warteschlangenDataGrid);
-        Grid.SetRow(warteschlangenBorder, 0);
-        tabellenGrid.Children.Add(warteschlangenBorder);
+        tabellenPanel.Children.Add(warteschlangenBorder);
 
         Border auslastungBorder = ErzeugeTabellenContainer("Auslastung", out auslastungDataGrid);
-        Grid.SetRow(auslastungBorder, 2);
-        tabellenGrid.Children.Add(auslastungBorder);
+        tabellenPanel.Children.Add(auslastungBorder);
 
         Border bereicheBorder = ErzeugeTabellenContainer("Bereiche: Patientenanzahl", out bereicheDataGrid);
-        Grid.SetRow(bereicheBorder, 4);
-        tabellenGrid.Children.Add(bereicheBorder);
+        tabellenPanel.Children.Add(bereicheBorder);
 
         Border wartezeitenBorder = ErzeugeTabellenContainer("Wartezeiten je Warteschlange", out wartezeitenDataGrid);
-        Grid.SetRow(wartezeitenBorder, 6);
-        tabellenGrid.Children.Add(wartezeitenBorder);
+        tabellenPanel.Children.Add(wartezeitenBorder);
 
         Border behandlungszeitenBorder = ErzeugeTabellenContainer("Behandlungszeit: Ist vs. Erwartet", out behandlungszeitenDataGrid);
-        Grid.SetRow(behandlungszeitenBorder, 8);
-        tabellenGrid.Children.Add(behandlungszeitenBorder);
+        tabellenPanel.Children.Add(behandlungszeitenBorder);
 
-        Grid.SetColumn(tabellenGrid, 2);
-        Grid.SetRow(tabellenGrid, 0);
-        inhaltGrid.Children.Add(tabellenGrid);
+        ScrollViewer tabellenScrollViewer = new()
+        {
+            Content = tabellenPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Visible,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Padding = new Thickness(0, 0, 4, 0)
+        };
+
+        Grid.SetColumn(tabellenScrollViewer, 2);
+        Grid.SetRow(tabellenScrollViewer, 0);
+        inhaltGrid.Children.Add(tabellenScrollViewer);
 
         return inhaltGrid;
     }
@@ -80,15 +78,24 @@ internal sealed partial class FinanzWpfFenster
     {
         DockPanel panel = new();
 
+        Border headerLeiste = new()
+        {
+            Background = new SolidColorBrush(Color.FromRgb(245, 247, 250)),
+            BorderBrush = Brushes.Gainsboro,
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Padding = new Thickness(10, 7, 10, 7)
+        };
+
         TextBlock header = new()
         {
             Text = titel,
             FontWeight = FontWeights.SemiBold,
-            FontSize = 16,
-            Margin = new Thickness(8, 6, 8, 4)
+            FontSize = 15,
+            Foreground = new SolidColorBrush(Color.FromRgb(35, 45, 55))
         };
-        DockPanel.SetDock(header, Dock.Top);
-        panel.Children.Add(header);
+        headerLeiste.Child = header;
+        DockPanel.SetDock(headerLeiste, Dock.Top);
+        panel.Children.Add(headerLeiste);
 
         dataGrid = new DataGrid
         {
@@ -98,15 +105,29 @@ internal sealed partial class FinanzWpfFenster
             CanUserDeleteRows = false,
             HeadersVisibility = DataGridHeadersVisibility.Column,
             Margin = new Thickness(8),
-            MinRowHeight = 24
+            MinRowHeight = 26,
+            RowHeight = 28,
+            AlternatingRowBackground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            Background = Brushes.White,
+            BorderThickness = new Thickness(0),
+            GridLinesVisibility = DataGridGridLinesVisibility.Horizontal,
+            HorizontalGridLinesBrush = new SolidColorBrush(Color.FromRgb(232, 236, 240)),
+            CanUserResizeColumns = true,
+            SelectionMode = DataGridSelectionMode.Single,
+            SelectionUnit = DataGridSelectionUnit.FullRow
         };
+        ScrollViewer.SetVerticalScrollBarVisibility(dataGrid, ScrollBarVisibility.Visible);
+        ScrollViewer.SetHorizontalScrollBarVisibility(dataGrid, ScrollBarVisibility.Auto);
         panel.Children.Add(dataGrid);
 
         return new Border
         {
-            BorderBrush = System.Windows.Media.Brushes.LightGray,
+            BorderBrush = Brushes.Gainsboro,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
+            Background = Brushes.White,
+            Height = 220,
+            Margin = new Thickness(0, 0, 0, 12),
             Child = panel
         };
     }

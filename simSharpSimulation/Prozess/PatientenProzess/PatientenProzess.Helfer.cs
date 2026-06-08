@@ -1,11 +1,30 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System;
 using SimSharp;
 
 namespace simSharpSimulation
 {
+    internal static class PatientenProzessHelfer
+    {
+        internal static int BestimmePrioritaet(PatientenTyp typ)
+        {
+            return typ switch
+            {
+                PatientenTyp.Kurz => 3,
+                PatientenTyp.Mittel => 2,
+                PatientenTyp.Lang => 1,
+                _ => 1
+            };
+        }
+
+        internal static double AktuelleMinuten(Simulation env)
+        {
+            return (env.Now - env.StartDate).TotalMinutes;
+        }
+    }
+
     // Diese Datei enthält gemeinsam genutzte Hilfsmethoden des Patientenprozesses.
     // Sie ist aktuell wichtig, weil Ressourcenwahl, PatientenTyp-Wahl und Belegungsprüfung
     // aus dem Patientenablauf hierher ausgelagert wurden.

@@ -23,7 +23,8 @@ internal sealed partial class FinanzWpfFenster
 
         StackPanel diagrammPanel = new()
         {
-            Orientation = Orientation.Vertical
+            Orientation = Orientation.Vertical,
+            Margin = new Thickness(0, 0, 4, 0)
         };
 
         Border phaseBorder = ErzeugeBildContainer("Prognose-Trefferquote je Phase", out prognosePhaseImage);
@@ -36,12 +37,12 @@ internal sealed partial class FinanzWpfFenster
         scatterBorder.Margin = new Thickness(0, 0, 0, 12);
         diagrammPanel.Children.Add(scatterBorder);
 
-        Border abbruecheZeitBorder = ErzeugeBildContainer("Prognose-Abbrüche über Zeit", out prognoseAbbruecheZeitImage);
+        Border abbruecheZeitBorder = ErzeugeBildContainer("Prognose-Abbrueche ueber Zeit", out prognoseAbbruecheZeitImage);
         abbruecheZeitBorder.MinHeight = 420;
         abbruecheZeitBorder.Margin = new Thickness(0, 0, 0, 12);
         diagrammPanel.Children.Add(abbruecheZeitBorder);
 
-        Border abbruchgruendeBorder = ErzeugeBildContainer("Abbruchgründe Vergleich", out prognoseAbbruchgruendeImage);
+        Border abbruchgruendeBorder = ErzeugeBildContainer("Abbruchgruende Vergleich", out prognoseAbbruchgruendeImage);
         abbruchgruendeBorder.MinHeight = 420;
         diagrammPanel.Children.Add(abbruchgruendeBorder);
 
@@ -49,7 +50,8 @@ internal sealed partial class FinanzWpfFenster
         {
             Content = diagrammPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Padding = new Thickness(0, 0, 4, 0)
         };
 
         Grid.SetColumn(diagrammScrollViewer, 2);
