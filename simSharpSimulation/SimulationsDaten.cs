@@ -14,6 +14,11 @@ namespace simSharpSimulation
     public sealed class SimulationsDaten
     {
         private const string ZustandUnveraendert = "UNVERAENDERT";
+        private const double PrognoseTrefferToleranzAnteil = 0.30;
+        private const double PrognoseTrefferMindestToleranzMinuten = 5.0;
+        private const int PrognoseKalibrierungMindestStichprobe = 12;
+        private const double PrognoseKalibrierungLernrate = 0.04;
+        private const double PrognoseKalibrierungMaxKorrekturMinuten = 12.0;
 
         private static readonly Dictionary<string, (string Von, string Zu)> EventZustandsMapping =
             ErstelleEventZustandsMapping();
@@ -62,6 +67,8 @@ namespace simSharpSimulation
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
         private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
         private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
+        private readonly Dictionary<string, PrognoseKalibrierung> prognoseKalibrierungNachPhase = new();
+        private static readonly bool PrognoseRestzeitKalibrierungAktiv = false;
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -275,6 +282,9 @@ namespace simSharpSimulation
             string phase,
             double zeitpunktMinuten,
             double prognoseRestMinuten,
+            double prognoseKorrekturMinuten,
+            double prognoseBearbeitungsRestMinuten,
+            double verbrauchteBearbeitungsMinuten,
             bool prognoseFertigBisSchichtende)
         {
             if (!prognoseOffen.TryGetValue(patientId, out List<PrognosePruefung>? liste))
@@ -283,7 +293,15 @@ namespace simSharpSimulation
                 prognoseOffen[patientId] = liste;
             }
 
-            liste.Add(new PrognosePruefung(patientId, phase, zeitpunktMinuten, prognoseRestMinuten, prognoseFertigBisSchichtende));
+            liste.Add(new PrognosePruefung(
+                patientId,
+                phase,
+                zeitpunktMinuten,
+                prognoseRestMinuten,
+                prognoseKorrekturMinuten,
+                prognoseBearbeitungsRestMinuten,
+                verbrauchteBearbeitungsMinuten,
+                prognoseFertigBisSchichtende));
             AnzahlPrognosePruefungen++;
 
             if (AnzahlPrognosePruefungen == 1)
@@ -292,7 +310,27 @@ namespace simSharpSimulation
             }
         }
 
-        public void SchliessePrognosen(int patientId, double endZeitpunktMinuten)
+        public double ErmittlePrognoseRestzeitKorrektur(string phase)
+        {
+            if (!PrognoseRestzeitKalibrierungAktiv)
+            {
+                return 0.0;
+            }
+
+            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out PrognoseKalibrierung? kalibrierung))
+            {
+                return 0.0;
+            }
+
+            return kalibrierung.Anzahl >= PrognoseKalibrierungMindestStichprobe
+                ? kalibrierung.GekappteKorrekturMinuten
+                : 0.0;
+        }
+
+        public void SchliessePrognosen(
+            int patientId,
+            double endZeitpunktMinuten,
+            double? gesampelteBearbeitungszeitGesamt = null)
         {
             if (!prognoseOffen.TryGetValue(patientId, out List<PrognosePruefung>? liste) || liste.Count == 0)
                 return;
@@ -300,6 +338,20 @@ namespace simSharpSimulation
             foreach (var pruefung in liste)
             {
                 double actualRest = Math.Max(0.0, endZeitpunktMinuten - pruefung.ZeitpunktMinuten);
+                double abweichungMinuten = pruefung.PrognoseRestMinuten - actualRest;
+                double? abweichungProzent = actualRest > 0.0001
+                    ? (abweichungMinuten / actualRest) * 100.0
+                    : null;
+                double? gesampelteBearbeitungsRestMinuten = gesampelteBearbeitungszeitGesamt.HasValue
+                    ? Math.Max(0.0, gesampelteBearbeitungszeitGesamt.Value - pruefung.VerbrauchteBearbeitungsMinuten)
+                    : null;
+                double? abweichungBearbeitungMinuten = gesampelteBearbeitungsRestMinuten.HasValue
+                    ? pruefung.PrognoseBearbeitungsRestMinuten - gesampelteBearbeitungsRestMinuten.Value
+                    : null;
+                double? abweichungBearbeitungProzent =
+                    gesampelteBearbeitungsRestMinuten.HasValue && gesampelteBearbeitungsRestMinuten.Value > 0.0001
+                        ? (abweichungBearbeitungMinuten!.Value / gesampelteBearbeitungsRestMinuten.Value) * 100.0
+                        : null;
                 bool korrekt;
 
                 if (actualRest <= 0.0001)
@@ -308,24 +360,50 @@ namespace simSharpSimulation
                 }
                 else
                 {
-                    double toleranz = actualRest * 0.20;
+                    double toleranz = BerechnePrognoseTrefferToleranz(actualRest);
                     korrekt = Math.Abs(pruefung.PrognoseRestMinuten - actualRest) <= toleranz;
                 }
 
                 if (korrekt)
                     AnzahlPrognoseRichtig++;
 
+                double basisPrognoseRestMinuten = pruefung.PrognoseRestMinuten - pruefung.PrognoseKorrekturMinuten;
+                AktualisierePrognoseKalibrierung(pruefung.Phase, actualRest - basisPrognoseRestMinuten);
                 prognoseErgebnisse.Add(new PrognoseErgebnis(
                     pruefung.PatientId,
                     pruefung.Phase,
                     pruefung.ZeitpunktMinuten,
                     pruefung.PrognoseRestMinuten,
+                    pruefung.PrognoseBearbeitungsRestMinuten,
+                    gesampelteBearbeitungsRestMinuten,
+                    abweichungBearbeitungMinuten,
+                    abweichungBearbeitungProzent,
                     actualRest,
+                    abweichungMinuten,
+                    abweichungProzent,
                     korrekt,
                     pruefung.PrognoseFertigBisSchichtende));
             }
 
             prognoseOffen.Remove(patientId);
+        }
+
+        private void AktualisierePrognoseKalibrierung(string phase, double abweichungMinuten)
+        {
+            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out PrognoseKalibrierung? kalibrierung))
+            {
+                kalibrierung = new PrognoseKalibrierung();
+                prognoseKalibrierungNachPhase[phase] = kalibrierung;
+            }
+
+            kalibrierung.Aktualisiere(abweichungMinuten);
+        }
+
+        private static double BerechnePrognoseTrefferToleranz(double istRestMinuten)
+        {
+            return Math.Max(
+                PrognoseTrefferMindestToleranzMinuten,
+                istRestMinuten * PrognoseTrefferToleranzAnteil);
         }
 
         public string ErzeugePrognoseReportText()
@@ -336,10 +414,27 @@ namespace simSharpSimulation
             sb.AppendLine("Prognosemodell-Auswertung");
             sb.AppendLine(new string('=', 50));
             sb.AppendLine($"Prognoseprüfungen gesamt: {AnzahlPrognosePruefungen.ToString("N0", culture)}");
-            sb.AppendLine($"Richtig (±20 %): {AnzahlPrognoseRichtig.ToString("N0", culture)}");
+            sb.AppendLine(
+                $"Richtig (+/-{(PrognoseTrefferToleranzAnteil * 100.0).ToString("N0", culture)} % " +
+                $"oder +/-{PrognoseTrefferMindestToleranzMinuten.ToString("N0", culture)} min): {AnzahlPrognoseRichtig.ToString("N0", culture)}");
             sb.AppendLine($"Trefferquote: {PrognoseTrefferquote.ToString("N2", culture)} %");
             sb.AppendLine($"Prognose-Abbrüche: {AnzahlPrognoseAbbruch.ToString("N0", culture)}");
             sb.AppendLine($"Aufnahmeprognose-Abweisungen: {AnzahlPrognoseAufnahmeAbgewiesen.ToString("N0", culture)}");
+            if (prognoseErgebnisse.Count > 0)
+            {
+                var ergebnisseMitBearbeitung = prognoseErgebnisse
+                    .Where(e => e.GesampelteBearbeitungsRestMinuten.HasValue)
+                    .ToList();
+                sb.AppendLine($"Mittlere geschaetzte Restzeit: {prognoseErgebnisse.Average(e => e.PrognoseRestMinuten).ToString("N2", culture)} min");
+                sb.AppendLine($"Mittlere tatsaechliche Restzeit: {prognoseErgebnisse.Average(e => e.IstRestMinuten).ToString("N2", culture)} min");
+                sb.AppendLine($"Mittlere absolute Abweichung: {prognoseErgebnisse.Average(e => Math.Abs(e.AbweichungMinuten)).ToString("N2", culture)} min");
+                if (ergebnisseMitBearbeitung.Count > 0)
+                {
+                    sb.AppendLine($"Mittlere prognostizierte Bearbeitungs-Restzeit: {ergebnisseMitBearbeitung.Average(e => e.PrognoseBearbeitungsRestMinuten).ToString("N2", culture)} min");
+                    sb.AppendLine($"Mittlere gesampelte Bearbeitungs-Restzeit: {ergebnisseMitBearbeitung.Average(e => e.GesampelteBearbeitungsRestMinuten!.Value).ToString("N2", culture)} min");
+                    sb.AppendLine($"Mittlere absolute Bearbeitungs-Abweichung: {ergebnisseMitBearbeitung.Average(e => Math.Abs(e.AbweichungBearbeitungMinuten!.Value)).ToString("N2", culture)} min");
+                }
+            }
             sb.AppendLine();
 
             var nachPhase = prognoseErgebnisse
@@ -356,7 +451,30 @@ namespace simSharpSimulation
                     int total = gruppe.Count();
                     int korrekt = gruppe.Count(e => e.Korrekt);
                     double quote = total > 0 ? (korrekt / (double)total) * 100.0 : 0.0;
-                    sb.AppendLine($"{gruppe.Key}: {korrekt}/{total} ({quote.ToString("N2", culture)} %)");
+                    double mittlerePrognose = gruppe.Average(e => e.PrognoseRestMinuten);
+                    double mittlereIstRestzeit = gruppe.Average(e => e.IstRestMinuten);
+                    double mittlereAbsoluteAbweichung = gruppe.Average(e => Math.Abs(e.AbweichungMinuten));
+                    var gruppeMitBearbeitung = gruppe
+                        .Where(e => e.GesampelteBearbeitungsRestMinuten.HasValue)
+                        .ToList();
+                    sb.AppendLine(
+                        $"{gruppe.Key}: {korrekt}/{total} ({quote.ToString("N2", culture)} %) " +
+                        $"| Prognose {mittlerePrognose.ToString("N2", culture)} min " +
+                        $"| Ist {mittlereIstRestzeit.ToString("N2", culture)} min " +
+                        $"| abs. Abw. {mittlereAbsoluteAbweichung.ToString("N2", culture)} min");
+                    if (gruppeMitBearbeitung.Count > 0)
+                    {
+                        double mittlereBearbeitungsPrognose =
+                            gruppeMitBearbeitung.Average(e => e.PrognoseBearbeitungsRestMinuten);
+                        double mittlereBearbeitung =
+                            gruppeMitBearbeitung.Average(e => e.GesampelteBearbeitungsRestMinuten!.Value);
+                        double mittlereAbsoluteBearbeitungsAbweichung =
+                            gruppeMitBearbeitung.Average(e => Math.Abs(e.AbweichungBearbeitungMinuten!.Value));
+                        sb.AppendLine(
+                            $"  Bearbeitung: Prognose {mittlereBearbeitungsPrognose.ToString("N2", culture)} min " +
+                            $"| Sample {mittlereBearbeitung.ToString("N2", culture)} min " +
+                            $"| abs. Abw. {mittlereAbsoluteBearbeitungsAbweichung.ToString("N2", culture)} min");
+                    }
                 }
             }
 
@@ -370,7 +488,7 @@ namespace simSharpSimulation
             sb.AppendLine(report);
             sb.AppendLine();
             sb.AppendLine("Details");
-            sb.AppendLine("PatientId;Phase;ZeitpunktMin;PrognoseRestMin;IstRestMin;Korrekt;PrognoseFertigBisSchichtende");
+            sb.AppendLine("PatientId;Phase;ZeitpunktMin;PrognoseRestMin;IstRestMin;AbweichungMin;AbweichungProzent;PrognoseBearbeitungsRestMin;GesampelteBearbeitungsRestMin;AbweichungBearbeitungMin;AbweichungBearbeitungProzent;Korrekt;PrognoseFertigBisSchichtende");
             foreach (var eintrag in prognoseErgebnisse)
             {
                 sb.AppendLine(string.Join(";", new[]
@@ -380,6 +498,12 @@ namespace simSharpSimulation
                     eintrag.ZeitpunktMinuten.ToString("F2", CultureInfo.InvariantCulture),
                     eintrag.PrognoseRestMinuten.ToString("F2", CultureInfo.InvariantCulture),
                     eintrag.IstRestMinuten.ToString("F2", CultureInfo.InvariantCulture),
+                    eintrag.AbweichungMinuten.ToString("F2", CultureInfo.InvariantCulture),
+                    eintrag.AbweichungProzent?.ToString("F2", CultureInfo.InvariantCulture) ?? "",
+                    eintrag.PrognoseBearbeitungsRestMinuten.ToString("F2", CultureInfo.InvariantCulture),
+                    eintrag.GesampelteBearbeitungsRestMinuten?.ToString("F2", CultureInfo.InvariantCulture) ?? "",
+                    eintrag.AbweichungBearbeitungMinuten?.ToString("F2", CultureInfo.InvariantCulture) ?? "",
+                    eintrag.AbweichungBearbeitungProzent?.ToString("F2", CultureInfo.InvariantCulture) ?? "",
                     eintrag.Korrekt ? "1" : "0",
                     eintrag.PrognoseFertigBisSchichtende ? "1" : "0"
                 }));
@@ -407,6 +531,8 @@ namespace simSharpSimulation
                 AnzahlPrognosePruefungen,
                 AnzahlPrognoseRichtig,
                 AnzahlPrognoseAbbruch,
+                PrognoseTrefferToleranzProzent = PrognoseTrefferToleranzAnteil * 100.0,
+                PrognoseTrefferMindestToleranzMinuten,
                 PrognoseTrefferquote,
                 Abbruchgruende = new
                 {
@@ -424,6 +550,12 @@ namespace simSharpSimulation
                     e.ZeitpunktMinuten,
                     e.PrognoseRestMinuten,
                     IstRestMinuten = e.IstRestMinuten,
+                    e.AbweichungMinuten,
+                    e.AbweichungProzent,
+                    e.PrognoseBearbeitungsRestMinuten,
+                    e.GesampelteBearbeitungsRestMinuten,
+                    e.AbweichungBearbeitungMinuten,
+                    e.AbweichungBearbeitungProzent,
                     e.Korrekt,
                     e.PrognoseFertigBisSchichtende
                 }),
@@ -584,11 +716,38 @@ namespace simSharpSimulation
             public int Miss { get; set; }
         }
 
+        private sealed class PrognoseKalibrierung
+        {
+            public int Anzahl { get; set; }
+            public double GeglaetteteAbweichungMinuten { get; set; }
+            public double GekappteKorrekturMinuten => Math.Clamp(
+                GeglaetteteAbweichungMinuten,
+                -PrognoseKalibrierungMaxKorrekturMinuten,
+                PrognoseKalibrierungMaxKorrekturMinuten);
+
+            public void Aktualisiere(double abweichungMinuten)
+            {
+                Anzahl++;
+                if (Anzahl == 1)
+                {
+                    GeglaetteteAbweichungMinuten = abweichungMinuten;
+                    return;
+                }
+
+                GeglaetteteAbweichungMinuten =
+                    ((1.0 - PrognoseKalibrierungLernrate) * GeglaetteteAbweichungMinuten) +
+                    (PrognoseKalibrierungLernrate * abweichungMinuten);
+            }
+        }
+
         private sealed record PrognosePruefung(
             int PatientId,
             string Phase,
             double ZeitpunktMinuten,
             double PrognoseRestMinuten,
+            double PrognoseKorrekturMinuten,
+            double PrognoseBearbeitungsRestMinuten,
+            double VerbrauchteBearbeitungsMinuten,
             bool PrognoseFertigBisSchichtende);
 
         private sealed record PrognoseErgebnis(
@@ -596,7 +755,13 @@ namespace simSharpSimulation
             string Phase,
             double ZeitpunktMinuten,
             double PrognoseRestMinuten,
+            double PrognoseBearbeitungsRestMinuten,
+            double? GesampelteBearbeitungsRestMinuten,
+            double? AbweichungBearbeitungMinuten,
+            double? AbweichungBearbeitungProzent,
             double IstRestMinuten,
+            double AbweichungMinuten,
+            double? AbweichungProzent,
             bool Korrekt,
             bool PrognoseFertigBisSchichtende);
 

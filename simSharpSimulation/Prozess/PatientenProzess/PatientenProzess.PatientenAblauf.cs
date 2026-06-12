@@ -48,19 +48,52 @@ namespace simSharpSimulation
             double arztBehandlungsdauer = ZieheArztBehandlungsdauer(patientenTyp, rnd);
             double schwesterWartezimmerdauer = ZieheSchwesterWartezimmerdauer(hatTermin, rnd);
             double arztWartezimmerdauer = ZieheArztWartezimmerdauer(hatTermin, rnd);
+            double vorbereitungsWahrscheinlichkeit = hatTermin
+                ? PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT
+                : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
+            bool brauchtVorbereitung = rnd.NextDouble() < vorbereitungsWahrscheinlichkeit;
+            bool gehtNachArztZurRezeption = rnd.NextDouble() < WahrscheinlichkeitNachArztZurRezeption;
+            double prognoseBearbeitungsRestzeitAbAnkunft =
+                ersteRezeptionsdauer +
+                (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0) +
+                arztBehandlungsdauer +
+                (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
+            PlaneRezeptionsAnkunft(
+                env,
+                patientId,
+                eingangZurRezeptionDauer.TotalMinutes,
+                ersteRezeptionsdauer);
             double erwarteteRestzeitAbAnkunft =
                 eingangZurRezeptionDauer.TotalMinutes +
+                SchaetzeRezeptionsQueueWartezeit(env, patientId, ersteRezeptionsdauer, eingangZurRezeptionDauer.TotalMinutes) +
                 ersteRezeptionsdauer +
-                BerechneErwarteteSchwesterRestzeit(
-                    hatTermin,
-                    interneBewegungsdauer,
-                    hatTermin
-                        ? PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT
-                        : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT,
+                (brauchtVorbereitung
+                    ? ((2.0 * interneBewegungsdauer.TotalMinutes) + schwesterWartezimmerdauer + schwesterBehandlungsdauer)
+                    : 0.0) +
+                (brauchtVorbereitung ? SchaetzeSchwesterQueueWartezeit(
+                    env,
+                    patientId,
                     schwesterBehandlungsdauer,
-                    schwesterWartezimmerdauer) +
+                    patientenTyp,
+                    eingangZurRezeptionDauer.TotalMinutes + ersteRezeptionsdauer + interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer) : 0.0) +
                 BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
-                BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer, zweiteRezeptionsdauer);
+                SchaetzeArztQueueWartezeit(
+                    env,
+                    patientId,
+                    arztBehandlungsdauer,
+                    patientenTyp,
+                    eingangZurRezeptionDauer.TotalMinutes +
+                    ersteRezeptionsdauer +
+                    (brauchtVorbereitung ? ((2.0 * interneBewegungsdauer.TotalMinutes) + schwesterWartezimmerdauer + schwesterBehandlungsdauer) : 0.0) +
+                    interneBewegungsdauer.TotalMinutes +
+                    arztWartezimmerdauer) +
+                (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
+                BerechneRestzeitNachArztMitKonkretemPfad(
+                    gehtNachArztZurRezeption,
+                    interneBewegungsdauer,
+                    rezeptionZumAusgangDauer,
+                    arztZumAusgangDauer,
+                    zweiteRezeptionsdauer);
 
             if (!DarfPatientNachAufnahmeprognoseNochRein(env, patientId))
             {
@@ -69,7 +102,13 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            if (!ErfassePrognoseCheckpoint(env, patientId, "Ankunft", erwarteteRestzeitAbAnkunft))
+            if (!ErfassePrognoseCheckpoint(
+                env,
+                patientId,
+                "Ankunft",
+                erwarteteRestzeitAbAnkunft,
+                prognoseBearbeitungsRestzeitAbAnkunft,
+                0.0))
             {
                 foreach (var ev in BrichWegenPrognoseAb(env, patientId, "Ankunft", TimeSpan.Zero))
                     yield return ev;
@@ -83,7 +122,7 @@ namespace simSharpSimulation
             double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
 
             var ersteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rezeptionZumAusgangDauer, ersteRezeptionsdauer, daten, ersteRezeptionErgebnis))
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rezeptionZumAusgangDauer, ersteRezeptionsdauer, daten, ersteRezeptionErgebnis, rezeptionStatus))
                 yield return ev;
 
             if (ersteRezeptionErgebnis.PatientHatKlinikVerlassen)
@@ -93,7 +132,6 @@ namespace simSharpSimulation
             }
 
             // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
-            bool brauchtVorbereitung = false;
             bool direktZurSchwester = false;
             bool ueberspringeSchwester = false;
 
@@ -103,7 +141,6 @@ namespace simSharpSimulation
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_termin", patientId);
 
                 // Schritt P4.7A: Bei Termin prüfen, ob Schwester-Vorbereitung nötig ist.
-                brauchtVorbereitung = rnd.NextDouble() < PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
                 if (brauchtVorbereitung)
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
@@ -140,7 +177,6 @@ namespace simSharpSimulation
                 daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_keinen_termin", patientId);
 
                 // Auch ohne Termin prüfen, ob eine Schwester-Vorbereitung anfällt.
-                brauchtVorbereitung = rnd.NextDouble() < PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
                 if (brauchtVorbereitung)
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
@@ -174,6 +210,41 @@ namespace simSharpSimulation
 
             // Schritt P4.10: Falls Schwester nicht übersprungen wird,
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
+            double prognoseBearbeitungsRestzeitNachRezeption =
+                (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0) +
+                arztBehandlungsdauer +
+                (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
+            double prognoseBearbeitungsRestzeitVorSchwester =
+                schwesterBehandlungsdauer +
+                arztBehandlungsdauer +
+                (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
+            double prognoseBearbeitungsRestzeitNachSchwester =
+                arztBehandlungsdauer +
+                (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
+            double verbrauchteBearbeitungszeitNachRezeption = ersteRezeptionsdauer;
+            double verbrauchteBearbeitungszeitNachSchwester =
+                ersteRezeptionsdauer +
+                (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0);
+
+            if (brauchtVorbereitung)
+            {
+                PlaneSchwesterAnkunft(
+                    env,
+                    patientId,
+                    direktZurSchwester ? 0.0 : interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer,
+                    schwesterBehandlungsdauer,
+                    patientenTyp);
+            }
+            else
+            {
+                PlaneArztAnkunft(
+                    env,
+                    patientId,
+                    interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer,
+                    arztBehandlungsdauer,
+                    patientenTyp);
+            }
+
             if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
             {
                 foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, rezeptionZumAusgangDauer))
@@ -192,8 +263,33 @@ namespace simSharpSimulation
                     interneBewegungsdauer,
                     schwesterBehandlungsdauer,
                     schwesterWartezimmerdauer) +
+                (brauchtVorbereitung ? SchaetzeSchwesterQueueWartezeit(
+                    env,
+                    patientId,
+                    schwesterBehandlungsdauer,
+                    patientenTyp,
+                    direktZurSchwester ? 0.0 : interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer) : 0.0) +
                 BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
-                BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer, zweiteRezeptionsdauer)))
+                SchaetzeArztQueueWartezeit(
+                    env,
+                    patientId,
+                    arztBehandlungsdauer,
+                    patientenTyp,
+                    brauchtVorbereitung
+                        ? ((direktZurSchwester ? 0.0 : interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer) +
+                           schwesterBehandlungsdauer +
+                           interneBewegungsdauer.TotalMinutes +
+                           arztWartezimmerdauer)
+                        : interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer) +
+                (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
+                BerechneRestzeitNachArztMitKonkretemPfad(
+                    gehtNachArztZurRezeption,
+                    interneBewegungsdauer,
+                    rezeptionZumAusgangDauer,
+                    arztZumAusgangDauer,
+                    zweiteRezeptionsdauer),
+                prognoseBearbeitungsRestzeitNachRezeption,
+                verbrauchteBearbeitungszeitNachRezeption))
             {
                 foreach (var ev in BrichWegenPrognoseAb(env, patientId, "NachRezeption", rezeptionZumAusgangDauer))
                     yield return ev;
@@ -216,8 +312,23 @@ namespace simSharpSimulation
                     "VorSchwester",
                     interneBewegungsdauer.TotalMinutes +
                     schwesterBehandlungsdauer +
+                    SchaetzeSchwesterQueueWartezeit(env, patientId, schwesterBehandlungsdauer, patientenTyp) +
                     BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
-                    BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer, zweiteRezeptionsdauer)))
+                    SchaetzeArztQueueWartezeit(
+                        env,
+                        patientId,
+                        arztBehandlungsdauer,
+                        patientenTyp,
+                        schwesterBehandlungsdauer + interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer) +
+                    (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
+                    BerechneRestzeitNachArztMitKonkretemPfad(
+                        gehtNachArztZurRezeption,
+                        interneBewegungsdauer,
+                        rezeptionZumAusgangDauer,
+                        arztZumAusgangDauer,
+                        zweiteRezeptionsdauer),
+                    prognoseBearbeitungsRestzeitVorSchwester,
+                    verbrauchteBearbeitungszeitNachRezeption))
                 {
                     foreach (var ev in BrichWegenPrognoseAb(env, patientId, "VorSchwester", interneBewegungsdauer))
                         yield return ev;
@@ -237,7 +348,8 @@ namespace simSharpSimulation
                     interneBewegungsdauer,
                     schwesterBehandlungsdauer,
                     daten,
-                    schwesterErgebnis))
+                    schwesterErgebnis,
+                    schwesterStatus))
                     yield return ev;
 
                 if (schwesterErgebnis.PatientHatKlinikVerlassen)
@@ -253,12 +365,33 @@ namespace simSharpSimulation
                     yield break;
                 }
 
+                PlaneArztAnkunft(
+                    env,
+                    patientId,
+                    interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer,
+                    arztBehandlungsdauer,
+                    patientenTyp);
+
                 if (!ErfassePrognoseCheckpoint(
                     env,
                     patientId,
                     "NachSchwester",
                     BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
-                    BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer, zweiteRezeptionsdauer)))
+                    SchaetzeArztQueueWartezeit(
+                        env,
+                        patientId,
+                        arztBehandlungsdauer,
+                        patientenTyp,
+                        interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer) +
+                    (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
+                    BerechneRestzeitNachArztMitKonkretemPfad(
+                        gehtNachArztZurRezeption,
+                        interneBewegungsdauer,
+                        rezeptionZumAusgangDauer,
+                        arztZumAusgangDauer,
+                        zweiteRezeptionsdauer),
+                    prognoseBearbeitungsRestzeitNachSchwester,
+                    verbrauchteBearbeitungszeitNachSchwester))
                 {
                     foreach (var ev in BrichWegenPrognoseAb(env, patientId, "NachSchwester", interneBewegungsdauer))
                         yield return ev;
@@ -294,7 +427,16 @@ namespace simSharpSimulation
                 "VorArzt",
                 interneBewegungsdauer.TotalMinutes +
                 arztBehandlungsdauer +
-                BerechneErwarteteRestzeitNachArzt(interneBewegungsdauer, rezeptionZumAusgangDauer, arztZumAusgangDauer, zweiteRezeptionsdauer)))
+                SchaetzeArztQueueWartezeit(env, patientId, arztBehandlungsdauer, patientenTyp) +
+                (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
+                BerechneRestzeitNachArztMitKonkretemPfad(
+                    gehtNachArztZurRezeption,
+                    interneBewegungsdauer,
+                    rezeptionZumAusgangDauer,
+                    arztZumAusgangDauer,
+                    zweiteRezeptionsdauer),
+                prognoseBearbeitungsRestzeitNachSchwester,
+                verbrauchteBearbeitungszeitNachSchwester))
             {
                 foreach (var ev in BrichWegenPrognoseAb(env, patientId, "VorArzt", interneBewegungsdauer))
                     yield return ev;
@@ -304,7 +446,7 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var arztErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis, arztStatus))
                 yield return ev;
 
             if (arztErgebnis.PatientHatKlinikVerlassen)
@@ -321,7 +463,20 @@ namespace simSharpSimulation
             }
 
             // Schritt P4.13: Nach dem Arzt entscheidet sich, ob der Patient noch einmal zur Rezeption muss.
-            bool gehtNachArztZurRezeption = rnd.NextDouble() < WahrscheinlichkeitNachArztZurRezeption;
+            double prognoseBearbeitungsRestzeitNachArzt =
+                gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0;
+            double verbrauchteBearbeitungszeitNachArzt =
+                verbrauchteBearbeitungszeitNachSchwester +
+                arztBehandlungsdauer;
+            if (gehtNachArztZurRezeption)
+            {
+                PlaneRezeptionsAnkunft(
+                    env,
+                    patientId,
+                    interneBewegungsdauer.TotalMinutes,
+                    zweiteRezeptionsdauer);
+            }
+
             if (!ErfassePrognoseCheckpoint(
                 env,
                 patientId,
@@ -331,7 +486,10 @@ namespace simSharpSimulation
                     interneBewegungsdauer,
                     rezeptionZumAusgangDauer,
                     arztZumAusgangDauer,
-                    zweiteRezeptionsdauer)))
+                    zweiteRezeptionsdauer) +
+                (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer, interneBewegungsdauer.TotalMinutes) : 0.0),
+                prognoseBearbeitungsRestzeitNachArzt,
+                verbrauchteBearbeitungszeitNachArzt))
             {
                 foreach (var ev in BrichWegenPrognoseAb(env, patientId, "NachArzt", arztZumAusgangDauer))
                     yield return ev;
@@ -345,7 +503,7 @@ namespace simSharpSimulation
                 yield return env.Timeout(interneBewegungsdauer);
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                 var zweiteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
-                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rezeptionZumAusgangDauer, zweiteRezeptionsdauer, daten, zweiteRezeptionErgebnis))
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rezeptionZumAusgangDauer, zweiteRezeptionsdauer, daten, zweiteRezeptionErgebnis, rezeptionStatus))
                     yield return ev;
 
                 if (zweiteRezeptionErgebnis.PatientHatKlinikVerlassen)
@@ -370,8 +528,13 @@ namespace simSharpSimulation
 
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
             double gesamtprozesszeit = nowMinutes - ankunftszeit;
+            double gesampelteBearbeitungszeitGesamt =
+                ersteRezeptionsdauer +
+                (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0) +
+                arztBehandlungsdauer +
+                (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
             daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
-            daten.SchliessePrognosen(patientId, nowMinutes);
+            daten.SchliessePrognosen(patientId, nowMinutes, gesampelteBearbeitungszeitGesamt);
             EntferneAktivePatientenPrognose(patientId);
         }
     }

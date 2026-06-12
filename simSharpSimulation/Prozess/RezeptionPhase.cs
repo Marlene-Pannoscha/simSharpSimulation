@@ -21,12 +21,14 @@ namespace simSharpSimulation
             TimeSpan wegZumAusgang,
             double behandlungsdauer,
             SimulationsDaten daten,
-            BehandlungsPhaseErgebnis ergebnis)
+            BehandlungsPhaseErgebnis ergebnis,
+            PrognoseRessourcenStatus prognoseStatus)
         {
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
 
             daten.LogEvent(nowMinutes, "betritt_rezeption_warteschlange", patientId);
+            prognoseStatus.RegistriereWartend(patientId, behandlungsdauer);
 
             bool rezeptionWarFrei = IstRezeptionFrei(rezeption);
             daten.LogEvent(nowMinutes, rezeptionWarFrei ? "rezeption_frei" : "rezeption_nicht_frei", patientId);
@@ -37,7 +39,7 @@ namespace simSharpSimulation
 
             if (nowMinutes >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis))
+                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis, prognoseStatus))
                     yield return ev;
                 yield break;
             }
@@ -64,6 +66,7 @@ namespace simSharpSimulation
                     daten.LogEvent(nowMinutes, "betritt_rezeption", patientId);
                     daten.LogEvent(nowMinutes, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
                     daten.LogEvent(nowMinutes, "startet_rezeption", patientId);
+                    prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
 
                     double wartezeitRezeption = nowMinutes - ankunftszeit;
                     daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
@@ -74,6 +77,7 @@ namespace simSharpSimulation
 
                     nowMinutes = (env.Now - env.StartDate).TotalMinutes;
                     daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
+                    prognoseStatus.BeendeBehandlung(patientId);
                     if (behandlungBereitsFertig)
                     {
                         daten.LogEvent(nowMinutes, "macht_folgetermin_aus_oder_rezept", patientId);
@@ -87,7 +91,7 @@ namespace simSharpSimulation
 
             if (brichtWartenAb)
             {
-                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis))
+                foreach (Event ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis, prognoseStatus))
                     yield return ev;
             }
         }
@@ -97,9 +101,11 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             int patientId,
             TimeSpan interneBewegungsdauer,
-            BehandlungsPhaseErgebnis ergebnis)
+            BehandlungsPhaseErgebnis ergebnis,
+            PrognoseRessourcenStatus prognoseStatus)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            prognoseStatus.EntfernePatient(patientId);
             // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
             daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
             daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_rezeption", patientId);

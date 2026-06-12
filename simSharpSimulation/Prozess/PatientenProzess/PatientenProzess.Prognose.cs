@@ -13,19 +13,32 @@ namespace simSharpSimulation
         // Rückgabewert:
         // - true  => der Patient wird laut Prognose noch vor Schichtende fertig
         // - false => der restliche Ablauf ist aus aktueller Sicht zu lang
-        private bool ErfassePrognoseCheckpoint(Simulation env, int patientId, string phase, double prognoseRestMinuten)
+        private bool ErfassePrognoseCheckpoint(
+            Simulation env,
+            int patientId,
+            string phase,
+            double prognoseRestMinuten,
+            double prognoseBearbeitungsRestMinuten,
+            double verbrauchteBearbeitungsMinuten)
         {
             double zeitpunktMinuten = (env.Now - env.StartDate).TotalMinutes;
+            double prognoseKorrekturMinuten = daten.ErmittlePrognoseRestzeitKorrektur(phase);
+            double kalibriertePrognoseRestMinuten = Math.Max(
+                0.0,
+                prognoseRestMinuten + prognoseKorrekturMinuten);
             // Die Schichtgrenze wird hier hart gegen den prognostizierten Rest geprüft.
             // Damit kann der Hauptprozess sofort entscheiden, ob der Patient weiterlaufen darf.
-            bool fertigBisSchichtende = zeitpunktMinuten + prognoseRestMinuten <= SimulationKonfiguration.SIMULATIONSDAUER;
+            bool fertigBisSchichtende = zeitpunktMinuten + kalibriertePrognoseRestMinuten <= SimulationKonfiguration.SIMULATIONSDAUER;
             daten.ErfassePrognosePruefung(
                 patientId,
                 phase,
                 zeitpunktMinuten,
-                Math.Max(0.0, prognoseRestMinuten),
+                kalibriertePrognoseRestMinuten,
+                prognoseKorrekturMinuten,
+                Math.Max(0.0, prognoseBearbeitungsRestMinuten),
+                Math.Max(0.0, verbrauchteBearbeitungsMinuten),
                 fertigBisSchichtende);
-            AktualisiereAktivePatientenPrognose(patientId, zeitpunktMinuten, prognoseRestMinuten);
+            AktualisiereAktivePatientenPrognose(patientId, zeitpunktMinuten, kalibriertePrognoseRestMinuten);
             return fertigBisSchichtende;
         }
 
@@ -162,6 +175,9 @@ namespace simSharpSimulation
             aktivePatientenPrognosen.Remove(patientId);
             aufnahmeprognoseZugelassenePatienten.Remove(patientId);
             aufnahmeprognoseAbgewiesenePatienten.Remove(patientId);
+            rezeptionStatus?.EntfernePatient(patientId);
+            schwesterStatus?.EntfernePatient(patientId);
+            arztStatus?.EntfernePatient(patientId);
         }
 
         // Restzeit-Schaetzung direkt nach der Rezeption.
@@ -281,6 +297,108 @@ namespace simSharpSimulation
                 (terminAnteil * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT) +
                 ((1.0 - terminAnteil) * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT);
             return PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * faktor;
+        }
+
+        private double SchaetzeRezeptionsQueueWartezeit(
+            Simulation env,
+            int patientId,
+            double behandlungsdauer,
+            double minutenBisAnkunft = 0.0)
+        {
+            double jetztMinuten = AktuelleMinute(env);
+            return rezeptionStatus.SchaetzeWartezeit(
+                jetztMinuten,
+                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
+                patientId,
+                behandlungsdauer);
+        }
+
+        private void PlaneRezeptionsAnkunft(
+            Simulation env,
+            int patientId,
+            double minutenBisAnkunft,
+            double behandlungsdauer)
+        {
+            rezeptionStatus.RegistriereGeplanteAnkunft(
+                patientId,
+                AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
+                behandlungsdauer);
+        }
+
+        private double SchaetzeSchwesterQueueWartezeit(
+            Simulation env,
+            int patientId,
+            double behandlungsdauer,
+            PatientenTyp patientenTyp,
+            double minutenBisAnkunft = 0.0)
+        {
+            double jetztMinuten = AktuelleMinute(env);
+            return schwesterStatus.SchaetzeWartezeit(
+                jetztMinuten,
+                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
+                patientId,
+                behandlungsdauer,
+                ErmittlePrioritaet(patientenTyp));
+        }
+
+        private void PlaneSchwesterAnkunft(
+            Simulation env,
+            int patientId,
+            double minutenBisAnkunft,
+            double behandlungsdauer,
+            PatientenTyp patientenTyp)
+        {
+            schwesterStatus.RegistriereGeplanteAnkunft(
+                patientId,
+                AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
+                behandlungsdauer,
+                ErmittlePrioritaet(patientenTyp));
+        }
+
+        private double SchaetzeArztQueueWartezeit(
+            Simulation env,
+            int patientId,
+            double behandlungsdauer,
+            PatientenTyp patientenTyp,
+            double minutenBisAnkunft = 0.0)
+        {
+            double jetztMinuten = AktuelleMinute(env);
+            return arztStatus.SchaetzeWartezeit(
+                jetztMinuten,
+                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
+                patientId,
+                behandlungsdauer,
+                ErmittlePrioritaet(patientenTyp));
+        }
+
+        private void PlaneArztAnkunft(
+            Simulation env,
+            int patientId,
+            double minutenBisAnkunft,
+            double behandlungsdauer,
+            PatientenTyp patientenTyp)
+        {
+            arztStatus.RegistriereGeplanteAnkunft(
+                patientId,
+                AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
+                behandlungsdauer,
+                ErmittlePrioritaet(patientenTyp));
+        }
+
+        private static double AktuelleMinute(Simulation env)
+        {
+            return (env.Now - env.StartDate).TotalMinutes;
+        }
+
+        private static int ErmittlePrioritaet(PatientenTyp typ)
+        {
+            return typ switch
+            {
+                PatientenTyp.Kurz => 1,
+                PatientenTyp.Mittel => 2,
+                PatientenTyp.Lang => 3,
+                _ => 3
+            };
         }
     }
 }

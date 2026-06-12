@@ -24,6 +24,9 @@ namespace simSharpSimulation
         private readonly Dictionary<int, AktiverPatientPrognose> aktivePatientenPrognosen = new();
         private readonly HashSet<int> aufnahmeprognoseZugelassenePatienten = new();
         private readonly HashSet<int> aufnahmeprognoseAbgewiesenePatienten = new();
+        private PrognoseRessourcenStatus rezeptionStatus = null!;
+        private PrognoseRessourcenStatus schwesterStatus = null!;
+        private PrognoseRessourcenStatus arztStatus = null!;
 
         // Schritt P1: Vorbereitung (Konstruktor)
         // Erhält einen Startwert für den Zufallsgenerator und ein Objekt zum Speichern der Ergebnisse.
@@ -56,6 +59,9 @@ namespace simSharpSimulation
                 var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
                 var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
+                rezeptionStatus = new PrognoseRessourcenStatus(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
+                schwesterStatus = new PrognoseRessourcenStatus(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+                arztStatus = new PrognoseRessourcenStatus(ArztKonfiguration.ANZAHL_AERZTE);
                 env.Process(AktiviereAufnahmeprognoseEineStundeVorSchliessung(env));
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
