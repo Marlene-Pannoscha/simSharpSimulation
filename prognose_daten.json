@@ -95342,1533 +95342,1816 @@
       "ZeitpunktMinuten": 420,
       "PatientId": 130,
       "Zugelassen": true,
-      "RestKapazitaet": 12
+      "RestKapazitaet": 12,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 75,
       "Zugelassen": true,
-      "RestKapazitaet": 11
+      "RestKapazitaet": 11,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 126,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 116,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 118,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 117,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 131,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 124,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 129,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 79,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 83,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 78,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 132,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 424.79934500166667,
       "PatientId": 135,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 425.666645645,
       "PatientId": 136,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 432.33672692333334,
       "PatientId": 137,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 435.269882345,
       "PatientId": 138,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 438.4372986133333,
       "PatientId": 139,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 438.5532203133333,
       "PatientId": 140,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 447.67869246333333,
       "PatientId": 141,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 448.13813360333336,
       "PatientId": 142,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 450.273634175,
       "PatientId": 143,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-03T00:00:00",
       "ZeitpunktMinuten": 476.35898667833334,
       "PatientId": 144,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10129,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10128,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10127,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10058,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10077,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10126,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10103,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10122,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 10107,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
+    },
+    {
+      "Tag": "2000-01-04T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 10118,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
+    },
+    {
+      "Tag": "2000-01-04T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 10105,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 427.9243164183333,
       "PatientId": 10130,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 431.37969394833334,
       "PatientId": 10131,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 447.66348188,
       "PatientId": 10132,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 450.27351883166665,
       "PatientId": 10133,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 455.714149145,
       "PatientId": 10118,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "AktivAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 471.63134162166665,
       "PatientId": 10134,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-04T00:00:00",
       "ZeitpunktMinuten": 474.35411206333333,
       "PatientId": 10105,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "AktivAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20114,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20118,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20121,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20123,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20117,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20122,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20116,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20119,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20101,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20098,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 20097,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 421.1333000883333,
       "PatientId": 20127,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 424.49129506833333,
       "PatientId": 20128,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 427.4338181933333,
       "PatientId": 20129,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 428.4447780016667,
       "PatientId": 20130,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 438.42084350333334,
       "PatientId": 20131,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 454.5825169666667,
       "PatientId": 20132,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 455.7687709333333,
       "PatientId": 20133,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 456.961202,
       "PatientId": 20134,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 461.1242425716667,
       "PatientId": 20135,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 462.78835654333335,
       "PatientId": 20136,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 469.21023745,
       "PatientId": 20137,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-05T00:00:00",
       "ZeitpunktMinuten": 477.923409815,
       "PatientId": 20138,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30124,
       "Zugelassen": true,
-      "RestKapazitaet": 15
+      "RestKapazitaet": 15,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30120,
       "Zugelassen": true,
-      "RestKapazitaet": 14
+      "RestKapazitaet": 14,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30122,
       "Zugelassen": true,
-      "RestKapazitaet": 13
+      "RestKapazitaet": 13,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30098,
       "Zugelassen": true,
-      "RestKapazitaet": 12
+      "RestKapazitaet": 12,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30109,
       "Zugelassen": true,
-      "RestKapazitaet": 11
+      "RestKapazitaet": 11,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30116,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30119,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30125,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30130,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30131,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30126,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30129,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30121,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30127,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30133,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 30132,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 423.1104246333333,
       "PatientId": 30134,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 438.621325845,
       "PatientId": 30135,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 450.150318985,
       "PatientId": 30136,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 458.6306640783333,
       "PatientId": 30137,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 459.2647087066667,
       "PatientId": 30138,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 461.76592346,
       "PatientId": 30139,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 467.66348164,
       "PatientId": 30140,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 476.95338713,
       "PatientId": 30141,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-06T00:00:00",
       "ZeitpunktMinuten": 477.0459608383333,
       "PatientId": 30142,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40128,
       "Zugelassen": true,
-      "RestKapazitaet": 14
+      "RestKapazitaet": 14,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40042,
       "Zugelassen": true,
-      "RestKapazitaet": 13
+      "RestKapazitaet": 13,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40051,
       "Zugelassen": true,
-      "RestKapazitaet": 12
+      "RestKapazitaet": 12,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40125,
       "Zugelassen": true,
-      "RestKapazitaet": 11
+      "RestKapazitaet": 11,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40123,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40126,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40122,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40129,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40049,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 40062,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 40037,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 40091,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 40113,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 40067,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 40090,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 428.24625174,
       "PatientId": 40131,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 437.2342649666667,
       "PatientId": 40132,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 437.43537913,
       "PatientId": 40133,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 441.40478256666665,
       "PatientId": 40134,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 447.0470231983333,
       "PatientId": 40037,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "AktivAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 459.50612974166665,
       "PatientId": 40135,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 459.74516296666667,
       "PatientId": 40136,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 462.29878618833334,
       "PatientId": 40137,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 463.40132387333335,
       "PatientId": 40138,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 464.85807064666665,
       "PatientId": 40139,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 474.072348505,
       "PatientId": 40140,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 477.192325015,
       "PatientId": 40141,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 496.349623145,
       "PatientId": 40067,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "AktivAbgewiesen"
     },
     {
       "Tag": "2000-01-07T00:00:00",
       "ZeitpunktMinuten": 500.8166030766667,
       "PatientId": 40091,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "AktivAbgewiesen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50114,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50102,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50110,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50106,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50107,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50117,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50099,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50121,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 50112,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 425.37007572,
       "PatientId": 50123,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 440.36916218166664,
       "PatientId": 50124,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 444.86467430666664,
       "PatientId": 50125,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 459.805767985,
       "PatientId": 50126,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 462.4603790616667,
       "PatientId": 50127,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-08T00:00:00",
       "ZeitpunktMinuten": 469.535265135,
       "PatientId": 50128,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60123,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60122,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60085,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60073,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60115,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60097,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 60118,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 427.90522839,
       "PatientId": 60124,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 432.16679861,
       "PatientId": 60125,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 434.57107256333336,
       "PatientId": 60126,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 439.5024455866667,
       "PatientId": 60127,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 447.2272461,
       "PatientId": 60128,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 450.6936457483333,
       "PatientId": 60129,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 451.7036678416667,
       "PatientId": 60130,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 451.96812701833335,
       "PatientId": 60131,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 460.6427684083333,
       "PatientId": 60132,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 460.81551686,
       "PatientId": 60133,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 463.4100339633333,
       "PatientId": 60134,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 466.260747375,
       "PatientId": 60135,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-09T00:00:00",
       "ZeitpunktMinuten": 468.04156758333335,
       "PatientId": 60136,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70129,
       "Zugelassen": true,
-      "RestKapazitaet": 18
+      "RestKapazitaet": 18,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70116,
       "Zugelassen": true,
-      "RestKapazitaet": 17
+      "RestKapazitaet": 17,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70125,
       "Zugelassen": true,
-      "RestKapazitaet": 16
+      "RestKapazitaet": 16,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70128,
       "Zugelassen": true,
-      "RestKapazitaet": 15
+      "RestKapazitaet": 15,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70131,
       "Zugelassen": true,
-      "RestKapazitaet": 14
+      "RestKapazitaet": 14,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70121,
       "Zugelassen": true,
-      "RestKapazitaet": 13
+      "RestKapazitaet": 13,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70122,
       "Zugelassen": true,
-      "RestKapazitaet": 12
+      "RestKapazitaet": 12,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70091,
       "Zugelassen": true,
-      "RestKapazitaet": 11
+      "RestKapazitaet": 11,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70126,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70104,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70112,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70109,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70115,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70132,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70119,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70133,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70030,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 70106,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
+    },
+    {
+      "Tag": "2000-01-10T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "PatientId": 70076,
+      "Zugelassen": false,
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 420.01371137,
       "PatientId": 70138,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 429.3179471166667,
       "PatientId": 70139,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 438.32924374833334,
       "PatientId": 70140,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 443.54023999,
       "PatientId": 70141,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 446.026796655,
       "PatientId": 70076,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "AktivAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 446.84403541,
       "PatientId": 70142,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 448.17616563,
       "PatientId": 70143,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 453.1005574966667,
       "PatientId": 70144,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-10T00:00:00",
       "ZeitpunktMinuten": 453.67587109,
       "PatientId": 70145,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80112,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80111,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80113,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80114,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80116,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80095,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80106,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80099,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80105,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 80115,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 435.07522618166666,
       "PatientId": 80120,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 441.722556445,
       "PatientId": 80121,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 443.595841265,
       "PatientId": 80122,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 444.9273135116667,
       "PatientId": 80123,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 447.468492095,
       "PatientId": 80124,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 451.6567244666667,
       "PatientId": 80125,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 459.175689675,
       "PatientId": 80126,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 473.098154625,
       "PatientId": 80127,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-11T00:00:00",
       "ZeitpunktMinuten": 479.0351046033333,
       "PatientId": 80128,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90119,
       "Zugelassen": true,
-      "RestKapazitaet": 18
+      "RestKapazitaet": 18,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90114,
       "Zugelassen": true,
-      "RestKapazitaet": 17
+      "RestKapazitaet": 17,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90104,
       "Zugelassen": true,
-      "RestKapazitaet": 16
+      "RestKapazitaet": 16,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90111,
       "Zugelassen": true,
-      "RestKapazitaet": 15
+      "RestKapazitaet": 15,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90098,
       "Zugelassen": true,
-      "RestKapazitaet": 14
+      "RestKapazitaet": 14,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90115,
       "Zugelassen": true,
-      "RestKapazitaet": 13
+      "RestKapazitaet": 13,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90118,
       "Zugelassen": true,
-      "RestKapazitaet": 12
+      "RestKapazitaet": 12,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90105,
       "Zugelassen": true,
-      "RestKapazitaet": 11
+      "RestKapazitaet": 11,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90110,
       "Zugelassen": true,
-      "RestKapazitaet": 10
+      "RestKapazitaet": 10,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90100,
       "Zugelassen": true,
-      "RestKapazitaet": 9
+      "RestKapazitaet": 9,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90117,
       "Zugelassen": true,
-      "RestKapazitaet": 8
+      "RestKapazitaet": 8,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90047,
       "Zugelassen": true,
-      "RestKapazitaet": 7
+      "RestKapazitaet": 7,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90124,
       "Zugelassen": true,
-      "RestKapazitaet": 6
+      "RestKapazitaet": 6,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90122,
       "Zugelassen": true,
-      "RestKapazitaet": 5
+      "RestKapazitaet": 5,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90120,
       "Zugelassen": true,
-      "RestKapazitaet": 4
+      "RestKapazitaet": 4,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90053,
       "Zugelassen": true,
-      "RestKapazitaet": 3
+      "RestKapazitaet": 3,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90043,
       "Zugelassen": true,
-      "RestKapazitaet": 2
+      "RestKapazitaet": 2,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90080,
       "Zugelassen": true,
-      "RestKapazitaet": 1
+      "RestKapazitaet": 1,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420,
       "PatientId": 90086,
       "Zugelassen": true,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "FreezeZugelassen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420.92911694833333,
       "PatientId": 90129,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 420.98404773666664,
       "PatientId": 90130,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 443.20773039833335,
       "PatientId": 90131,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 443.62573604333335,
       "PatientId": 90132,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 448.051769645,
       "PatientId": 90133,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 454.20896960833335,
       "PatientId": 90134,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 456.0081724066667,
       "PatientId": 90135,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     },
     {
       "Tag": "2000-01-12T00:00:00",
       "ZeitpunktMinuten": 478.731851005,
       "PatientId": 90136,
       "Zugelassen": false,
-      "RestKapazitaet": 0
+      "RestKapazitaet": 0,
+      "Entscheidungsart": "SpaeteAnkunftAbgewiesen"
     }
   ]
 }

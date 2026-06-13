@@ -33,6 +33,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> schwesternWartezeiten,
             IReadOnlyList<double> gesamtprozesszeiten,
             IReadOnlyList<TagesHitMissPunkt> hitMissProTag,
+            IReadOnlyList<(DateTime Tag, double ZeitpunktMinuten, int AufnahmeKapazitaet)> aufnahmeprognosePruefungen,
+            IReadOnlyList<(DateTime Tag, double ZeitpunktMinuten, int PatientId, bool Zugelassen, int RestKapazitaet, string Entscheidungsart)> aufnahmeprognoseEntscheidungen,
             IReadOnlyList<string> traceData,
             IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp,
             IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp,
@@ -96,6 +98,8 @@ namespace simSharpSimulation
             ErzeugeHitMissProTagDiagramm(hitMissProTag);
             // [Diagramm 14] Zeitachse eines Miss-Patienten (Wartezeit/Feierabend)
             ErzeugeMissPatientenZeitachsenDiagramm(traceData);
+            // [Diagramm 15] Aufnahmeprognose / Queue-Freeze
+            ErzeugeAufnahmeprognoseDiagramm(aufnahmeprognosePruefungen, aufnahmeprognoseEntscheidungen);
         }
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)

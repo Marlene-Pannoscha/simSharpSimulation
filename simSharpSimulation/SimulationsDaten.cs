@@ -110,6 +110,14 @@ namespace simSharpSimulation
                 eintrag.Value.Hit,
                 eintrag.Value.Miss))
             .ToList();
+        internal IReadOnlyList<(DateTime Tag, double ZeitpunktMinuten, int AufnahmeKapazitaet)> AufnahmeprognosePruefungen =>
+            prognoseAufnahmePruefungen
+                .Select(p => (p.Tag, p.ZeitpunktMinuten, p.AufnahmeKapazitaet))
+                .ToList();
+        internal IReadOnlyList<(DateTime Tag, double ZeitpunktMinuten, int PatientId, bool Zugelassen, int RestKapazitaet, string Entscheidungsart)> AufnahmeprognoseEntscheidungen =>
+            prognoseAufnahmeEntscheidungen
+                .Select(e => (e.Tag, e.ZeitpunktMinuten, e.PatientId, e.Zugelassen, e.RestKapazitaet, e.Entscheidungsart))
+                .ToList();
 
         /// <summary>
         /// Speichert ein Ereignis im Trace-Format:
@@ -197,10 +205,26 @@ namespace simSharpSimulation
                 zeitpunktMinuten,
                 patientId,
                 true,
-                restKapazitaet));
+                restKapazitaet,
+                "FreezeZugelassen"));
         }
 
-        public void ErfassePrognoseAufnahmeAbgewiesen(DateTime tag, double zeitpunktMinuten, int patientId)
+        public void ErfassePrognoseAufnahmeFreezeAbgewiesen(DateTime tag, double zeitpunktMinuten, int patientId)
+        {
+            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(
+                tag.Date,
+                zeitpunktMinuten,
+                patientId,
+                false,
+                0,
+                "FreezeAbgewiesen"));
+        }
+
+        public void ErfassePrognoseAufnahmeAbgewiesen(
+            DateTime tag,
+            double zeitpunktMinuten,
+            int patientId,
+            string entscheidungsart = "AktivAbgewiesen")
         {
             AnzahlAbgebrochenMiss++;
             AnzahlPrognoseAufnahmeAbgewiesen++;
@@ -210,7 +234,8 @@ namespace simSharpSimulation
                 zeitpunktMinuten,
                 patientId,
                 false,
-                0));
+                0,
+                entscheidungsart));
         }
 
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
@@ -551,7 +576,8 @@ namespace simSharpSimulation
                     e.ZeitpunktMinuten,
                     e.PatientId,
                     e.Zugelassen,
-                    e.RestKapazitaet
+                    e.RestKapazitaet,
+                    e.Entscheidungsart
                 })
             };
 
@@ -729,7 +755,8 @@ namespace simSharpSimulation
             double ZeitpunktMinuten,
             int PatientId,
             bool Zugelassen,
-            int RestKapazitaet);
+            int RestKapazitaet,
+            string Entscheidungsart);
     }
 
     internal readonly record struct TagesHitMissPunkt(string Label, int Hit, int Miss);

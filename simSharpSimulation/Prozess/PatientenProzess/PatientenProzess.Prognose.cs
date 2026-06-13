@@ -102,7 +102,7 @@ namespace simSharpSimulation
         private IEnumerable<Event> WeiseWegenAufnahmeprognoseAb(Simulation env, int patientId, TimeSpan wegZumAusgang)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientId);
+            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientId, "AktivAbgewiesen");
             daten.LogEvent(nowMinutes, "abgewiesen_wegen_aufnahmeprognose", patientId);
             daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
             yield return env.Timeout(wegZumAusgang);
@@ -116,7 +116,7 @@ namespace simSharpSimulation
         private void WeiseVorKlinikWegenAufnahmeprognoseAb(Simulation env, int patientId)
         {
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientId);
+            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientId, "SpaeteAnkunftAbgewiesen");
             daten.LogEvent(nowMinutes, "abgewiesen_vor_klinik_wegen_aufnahmeprognose", patientId);
             EntferneAktivePatientenPrognose(patientId);
         }
@@ -160,6 +160,10 @@ namespace simSharpSimulation
                 }
 
                 aufnahmeprognoseAbgewiesenePatienten.Add(patient.PatientId);
+                daten.ErfassePrognoseAufnahmeFreezeAbgewiesen(
+                    env.StartDate,
+                    nowMinutes,
+                    patient.PatientId);
             }
 
             aufnahmeprognoseAktiviert = true;
