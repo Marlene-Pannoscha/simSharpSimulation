@@ -65,6 +65,12 @@ namespace simSharpSimulation
                 daten.LogEvent(eintrag.zeit, "wartet_vor_oeffnung", patientCount);
 
                 // Bei Öffnung werden wartende Patienten nacheinander in FIFO-Reihenfolge gestartet.
+                // Der Praxisprozess startet erst bei Oeffnung, nicht zum negativen Ankunftszeitpunkt.
+                if ((env.Now - env.StartDate).TotalMinutes < 0.0)
+                {
+                    yield return env.Timeout(TimeSpan.FromMinutes(0.0 - (env.Now - env.StartDate).TotalMinutes));
+                }
+
                 env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
                 patientCount++;
             }
