@@ -14,12 +14,40 @@ internal sealed partial class FinanzWpfFenster
         Grid inhaltGrid = ErzeugeGeteiltesTabGrid();
 
         // Links stehen Textauswertung und Kennzahlen, rechts die erzeugten Diagramme.
-        ergebnisTextBox = ErzeugeErgebnisTextBox();
-        Grid.SetColumn(ergebnisTextBox, 0);
-        Grid.SetRow(ergebnisTextBox, 0);
-        inhaltGrid.Children.Add(ergebnisTextBox);
+        var ergebnisBox = ErzeugeErgebnisTextBox();
+        Grid.SetColumn(ergebnisBox, 0);
+        Grid.SetRow(ergebnisBox, 0);
+        inhaltGrid.Children.Add(ergebnisBox);
+        ergebnisTextBox = ergebnisBox;
+
+        var ticker = new TextBlock
+        {
+            FontSize = 16,
+            FontWeight = FontWeights.Bold,
+            Foreground = TextFarbe,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap,
+            Padding = new Thickness(10, 8, 10, 8)
+        };
+        var rowDef = new RowDefinition { Height = GridLength.Auto };
+        inhaltGrid.RowDefinitions.Add(rowDef);
+        Border tickerBorder = new()
+        {
+            Child = ticker,
+            Background = DezenteFlaeche,
+            BorderBrush = RandFarbe,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+        Grid.SetRow(tickerBorder, 1);
+        inhaltGrid.Children.Add(tickerBorder);
+        breakEvenTicker = ticker;
+
 
         Grid bilderGrid = new();
+        bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
         bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
         bilderGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -32,22 +60,45 @@ internal sealed partial class FinanzWpfFenster
         Grid.SetRow(gewinnBorder, 2);
         bilderGrid.Children.Add(gewinnBorder);
 
-        Grid.SetColumn(bilderGrid, 2);
-        Grid.SetRow(bilderGrid, 0);
-        inhaltGrid.Children.Add(bilderGrid);
+        Border kostenstrukturBorder = ErzeugeBildContainer("Kosten und Gewinnstruktur", out kostenstrukturImage);
+        Grid.SetRow(kostenstrukturBorder, 4);
+        bilderGrid.Children.Add(kostenstrukturBorder);
+
+        ScrollViewer scrollViewer = new ScrollViewer
+        {
+            Content = bilderGrid,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Padding = new Thickness(0, 0, 4, 0)
+        };
+
+        Grid.SetColumn(scrollViewer, 2);
+        Grid.SetRow(scrollViewer, 0);
+        Grid.SetRowSpan(scrollViewer, 2); // Span over the text and ticker rows
+        inhaltGrid.Children.Add(scrollViewer);
 
         return inhaltGrid;
     }
 
-    private string ErzeugeErgebnisText(FinanzErgebnis ergebnis, string finanzenPfad, string gewinnPfad)
+    private string ErzeugeErgebnisText(FinanzErgebnis ergebnis, string finanzenPfad, string gewinnPfad, string kostenstrukturPfad)
     {
         Versicherungsverteilung versicherungen = ergebnis.VersicherungenGesamt;
         Umsatzverteilung umsatzverteilung = ergebnis.UmsatzverteilungGesamt;
         Behandlungsmix behandlungsmix = ergebnis.BehandlungsmixGesamt;
+        Kostenstruktur kostenstruktur = new()
+        {
+            PersonalkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0,
+            MietkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0,
+            InfrastrukturkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0,
+            MaterialkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0,
+            GeraeteLeasingAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0,
+            SonstigeFixkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0,
+            BehandlungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0,
+        };
+        BreakEvenPoint breakEven = ergebnis.BreakEven;
+
         double privatAnteilProzent = KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert * 100.0;
         double gesetzlichAnteilProzent = (1.0 - KonfigurationJsonExport.Finanzen.Versicherung.AnteilPrivatversichert) * 100.0;
-        int durchschnittPatientenProTagGerundet = (int)Math.Round(ergebnis.DurchschnittBehandeltePatientenProTag);
-
         // Der Bericht fasst die Simulation kompakt fuer die linke Textspalte zusammen.
         StringBuilder sb = new();
         sb.AppendLine("Ergebnis");
@@ -61,6 +112,33 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Durchschnitt Kosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicheKostenProTag)}");
         sb.AppendLine($"Durchschnitt Gewinn pro {ergebnis.DurchschnittLabel}: {FinanzVisualisierung.FormatEuro(ergebnis.DurchschnittlicherGewinnProEinheit)}");
         sb.AppendLine($"Durchschnitt behandelte Patienten pro Tag: {ergebnis.DurchschnittBehandeltePatientenProTag.ToString("N1", DeCulture)}");
+        sb.AppendLine(FinanzVisualisierung.FormatBreakEven(ergebnis.BreakEven, ergebnis.DurchschnittBehandeltePatientenProTag));
+        sb.AppendLine();
+        sb.AppendLine("Praxisdetails");
+        sb.AppendLine($"Gesamtflaeche: {ergebnis.Gesamtflaeche.ToString("N2", DeCulture)} m2");
+        sb.AppendLine($"Mietkosten pro m2/Monat: {FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm)}");
+        // Zeige Mietkosten eindeutig: pro Tag, pro Monat (auf Basis m2 * Preis/Monat) und pro Jahr
+        sb.AppendLine($"Gesamtmietkosten pro Tag: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag)}");
+        double gesamtMietkostenMonat = ergebnis.MietkostenProQm * ergebnis.Gesamtflaeche; // exakter Monatswert
+        sb.AppendLine($"Gesamtmietkosten pro Monat: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat)}");
+        sb.AppendLine($"Gesamtmietkosten pro Jahr: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat * 12)}");
+        sb.AppendLine();
+        sb.AppendLine("Kosten-und Gewinn-struktur (von Umsatz)");
+        sb.AppendLine($"Personalkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Infrastruktur: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtInfrastrukturkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Medizinisches Material: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Geraete-Leasing: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtLeasingkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Sonstige Fixkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtSonstigeFixkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Behandlungskosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtBehandlungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Gewinn: {FinanzVisualisierung.FormatEuro(ergebnis.Gesamtgewinn)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine();
+        sb.AppendLine("Saisonaler Gewinn (im gewaehlten Zeitraum)");
+        foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
+        {
+            double saisonWert = ergebnis.SaisonGewinn.TryGetValue(saison, out double wert) ? wert : 0.0;
+            sb.AppendLine($"{saison}: {FinanzVisualisierung.FormatEuro(saisonWert)}");
+        }
         sb.AppendLine();
         sb.AppendLine("Versicherung");
         sb.AppendLine($"Privat ({privatAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.PrivatPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzPrivat)}");
@@ -72,20 +150,16 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Lang: {behandlungsmix.LangPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.LangKosten)}");
         sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FinanzVisualisierung.FormatEuro(behandlungsmix.Gesamtkosten)}");
         sb.AppendLine();
-        sb.AppendLine("Kostenstruktur pro Tag");
-        sb.AppendLine($"Aerzte: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneArztlohn(ArztKonfiguration.ANZAHL_AERZTE, durchschnittPatientenProTagGerundet))}");
-        sb.AppendLine($"Schwestern: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneSchwesterlohn(SchwesterKonfiguration.ANZAHL_SCHWESTERN))}");
-        sb.AppendLine($"Rezeption: {FinanzVisualisierung.FormatEuro(FinanzRechner.BerechneRezeptionlohn(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN))}");
-        sb.AppendLine($"Zimmer: {KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester} Schwester / {KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt} Arzt");
-        sb.AppendLine($"Fläche: {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString("N1", DeCulture)} m² Schwester / {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString("N1", DeCulture)} m² Arzt");
-        sb.AppendLine($"Wartezimmerfläche: {KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString("N1", DeCulture)} m²");
-        double mietkostenProTag = KonfigurationJsonExport.MietkostenProTag;
-        sb.AppendLine($"Mietkosten Räume: {FinanzVisualisierung.FormatEuro(mietkostenProTag)}");
-        sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(mietkostenProTag + KonfigurationJsonExport.Finanzen.Fixkosten.WeitereFixkostenProTag)}");
-        sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");
         sb.AppendLine($"- Gewinn: {gewinnPfad}");
+        sb.AppendLine($"- Kostenstruktur: {kostenstrukturPfad}");
+
+        // Update Break-Even Ticker
+        if (breakEvenTicker != null)
+        {
+            breakEvenTicker.Text = FinanzVisualisierung.FormatBreakEven(breakEven, ergebnis.DurchschnittBehandeltePatientenProTag);
+        }
 
         return sb.ToString();
     }

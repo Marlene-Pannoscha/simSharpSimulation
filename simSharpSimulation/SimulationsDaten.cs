@@ -65,10 +65,6 @@ namespace simSharpSimulation
         private readonly Dictionary<int, List<PrognosePruefung>> prognoseOffen = new();
         private readonly List<PrognoseErgebnis> prognoseErgebnisse = new();
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
-        private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
-        private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
-        private readonly Dictionary<string, PrognoseKalibrierung> prognoseKalibrierungNachPhase = new();
-        private static readonly bool PrognoseRestzeitKalibrierungAktiv = false;
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -186,34 +182,6 @@ namespace simSharpSimulation
             AnzahlPrognoseAbbruch++;
             ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
             prognoseAbbrueche.Add(new PrognoseAbbruchPunkt(zeitpunktMinuten, phase));
-        }
-
-        public void ErfassePrognoseAufnahmepruefung(DateTime tag, double zeitpunktMinuten, int aufnahmeKapazitaet)
-        {
-            prognoseAufnahmePruefungen.Add(new PrognoseAufnahmePruefung(tag.Date, zeitpunktMinuten, aufnahmeKapazitaet));
-        }
-
-        public void ErfassePrognoseAufnahmeZugelassen(DateTime tag, double zeitpunktMinuten, int patientId, int restKapazitaet)
-        {
-            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(
-                tag.Date,
-                zeitpunktMinuten,
-                patientId,
-                true,
-                restKapazitaet));
-        }
-
-        public void ErfassePrognoseAufnahmeAbgewiesen(DateTime tag, double zeitpunktMinuten, int patientId)
-        {
-            AnzahlAbgebrochenMiss++;
-            AnzahlPrognoseAufnahmeAbgewiesen++;
-            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
-            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(
-                tag.Date,
-                zeitpunktMinuten,
-                patientId,
-                false,
-                0));
         }
 
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
@@ -419,22 +387,6 @@ namespace simSharpSimulation
                 $"oder +/-{PrognoseTrefferMindestToleranzMinuten.ToString("N0", culture)} min): {AnzahlPrognoseRichtig.ToString("N0", culture)}");
             sb.AppendLine($"Trefferquote: {PrognoseTrefferquote.ToString("N2", culture)} %");
             sb.AppendLine($"Prognose-Abbrüche: {AnzahlPrognoseAbbruch.ToString("N0", culture)}");
-            sb.AppendLine($"Aufnahmeprognose-Abweisungen: {AnzahlPrognoseAufnahmeAbgewiesen.ToString("N0", culture)}");
-            if (prognoseErgebnisse.Count > 0)
-            {
-                var ergebnisseMitBearbeitung = prognoseErgebnisse
-                    .Where(e => e.GesampelteBearbeitungsRestMinuten.HasValue)
-                    .ToList();
-                sb.AppendLine($"Mittlere geschaetzte Restzeit: {prognoseErgebnisse.Average(e => e.PrognoseRestMinuten).ToString("N2", culture)} min");
-                sb.AppendLine($"Mittlere tatsaechliche Restzeit: {prognoseErgebnisse.Average(e => e.IstRestMinuten).ToString("N2", culture)} min");
-                sb.AppendLine($"Mittlere absolute Abweichung: {prognoseErgebnisse.Average(e => Math.Abs(e.AbweichungMinuten)).ToString("N2", culture)} min");
-                if (ergebnisseMitBearbeitung.Count > 0)
-                {
-                    sb.AppendLine($"Mittlere prognostizierte Bearbeitungs-Restzeit: {ergebnisseMitBearbeitung.Average(e => e.PrognoseBearbeitungsRestMinuten).ToString("N2", culture)} min");
-                    sb.AppendLine($"Mittlere gesampelte Bearbeitungs-Restzeit: {ergebnisseMitBearbeitung.Average(e => e.GesampelteBearbeitungsRestMinuten!.Value).ToString("N2", culture)} min");
-                    sb.AppendLine($"Mittlere absolute Bearbeitungs-Abweichung: {ergebnisseMitBearbeitung.Average(e => Math.Abs(e.AbweichungBearbeitungMinuten!.Value)).ToString("N2", culture)} min");
-                }
-            }
             sb.AppendLine();
 
             var nachPhase = prognoseErgebnisse
@@ -563,20 +515,6 @@ namespace simSharpSimulation
                 {
                     a.ZeitpunktMinuten,
                     a.Phase
-                }),
-                AufnahmeprognosePruefungen = prognoseAufnahmePruefungen.Select(p => new
-                {
-                    p.Tag,
-                    p.ZeitpunktMinuten,
-                    p.AufnahmeKapazitaet
-                }),
-                AufnahmeprognoseEntscheidungen = prognoseAufnahmeEntscheidungen.Select(e => new
-                {
-                    e.Tag,
-                    e.ZeitpunktMinuten,
-                    e.PatientId,
-                    e.Zugelassen,
-                    e.RestKapazitaet
                 })
             };
 
@@ -634,7 +572,9 @@ namespace simSharpSimulation
             string dateiPfad = ErmittleRessourcenDateiPfad("event-zustandsmapping.json");
 
             string json = File.ReadAllText(dateiPfad);
-            var jsonDaten = JsonSerializer.Deserialize<Dictionary<string, EventZustandsEintrag>>(json);
+            var jsonDaten = JsonSerializer.Deserialize<Dictionary<string, EventZustandsEintrag>>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (jsonDaten is null || jsonDaten.Count == 0)
             {

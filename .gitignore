@@ -4,4 +4,4 @@
 **/.dotnet/**
 **/klinik_trace.txt
 **/images/**
-
+*.png

@@ -10,24 +10,38 @@ namespace simSharpSimulation;
 
 internal sealed partial class FinanzWpfFenster : Window
 {
-    // Diese Steuerelemente werden benoetigt, um Eingaben zu lesen und Ergebnisse anzuzeigen.
-    private readonly TextBox aerzteTextBox;
-    private readonly TextBox schwesternTextBox;
-    private readonly TextBox rezeptionTextBox;
-    private readonly TextBox behandlungsraeumeSchwesterTextBox;
-    private readonly TextBox behandlungsflaecheSchwesterTextBox;
-    private readonly TextBox behandlungsraeumeArztTextBox;
-    private readonly TextBox behandlungsflaecheArztTextBox;
-    private readonly TextBox wartezimmerflaecheTextBox;
-    private readonly ComboBox zeitraumComboBox;
-    private TextBox ergebnisTextBox = null!;
-    private Image finanzenImage = null!;
-    private Image gewinnImage = null!;
+    private TextBox ergebnisTextBox = new TextBox();
+    private TextBlock breakEvenTicker = new TextBlock();
+    private Image finanzenImage = new Image();
+    private Image gewinnImage = new Image();
+    private Image kostenstrukturImage = new Image();
+
+    private TextBox aerzteTextBox = new TextBox();
+    private TextBox schwesternTextBox = new TextBox();
+    private TextBox rezeptionTextBox = new TextBox();
+    private TextBox behandlungsraeumeSchwesterTextBox = new TextBox();
+    private TextBox behandlungsflaecheSchwesterTextBox = new TextBox();
+    private TextBox behandlungsraeumeArztTextBox = new TextBox();
+    private TextBox behandlungsflaecheArztTextBox = new TextBox();
+    private TextBox wartezimmerflaecheTextBox = new TextBox();
+    private TextBox infrastrukturProTagTextBox = new TextBox();
+    private TextBox geraeteLeasingProTagTextBox = new TextBox();
+    private ComboBox zeitraumComboBox = new ComboBox();
+
+    private Button? exportButton;
+    private Button? exportFinanzenButton;
+
     private readonly TextBlock statusTextBlock;
+    // Kennzahlen Anzeige (wird im Konfiguration-Tab angezeigt)
+    private TextBlock raeumeKurzinfoTextBlock = new TextBlock();
+    private TextBox mietkostenProQmTextBox = null!;
+    private TextBox gesamtFlaecheTextBox = null!;
+    private TextBox gesamtMietkostenTextBox = null!;
     
     // Hit/Miss Tab-Steuerelemente
     private TextBox hitMissErgebnisTextBox = null!;
     private Image hitMissImage = null!;
+    private TextBox simulationsUebersichtTextBox = null!;
     private TextBox wartezeitenTextBox = null!;
     private DataGrid warteschlangenDataGrid = null!;
     private DataGrid bereicheDataGrid = null!;
@@ -38,6 +52,13 @@ internal sealed partial class FinanzWpfFenster : Window
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");
     private const double ErgebnisSpaltenBreite = 360;
     private const double SpaltenAbstand = 12;
+    private static readonly Brush FensterHintergrund = new SolidColorBrush(Color.FromRgb(246, 248, 251));
+    private static readonly Brush FlaechenHintergrund = Brushes.White;
+    private static readonly Brush DezenteFlaeche = new SolidColorBrush(Color.FromRgb(241, 245, 249));
+    private static readonly Brush RandFarbe = new SolidColorBrush(Color.FromRgb(214, 221, 230));
+    private static readonly Brush TextFarbe = new SolidColorBrush(Color.FromRgb(31, 41, 55));
+    private static readonly Brush SekundaerTextFarbe = new SolidColorBrush(Color.FromRgb(88, 99, 113));
+    private static readonly Brush AkzentFarbe = new SolidColorBrush(Color.FromRgb(37, 99, 235));
 
     public FinanzWpfFenster()
     {
@@ -48,22 +69,26 @@ internal sealed partial class FinanzWpfFenster : Window
         MinWidth = 1100;
         MinHeight = 700;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Background = FensterHintergrund;
+        FontFamily = new FontFamily("Segoe UI");
+        FontSize = 13;
 
         Grid root = new();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.Margin = new Thickness(12);
+        root.Margin = new Thickness(14);
 
         Grid eingabeGrid = new()
         {
-            Margin = new Thickness(0, 0, 0, 4)
+            Margin = new Thickness(0, 0, 0, 6),
+            MinWidth = 1040
         };
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.8, GridUnitType.Star) });
         eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(240) });
+        eingabeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
 
         Grid personalGrid = ErzeugeParameterGrid();
         aerzteTextBox = FuegeParameterZeile(personalGrid, "Aerzte", ArztKonfiguration.ANZAHL_AERZTE.ToString(CultureInfo.InvariantCulture));
@@ -73,30 +98,18 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetColumn(personalBox, 0);
         eingabeGrid.Children.Add(personalBox);
 
-        Grid raeumeGrid = ErzeugeParameterGrid();
-        behandlungsraeumeSchwesterTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Schwesterzimmer",
-            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture));
-        behandlungsflaecheSchwesterTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Flaeche je Schwesterzimmer (m2)",
-            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture));
-        behandlungsraeumeArztTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Arztzimmer",
-            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture));
-        behandlungsflaecheArztTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Flaeche je Arztzimmer (m2)",
-            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture));
-        wartezimmerflaecheTextBox = FuegeParameterZeile(
-            raeumeGrid,
-            "Wartezimmerflaeche (m2)",
-            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
-        Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
-        Grid.SetColumn(raeumeBox, 2);
-        eingabeGrid.Children.Add(raeumeBox);
+        UIElement konfigurationTabInhalt = ErstelleKonfigurationTab();
+
+        raeumeKurzinfoTextBlock = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = TextFarbe,
+            LineHeight = 20
+        };
+        Border raeumeKurzinfoBox = ErzeugeParameterGruppe("Raeume und Kosten", raeumeKurzinfoTextBlock);
+        Grid.SetColumn(raeumeKurzinfoBox, 2);
+        eingabeGrid.Children.Add(raeumeKurzinfoBox);
+        AktualisiereRaeumeKurzinfo();
 
         Grid aktionenGrid = ErzeugeParameterGrid();
 
@@ -115,11 +128,13 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Content = "Simulation starten",
             Padding = new Thickness(14, 7, 14, 7),
-            Background = new SolidColorBrush(Color.FromRgb(33, 150, 243)),
+            Background = AkzentFarbe,
             Foreground = Brushes.White,
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Margin = new Thickness(0, 12, 0, 0)
+            Margin = new Thickness(0, 12, 0, 0),
+            BorderThickness = new Thickness(0),
+            MinHeight = 34
         };
         startenButton.Click += SimulationStarten_Click;
         aktionenGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -132,22 +147,46 @@ internal sealed partial class FinanzWpfFenster : Window
         Grid.SetColumn(aktionenBox, 4);
         eingabeGrid.Children.Add(aktionenBox);
 
-        Grid.SetRow(eingabeGrid, 0);
-        root.Children.Add(eingabeGrid);
+        ScrollViewer eingabeScrollViewer = new()
+        {
+            Content = eingabeGrid,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        Grid.SetRow(eingabeScrollViewer, 0);
+        root.Children.Add(eingabeScrollViewer);
 
         statusTextBlock = new TextBlock
         {
             Text = "Bereit.",
-            Margin = new Thickness(0, 8, 0, 8),
-            Foreground = Brushes.DimGray
+            Margin = new Thickness(2, 8, 0, 10),
+            Foreground = SekundaerTextFarbe
         };
         Grid.SetRow(statusTextBlock, 1);
         root.Children.Add(statusTextBlock);
 
-        // TabControl mit Tabs: Finanzen, Hit/Miss, Wartezeiten, Prognose
-        TabControl tabControl = new();
+        // TabControl mit Tabs: Uebersicht, Finanzen, Hit/Miss, Wartezeiten, Prognose
+        TabControl tabControl = new()
+        {
+            Background = Brushes.Transparent,
+            BorderBrush = RandFarbe,
+            BorderThickness = new Thickness(1)
+        };
+
+        TabItem uebersichtTab = new()
+        {
+            Header = "Uebersicht",
+            Content = ErstelleSimulationsUebersichtTab()
+        };
+        tabControl.Items.Add(uebersichtTab);
+
+        TabItem konfigurationTab = new()
+        {
+            Header = "Konfiguration",
+            Content = konfigurationTabInhalt
+        };
+        tabControl.Items.Add(konfigurationTab);
         
-        // Tab 1: Finanzen
         TabItem finanzenTab = new()
         {
             Header = "Finanzen",
@@ -182,8 +221,163 @@ internal sealed partial class FinanzWpfFenster : Window
 
         Content = root;
 
+        AktualisiereSimulationsUebersicht(null);
         AktualisiereWartezeitenTab(null);
         AktualisierePrognoseTab();
+    }
+
+    private UIElement ErstelleKonfigurationTab()
+    {
+        Grid inhaltGrid = new()
+        {
+            Margin = new Thickness(10)
+        };
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(12) });
+        inhaltGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
+        inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        TextBlock hinweisText = new()
+        {
+            Text = "Raeume und Flaechen koennen hier angepasst werden. Die Kurzuebersicht oben aktualisiert sich automatisch.",
+            Foreground = SekundaerTextFarbe,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(2, 0, 2, 0)
+        };
+        Grid.SetRow(hinweisText, 0);
+        Grid.SetColumnSpan(hinweisText, 3);
+        inhaltGrid.Children.Add(hinweisText);
+
+        Grid raeumeGrid = ErzeugeParameterGrid();
+        behandlungsraeumeSchwesterTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Schwesterzimmer",
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester.ToString(CultureInfo.InvariantCulture));
+        behandlungsflaecheSchwesterTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Flaeche je Schwesterzimmer (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumSchwesterQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        behandlungsraeumeArztTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Arztzimmer",
+            KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt.ToString(CultureInfo.InvariantCulture));
+        behandlungsflaecheArztTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Flaeche je Arztzimmer (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter.ToString(CultureInfo.InvariantCulture));
+        wartezimmerflaecheTextBox = FuegeParameterZeile(
+            raeumeGrid,
+            "Wartezimmerflaeche (m2)",
+            KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter.ToString(CultureInfo.InvariantCulture));
+
+        gesamtFlaecheTextBox = ErzeugeKennzahlTextBox();
+        FuegeParameterZeile(raeumeGrid, "Gesamtflaeche", gesamtFlaecheTextBox);
+
+        Border raeumeBox = ErzeugeParameterGruppe("Raeume und Flaechen", raeumeGrid);
+        Grid.SetRow(raeumeBox, 2);
+        Grid.SetColumn(raeumeBox, 0);
+        inhaltGrid.Children.Add(raeumeBox);
+
+        Grid kostenGrid = ErzeugeParameterGrid();
+        infrastrukturProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Infrastruktur pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag.ToString(CultureInfo.InvariantCulture));
+        geraeteLeasingProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Geraete-Leasing pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag.ToString(CultureInfo.InvariantCulture));
+
+        mietkostenProQmTextBox = ErzeugeKennzahlTextBox();
+        FuegeParameterZeile(kostenGrid, "Mietkosten pro m2/Monat", mietkostenProQmTextBox);
+
+        gesamtMietkostenTextBox = ErzeugeKennzahlTextBox();
+        FuegeParameterZeile(kostenGrid, "Gesamtmietkosten pro Tag", gesamtMietkostenTextBox);
+
+        Border kostenBox = ErzeugeParameterGruppe("Fixkosten und Kennzahlen", kostenGrid);
+        Grid.SetRow(kostenBox, 2);
+        Grid.SetColumn(kostenBox, 2);
+        inhaltGrid.Children.Add(kostenBox);
+
+        RegistriereRaeumeKurzinfoAktualisierung();
+        AktualisiereRaeumeKurzinfo();
+
+        return new ScrollViewer
+        {
+            Content = inhaltGrid,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+    }
+
+    private void RegistriereRaeumeKurzinfoAktualisierung()
+    {
+        TextChangedEventHandler handler = (_, _) => AktualisiereRaeumeKurzinfo();
+        behandlungsraeumeSchwesterTextBox.TextChanged += handler;
+        behandlungsflaecheSchwesterTextBox.TextChanged += handler;
+        behandlungsraeumeArztTextBox.TextChanged += handler;
+        behandlungsflaecheArztTextBox.TextChanged += handler;
+        wartezimmerflaecheTextBox.TextChanged += handler;
+        infrastrukturProTagTextBox.TextChanged += handler;
+        geraeteLeasingProTagTextBox.TextChanged += handler;
+    }
+
+    private void AktualisiereRaeumeKurzinfo()
+    {
+        if (!TryParseKurzinfoInt(behandlungsraeumeSchwesterTextBox.Text, out int schwesterZimmer) ||
+            !TryParseKurzinfoDouble(behandlungsflaecheSchwesterTextBox.Text, out double flaecheSchwester) ||
+            !TryParseKurzinfoInt(behandlungsraeumeArztTextBox.Text, out int arztZimmer) ||
+            !TryParseKurzinfoDouble(behandlungsflaecheArztTextBox.Text, out double flaecheArzt) ||
+            !TryParseKurzinfoDouble(wartezimmerflaecheTextBox.Text, out double flaecheWartezimmer) ||
+            !TryParseKurzinfoDouble(infrastrukturProTagTextBox.Text, out double infrastrukturProTag) ||
+            !TryParseKurzinfoDouble(geraeteLeasingProTagTextBox.Text, out double leasingProTag))
+        {
+            raeumeKurzinfoTextBlock.Text = "Konfiguration unvollstaendig.\nDetails im Tab Konfiguration pruefen.";
+            return;
+        }
+
+        double gesamtFlaeche = schwesterZimmer * flaecheSchwester
+            + arztZimmer * flaecheArzt
+            + flaecheWartezimmer;
+        double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtFlaeche);
+        double gesamtMietkostenProTag = (mietkostenProQm * gesamtFlaeche * 12) / 365.0;
+
+        if (gesamtFlaecheTextBox is not null)
+            gesamtFlaecheTextBox.Text = gesamtFlaeche.ToString("N2", DeCulture) + " m2";
+        if (mietkostenProQmTextBox is not null)
+            mietkostenProQmTextBox.Text = FinanzVisualisierung.FormatEuro(mietkostenProQm);
+        if (gesamtMietkostenTextBox is not null)
+            gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(gesamtMietkostenProTag);
+
+        raeumeKurzinfoTextBlock.Text =
+            $"Raeume: {schwesterZimmer.ToString("N0", DeCulture)} Schwesterzimmer, {arztZimmer.ToString("N0", DeCulture)} Arztzimmer\n" +
+            $"Flaeche: {gesamtFlaeche.ToString("N2", DeCulture)} m2\n" +
+            $"Miete/Tag: {FinanzVisualisierung.FormatEuro(gesamtMietkostenProTag)}\n" +
+            $"Infrastruktur + Leasing/Tag: {FinanzVisualisierung.FormatEuro(infrastrukturProTag + leasingProTag)}\n" +
+            "Details im Tab Konfiguration anpassen.";
+    }
+
+    private static bool TryParseKurzinfoInt(string? input, out int value)
+    {
+        return int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ||
+            int.TryParse(input, NumberStyles.Integer, DeCulture, out value);
+    }
+
+    private static bool TryParseKurzinfoDouble(string? input, out double value)
+    {
+        return double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
+            double.TryParse(input, NumberStyles.Float, DeCulture, out value);
+    }
+
+    private static TextBox ErzeugeKennzahlTextBox()
+    {
+        TextBox textBox = ErzeugeParameterTextBox(string.Empty);
+        textBox.IsReadOnly = true;
+        textBox.BorderThickness = new Thickness(0);
+        textBox.Background = Brushes.Transparent;
+        return textBox;
     }
 
     public static void StarteFenster()
@@ -242,6 +436,12 @@ internal sealed partial class FinanzWpfFenster : Window
             if (!TryParseDouble(wartezimmerflaecheTextBox.Text, 1.0, 1000.0, out double flaecheWartezimmer, out string wartezimmerFlaecheFehler))
                 throw new InvalidOperationException(wartezimmerFlaecheFehler);
 
+            if (!TryParseDouble(infrastrukturProTagTextBox.Text, 0.0, 100000.0, out double infrastrukturProTag, out string infrastrukturFehler))
+                throw new InvalidOperationException(infrastrukturFehler);
+
+            if (!TryParseDouble(geraeteLeasingProTagTextBox.Text, 0.0, 100000.0, out double geraeteLeasingProTag, out string leasingFehler))
+                throw new InvalidOperationException(leasingFehler);
+
             if (anzahlSchwesterZimmer + anzahlArztZimmer <= 0)
                 throw new InvalidOperationException("Bitte mindestens ein Behandlungszimmer insgesamt angeben.");
 
@@ -254,12 +454,14 @@ internal sealed partial class FinanzWpfFenster : Window
             KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt = anzahlArztZimmer;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter = flaecheArzt;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter = flaecheWartezimmer;
+            KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag = infrastrukturProTag;
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag = geraeteLeasingProTag;
 
             string zeitraum = zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
 
             statusTextBlock.Text = "Simulation laeuft...";
             FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, anzahlSchwestern, zeitraum);
-            (string finanzenPfad, string gewinnPfad) =
+            (string finanzenPfad, string gewinnPfad, string kostenstrukturPfad) =
                 FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, anzahlSchwestern);
             
             // Hit/Miss Diagramm erzeugen
@@ -273,15 +475,46 @@ internal sealed partial class FinanzWpfFenster : Window
             simulationsDaten.SchreibePrognoseDatenJson("prognose_daten.json");
 
             // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
-            ergebnisTextBox.Text = ErzeugeErgebnisText(ergebnis, finanzenPfad, gewinnPfad);
-            finanzenImage.Source = LadeBild(finanzenPfad);
-            gewinnImage.Source = LadeBild(gewinnPfad);
+            if (ergebnisTextBox != null)
+            {
+                ergebnisTextBox.Text = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
+            }
+            if (breakEvenTicker != null)
+            {
+                breakEvenTicker.Text = FinanzVisualisierung.FormatBreakEven(ergebnis.BreakEven, ergebnis.DurchschnittBehandeltePatientenProTag);
+            }
+            if (finanzenImage != null)
+            {
+                finanzenImage.Source = LadeBild(finanzenPfad);
+            }
+            if (gewinnImage != null)
+            {
+                gewinnImage.Source = LadeBild(gewinnPfad);
+            }
+            if (kostenstrukturImage != null)
+            {
+                kostenstrukturImage.Source = LadeBild(kostenstrukturPfad);
+            }
+
+            // Aktualisiere die Kennzahlen-Anzeige im Eingabebereich
+            try
+            {
+                mietkostenProQmTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.MietkostenProQm);
+                gesamtFlaecheTextBox.Text = ergebnis.Gesamtflaeche.ToString("N2", DeCulture) + " m2";
+                gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag);
+                AktualisiereRaeumeKurzinfo();
+            }
+            catch
+            {
+                // Ignoriere UI-Update-Fehler (sollte nicht passieren)
+            }
             
             // Hit/Miss Tab aktualisieren
             hitMissErgebnisTextBox.Text = ErzeugeHitMissErgebnisText(anzahlHit, anzahlMiss, hitMissPfad);
             hitMissImage.Source = LadeBild(hitMissPfad);
 
             AktualisiereWartezeitenTab(simulationsDaten);
+            AktualisiereSimulationsUebersicht(simulationsDaten);
             AktualisierePrognoseTab();
             
             statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
@@ -340,8 +573,9 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Text = titel,
             FontWeight = FontWeights.SemiBold,
-            FontSize = 18,
-            Margin = new Thickness(8, 6, 8, 4)
+            FontSize = 16,
+            Foreground = TextFarbe,
+            Margin = new Thickness(12, 10, 12, 6)
         };
         DockPanel.SetDock(header, Dock.Top);
         panel.Children.Add(header);
@@ -349,15 +583,16 @@ internal sealed partial class FinanzWpfFenster : Window
         image = new Image
         {
             Stretch = Stretch.Uniform,
-            Margin = new Thickness(8)
+            Margin = new Thickness(12)
         };
         panel.Children.Add(image);
 
         return new Border
         {
-            BorderBrush = Brushes.LightGray,
+            BorderBrush = RandFarbe,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
+            CornerRadius = new CornerRadius(6),
+            Background = FlaechenHintergrund,
             Child = panel
         };
     }
@@ -365,6 +600,7 @@ internal sealed partial class FinanzWpfFenster : Window
     private static Grid ErzeugeGeteiltesTabGrid()
     {
         Grid inhaltGrid = new();
+        inhaltGrid.Margin = new Thickness(10);
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ErgebnisSpaltenBreite) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(SpaltenAbstand) });
         inhaltGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -382,7 +618,11 @@ internal sealed partial class FinanzWpfFenster : Window
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             FontFamily = new FontFamily("Consolas"),
             FontSize = 13,
-            Padding = new Thickness(8)
+            Padding = new Thickness(10),
+            Background = FlaechenHintergrund,
+            Foreground = TextFarbe,
+            BorderBrush = RandFarbe,
+            BorderThickness = new Thickness(1)
         };
     }
 
@@ -394,7 +634,7 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Text = titel,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brushes.DimGray,
+            Foreground = SekundaerTextFarbe,
             Margin = new Thickness(0, 0, 0, 8)
         };
         DockPanel.SetDock(header, Dock.Top);
@@ -403,11 +643,11 @@ internal sealed partial class FinanzWpfFenster : Window
 
         return new Border
         {
-            BorderBrush = Brushes.Gainsboro,
+            BorderBrush = RandFarbe,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
+            CornerRadius = new CornerRadius(6),
             Padding = new Thickness(12),
-            Background = Brushes.WhiteSmoke,
+            Background = FlaechenHintergrund,
             Child = panel
         };
     }
@@ -416,7 +656,7 @@ internal sealed partial class FinanzWpfFenster : Window
     {
         Grid grid = new();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(124) });
         return grid;
     }
 
@@ -436,6 +676,8 @@ internal sealed partial class FinanzWpfFenster : Window
         {
             Text = labelText,
             VerticalAlignment = VerticalAlignment.Center,
+            Foreground = TextFarbe,
+            TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 3, 12, 3)
         };
         Grid.SetRow(label, row);
@@ -456,7 +698,9 @@ internal sealed partial class FinanzWpfFenster : Window
             MinHeight = 30,
             Padding = new Thickness(8, 3, 8, 3),
             HorizontalContentAlignment = HorizontalAlignment.Right,
-            VerticalContentAlignment = VerticalAlignment.Center
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Background = Brushes.White,
+            BorderBrush = RandFarbe
         };
     }
 

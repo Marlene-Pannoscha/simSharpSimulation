@@ -4,11 +4,6 @@ using System.Collections.Generic;
 
 namespace simSharpSimulation
 {
-    /*
-     * Diese Klasse kapselt die Logik fuer die Schwester-Phase im Simulationsprozess.
-     * Die Warteschlange ist analog zur Arzt-Phase aufgebaut:
-     * warten auf freie Ressource oder Abbruch wegen Wartezeit/Feierabend.
-     */
     public static class SchwesterPhase
     {
         private static int GetPriority(PatientenTyp typ)
@@ -110,6 +105,7 @@ namespace simSharpSimulation
             Simulation env,
             SimulationsDaten daten,
             int patientId,
+            int? schwesterId,
             int? schwesterId,
             TimeSpan interneBewegungsdauer,
             BehandlungsPhaseErgebnis ergebnis,

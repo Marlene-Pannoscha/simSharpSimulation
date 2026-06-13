@@ -131,11 +131,11 @@ internal static class PrognoseVisualisierung
     private static void ErzeugePrognoseAbbruecheZeitachseDiagramm(PrognoseVisualDaten daten, string outputPfad)
     {
         Plot plot = new(1200, 600);
-        string[] phasen = { "Ankunft", "NachRezeption", "VorSchwester", "NachSchwester", "VorArzt", "NachArzt" };
+        string[] phasen = { "Aufnahmeprognose", "Ankunft", "NachRezeption", "VorSchwester", "NachSchwester", "VorArzt", "NachArzt" };
         double[] yTicks = Enumerable.Range(0, phasen.Length).Select(i => (double)i).ToArray();
         Color[] farben =
         {
-            Color.SteelBlue, Color.DarkOrange, Color.MediumPurple,
+            Color.IndianRed, Color.SteelBlue, Color.DarkOrange, Color.MediumPurple,
             Color.Teal, Color.Firebrick, Color.ForestGreen
         };
 
@@ -174,10 +174,11 @@ internal static class PrognoseVisualisierung
     {
         Plot plot = new(1100, 600);
 
-        double[] positionen = { 0.0, 1.0, 2.0, 3.0 };
+        double[] positionen = { 0.0, 1.0, 2.0, 3.0, 4.0 };
         double[] werte =
         {
             daten.Abbruchgruende.Prognose,
+            daten.Abbruchgruende.Aufnahmeprognose,
             daten.Abbruchgruende.RezeptionFeierabend,
             daten.Abbruchgruende.SchwesterFeierabend,
             daten.Abbruchgruende.ArztFeierabend
@@ -192,6 +193,7 @@ internal static class PrognoseVisualisierung
         plot.XTicks(positionen, new[]
         {
             "Prognose",
+            "Aufnahme-\nprognose",
             "Rezeption\nFeierabend",
             "Schwester\nFeierabend",
             "Arzt\nFeierabend"
@@ -257,6 +259,7 @@ internal static class PrognoseVisualisierung
 
     private sealed record Abbruchgruende(
         int Prognose,
+        int Aufnahmeprognose,
         int RezeptionFeierabend,
         int SchwesterFeierabend,
         int ArztFeierabend);

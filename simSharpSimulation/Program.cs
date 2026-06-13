@@ -141,16 +141,20 @@ namespace simSharpSimulation
             int behandeltePatientenGesamt = daten.Gesamtprozesszeiten.Count;
             int behandeltePatientenProTag = (int)Math.Round(behandeltePatientenGesamt / (double)SimulierteArbeitstage);
             int anzahlAerzte = ArztKonfiguration.ANZAHL_AERZTE;
-            Tagesergebnis finanzenGesamt = FinanzRechner.BerechneZeitraumergebnis(anzahlAerzte, behandeltePatientenGesamt, SimulierteArbeitstage);
 
             Console.WriteLine($"Simulierte Arbeitstage: {SimulierteArbeitstage}");
             Console.WriteLine($"Behandelte Patienten gesamt: {behandeltePatientenGesamt}");
             Console.WriteLine($"Behandelte Patienten pro Tag: {behandeltePatientenProTag}");
             Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
-            SchreibeFinanzwerte(finanzenGesamt);
 
-            Console.WriteLine();
+            // Erzeuge ein vollständiges Finanz-Ergebnis wie in der WPF-Ansicht und gib den identischen Bericht aus.
+            FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN, "Jahr");
+            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            string reportText = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
+            Console.WriteLine(reportText);
+
             Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
+            // Tagesübersicht (durchschnittlicher Tag)
             Tagesergebnis finanzenProTag = FinanzRechner.BerechneTagesergebnis(anzahlAerzte, behandeltePatientenProTag);
             Console.WriteLine($"Behandelte Patienten pro Tag: {behandeltePatientenProTag}");
             Console.WriteLine($"Anzahl Ärzte: {anzahlAerzte}");
