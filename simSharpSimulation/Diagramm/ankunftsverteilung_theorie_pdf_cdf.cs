@@ -20,15 +20,11 @@ namespace simSharpSimulation
             double freezeZeitpunkt = Math.Max(
                 0.0,
                 simulationsdauer - SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
-            double mittlereZwischenankunftszeit = Math.Max(
-                0.0001,
-                PatientenKonfiguration.OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN);
-            double poissonDichte = 1.0 / mittlereZwischenankunftszeit;
-            double[] poissonPdf = x.Select(v => v <= simulationsdauer ? poissonDichte : 0.0).ToArray();
-            plot.AddScatter(x, poissonPdf, color: Color.DarkOrange, lineWidth: 2, label: "Ohne Termin: Poisson-Rate");
+            double[] poissonPdf = x.Select(BerechneOhneTerminRateProMinute).ToArray();
+            plot.AddScatter(x, poissonPdf, color: Color.DarkOrange, lineWidth: 2, label: "Ohne Termin: Exponential-Rate");
             plot.AddScatter(
                 new[] { freezeZeitpunkt, freezeZeitpunkt },
-                new[] { 0.0, poissonDichte * 1.15 },
+                new[] { 0.0, poissonPdf.DefaultIfEmpty(0.0).Max() * 1.15 },
                 color: Color.DarkGreen,
                 lineStyle: ScottPlot.LineStyle.Dot,
                 lineWidth: 2,
@@ -38,13 +34,11 @@ namespace simSharpSimulation
             var terminCdfLine = plot.AddScatter(x, terminCdf, color: Color.Red, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Mit Termin: Normal-CDF");
             terminCdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            double[] poissonCdf = x
-                .Select(v => simulationsdauer > 0.0 ? Math.Clamp(v / simulationsdauer, 0.0, 1.0) : 0.0)
-                .ToArray();
-            var poissonCdfLine = plot.AddScatter(x, poissonCdf, color: Color.SaddleBrown, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Ohne Termin: kumulierte Rate");
+            double[] poissonCdf = x.Select(BerechneOhneTerminKumuliertenAnteil).ToArray();
+            var poissonCdfLine = plot.AddScatter(x, poissonCdf, color: Color.SaddleBrown, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Ohne Termin: kumulierter Anteil");
             poissonCdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            plot.Title($"Theoretische Patientenankuenfte\nMit Termin: Normalverteilung | Ohne Termin: Poisson bis Praxisschluss, Queue-Freeze bei Minute {freezeZeitpunkt:N0}");
+            plot.Title($"Theoretische Patientenankuenfte\nMit Termin: Normalverteilung | Ohne Termin: Exponential mit Tagesanteilen, Queue-Freeze bei Minute {freezeZeitpunkt:N0}");
             plot.XLabel("Zeit in Minuten (0 bis 480)");
             plot.YLabel("Dichte / Rate");
             axisRight.Label("Kumulierte Wahrscheinlichkeit / Rate");

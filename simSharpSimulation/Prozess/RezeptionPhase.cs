@@ -71,9 +71,9 @@ namespace simSharpSimulation
                 prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
 
                 double wartezeitRezeption = nowMinutes - ankunftszeit;
-                daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
+                daten.ErfasseRezeptionWartezeit(patientId, wartezeitRezeption, hatTermin);
 
-                daten.ErfasseRezeptionBehandlungszeit(behandlungsdauer, hatTermin);
+                daten.ErfasseRezeptionBehandlungszeit(patientId, behandlungsdauer, hatTermin);
 
                 yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 

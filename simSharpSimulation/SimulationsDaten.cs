@@ -66,6 +66,7 @@ namespace simSharpSimulation
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
         private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
         private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
+        private readonly Dictionary<int, PatientenZeitanteile> patientenZeitanteile = new();
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -101,6 +102,10 @@ namespace simSharpSimulation
         public double DurchschnittlicheGesamtprozesszeit => MittelwertOder0(Gesamtprozesszeiten);
         public double DurchschnittlicheGesamtprozesszeitMitTermin => MittelwertOder0(GesamtprozesszeitenMitTermin);
         public double DurchschnittlicheGesamtprozesszeitOhneTermin => MittelwertOder0(GesamtprozesszeitenOhneTermin);
+        public double DurchschnittlicheSummeStationenMitTermin => MittelwertZeitanteil(true, z => z.SummeStationen);
+        public double DurchschnittlicheSummeStationenOhneTermin => MittelwertZeitanteil(false, z => z.SummeStationen);
+        public double DurchschnittlicheSonstigeZeitMitTermin => MittelwertZeitanteil(true, z => z.SonstigeZeit);
+        public double DurchschnittlicheSonstigeZeitOhneTermin => MittelwertZeitanteil(false, z => z.SonstigeZeit);
         public double PrognoseTrefferquote => AnzahlPrognosePruefungen > 0
             ? (AnzahlPrognoseRichtig / (double)AnzahlPrognosePruefungen) * 100.0
             : 0.0;
@@ -133,11 +138,12 @@ namespace simSharpSimulation
             TraceData.Add(logEntry);
         }
 
-        public void ErfasseArztWartezeit(double wartezeitArzt, bool hatTermin, PatientenTyp patientenTyp)
+        public void ErfasseArztWartezeit(int patientId, double wartezeitArzt, bool hatTermin, PatientenTyp patientenTyp)
         {
             Wartezeiten.Add(wartezeitArzt);
             WartezeitenArztNachTyp[patientenTyp].Add(wartezeitArzt);
             FuegeNachTerminHinzu(wartezeitArzt, hatTermin, WartezeitenMitTermin, WartezeitenOhneTermin);
+            ErfasseStationszeit(patientId, hatTermin, wartezeitArzt);
         }
 
         public void ErfasseArztAbbruchWartezeit(DateTime tag)
@@ -238,7 +244,7 @@ namespace simSharpSimulation
                 entscheidungsart));
         }
 
-        public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
+        public void ErfasseSchwesterWartezeit(int patientId, double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
         {
             SchwesternWartezeiten.Add(wartezeitSchwester);
             WartezeitenSchwesterNachTyp[patientenTyp].Add(wartezeitSchwester);
@@ -247,9 +253,10 @@ namespace simSharpSimulation
                 hatTermin,
                 SchwesternWartezeitenMitTermin,
                 SchwesternWartezeitenOhneTermin);
+            ErfasseStationszeit(patientId, hatTermin, wartezeitSchwester);
         }
 
-        public void ErfasseSchwesterBehandlungszeit(double dauerSchwester, bool hatTermin, PatientenTyp patientenTyp)
+        public void ErfasseSchwesterBehandlungszeit(int patientId, double dauerSchwester, bool hatTermin, PatientenTyp patientenTyp)
         {
             SchwesternBehandlungszeitenNachTyp[patientenTyp].Add(dauerSchwester);
             FuegeNachTerminHinzu(
@@ -257,9 +264,10 @@ namespace simSharpSimulation
                 hatTermin,
                 SchwesternBehandlungszeitenMitTermin,
                 SchwesternBehandlungszeitenOhneTermin);
+            ErfasseStationszeit(patientId, hatTermin, dauerSchwester);
         }
 
-        public void ErfasseRezeptionWartezeit(double wartezeitRezeption, bool hatTermin)
+        public void ErfasseRezeptionWartezeit(int patientId, double wartezeitRezeption, bool hatTermin)
         {
             RezeptionsWartezeiten.Add(wartezeitRezeption);
             FuegeNachTerminHinzu(
@@ -267,9 +275,10 @@ namespace simSharpSimulation
                 hatTermin,
                 RezeptionsWartezeitenMitTermin,
                 RezeptionsWartezeitenOhneTermin);
+            ErfasseStationszeit(patientId, hatTermin, wartezeitRezeption);
         }
 
-        public void ErfasseRezeptionBehandlungszeit(double dauerRezeption, bool hatTermin)
+        public void ErfasseRezeptionBehandlungszeit(int patientId, double dauerRezeption, bool hatTermin)
         {
             RezeptionsBehandlungszeiten.Add(dauerRezeption);
             FuegeNachTerminHinzu(
@@ -277,9 +286,10 @@ namespace simSharpSimulation
                 hatTermin,
                 RezeptionsBehandlungszeitenMitTermin,
                 RezeptionsBehandlungszeitenOhneTermin);
+            ErfasseStationszeit(patientId, hatTermin, dauerRezeption);
         }
 
-        public void ErfasseArztBehandlungszeit(double dauerArzt, bool hatTermin, PatientenTyp patientenTyp)
+        public void ErfasseArztBehandlungszeit(int patientId, double dauerArzt, bool hatTermin, PatientenTyp patientenTyp)
         {
             ArztBehandlungszeitenNachTyp[patientenTyp].Add(dauerArzt);
             FuegeNachTerminHinzu(
@@ -287,9 +297,10 @@ namespace simSharpSimulation
                 hatTermin,
                 ArztBehandlungszeitenMitTermin,
                 ArztBehandlungszeitenOhneTermin);
+            ErfasseStationszeit(patientId, hatTermin, dauerArzt);
         }
 
-        public void ErfasseGesamtprozesszeit(double gesamtprozesszeit, bool hatTermin)
+        public void ErfasseGesamtprozesszeit(int patientId, double gesamtprozesszeit, bool hatTermin)
         {
             Gesamtprozesszeiten.Add(gesamtprozesszeit);
             FuegeNachTerminHinzu(
@@ -297,6 +308,8 @@ namespace simSharpSimulation
                 hatTermin,
                 GesamtprozesszeitenMitTermin,
                 GesamtprozesszeitenOhneTermin);
+            PatientenZeitanteile anteile = HoleOderErzeugePatientenZeitanteile(patientId, hatTermin);
+            anteile.Prozess = gesamtprozesszeit;
         }
 
         public void ErfasseAnkunftszeit(double ankunftszeit, bool hatTermin)
@@ -630,6 +643,33 @@ namespace simSharpSimulation
             return werte.Count > 0 ? werte.Average() : 0;
         }
 
+        private void ErfasseStationszeit(int patientId, bool hatTermin, double dauer)
+        {
+            PatientenZeitanteile anteile = HoleOderErzeugePatientenZeitanteile(patientId, hatTermin);
+            anteile.SummeStationen += Math.Max(0.0, dauer);
+        }
+
+        private PatientenZeitanteile HoleOderErzeugePatientenZeitanteile(int patientId, bool hatTermin)
+        {
+            if (!patientenZeitanteile.TryGetValue(patientId, out PatientenZeitanteile? anteile))
+            {
+                anteile = new PatientenZeitanteile(hatTermin);
+                patientenZeitanteile[patientId] = anteile;
+            }
+
+            return anteile;
+        }
+
+        private double MittelwertZeitanteil(bool hatTermin, Func<PatientenZeitanteile, double> selector)
+        {
+            var werte = patientenZeitanteile.Values
+                .Where(z => z.HatTermin == hatTermin && z.Prozess.HasValue)
+                .Select(selector)
+                .ToList();
+
+            return werte.Count > 0 ? werte.Average() : 0.0;
+        }
+
         private static Dictionary<string, (string Von, string Zu)> ErstelleEventZustandsMapping()
         {
             string dateiPfad = ErmittleRessourcenDateiPfad("event-zustandsmapping.json");
@@ -715,6 +755,19 @@ namespace simSharpSimulation
         {
             public int Hit { get; set; }
             public int Miss { get; set; }
+        }
+
+        private sealed class PatientenZeitanteile
+        {
+            public PatientenZeitanteile(bool hatTermin)
+            {
+                HatTermin = hatTermin;
+            }
+
+            public bool HatTermin { get; }
+            public double SummeStationen { get; set; }
+            public double? Prozess { get; set; }
+            public double SonstigeZeit => Math.Max(0.0, (Prozess ?? 0.0) - SummeStationen);
         }
 
         private sealed record PrognosePruefung(

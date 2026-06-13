@@ -44,16 +44,12 @@ namespace simSharpSimulation
             double freezeZeitpunkt = Math.Max(
                 0.0,
                 simulationsdauer - SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
-            double mittlereZwischenankunftszeit = Math.Max(
-                0.0001,
-                PatientenKonfiguration.OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN);
-            double poissonErwartungProBin = Program.SimulierteArbeitstage *
-                balkenBreite /
-                mittlereZwischenankunftszeit;
-            double[] poissonLinie = x.Select(v => v <= simulationsdauer ? poissonErwartungProBin : 0.0).ToArray();
-            plot.AddScatter(x, poissonLinie, color: Color.DarkOrange, lineWidth: 3, label: "Theorie: ohne Termin Poisson-Rate");
+            double[] poissonLinie = x
+                .Select(v => Program.SimulierteArbeitstage * balkenBreite * BerechneOhneTerminRateProMinute(v))
+                .ToArray();
+            plot.AddScatter(x, poissonLinie, color: Color.DarkOrange, lineWidth: 3, label: "Theorie: ohne Termin Exponential-Rate");
             double freezeLinieHoehe = Math.Max(
-                poissonErwartungProBin,
+                poissonLinie.DefaultIfEmpty(0.0).Max(),
                 Math.Max(countsMitTermin.DefaultIfEmpty(0).Max(), countsOhneTermin.DefaultIfEmpty(0).Max()));
             plot.AddScatter(
                 new[] { freezeZeitpunkt, freezeZeitpunkt },
@@ -67,13 +63,11 @@ namespace simSharpSimulation
             var terminCdfLine = plot.AddScatter(x, terminCdf, color: Color.Red, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Termin Normal-CDF");
             terminCdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            double[] poissonCdf = x
-                .Select(v => simulationsdauer > 0.0 ? Math.Clamp(v / simulationsdauer, 0.0, 1.0) : 0.0)
-                .ToArray();
-            var poissonCdfLine = plot.AddScatter(x, poissonCdf, color: Color.SaddleBrown, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Ohne Termin kumulierte Rate");
+            double[] poissonCdf = x.Select(BerechneOhneTerminKumuliertenAnteil).ToArray();
+            var poissonCdfLine = plot.AddScatter(x, poissonCdf, color: Color.SaddleBrown, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Ohne Termin kumulierter Anteil");
             poissonCdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            plot.Title($"Simulation vs. Theorie: Ankuenfte\nMit Termin: Normal | Ohne Termin: Poisson bis Praxisschluss, Queue-Freeze bei Minute {freezeZeitpunkt:N0}");
+            plot.Title($"Simulation vs. Theorie: Ankuenfte\nMit Termin: Normal | Ohne Termin: Exponential mit Tagesanteilen, Queue-Freeze bei Minute {freezeZeitpunkt:N0}");
             plot.XLabel("Zeit der Simulation in Minuten (0 bis 480)");
             plot.YLabel($"Patienten pro {balkenBreite:N0}-Minuten-Bin");
             axisRight.Label("Kumulierte Wahrscheinlichkeit / Rate");
@@ -82,6 +76,70 @@ namespace simSharpSimulation
             string outputPath = ErzeugeOutputPfad("ankuenfte_simulation_vs_theorie.png");
             plot.SaveFig(outputPath);
             Console.WriteLine($"--- Diagramm 2 gespeichert: {outputPath} ---");
+        }
+
+        private static double BerechneOhneTerminRateProMinute(double minute)
+        {
+            int anzahlOhneTermin = PatientenKonfiguration.BerechneAnzahlPatientenOhneTermin();
+            double anteilSumme = PatientenKonfiguration.OHNE_TERMIN_TAGESANTEILE
+                .Where(a => a.BisMinute > a.VonMinute && a.Anteil > 0.0)
+                .Sum(a => a.Anteil);
+
+            if (anzahlOhneTermin <= 0 || anteilSumme <= 0.0)
+            {
+                return 0.0;
+            }
+
+            foreach (var anteil in PatientenKonfiguration.OHNE_TERMIN_TAGESANTEILE)
+            {
+                double dauer = anteil.BisMinute - anteil.VonMinute;
+                if (dauer <= 0.0 || anteil.Anteil <= 0.0)
+                {
+                    continue;
+                }
+
+                if (minute >= anteil.VonMinute && minute <= anteil.BisMinute)
+                {
+                    return (anzahlOhneTermin * (anteil.Anteil / anteilSumme)) / dauer;
+                }
+            }
+
+            return 0.0;
+        }
+
+        private static double BerechneOhneTerminKumuliertenAnteil(double minute)
+        {
+            double anteilSumme = PatientenKonfiguration.OHNE_TERMIN_TAGESANTEILE
+                .Where(a => a.BisMinute > a.VonMinute && a.Anteil > 0.0)
+                .Sum(a => a.Anteil);
+
+            if (anteilSumme <= 0.0)
+            {
+                return 0.0;
+            }
+
+            double kumuliert = 0.0;
+            foreach (var anteil in PatientenKonfiguration.OHNE_TERMIN_TAGESANTEILE
+                .Where(a => a.BisMinute > a.VonMinute && a.Anteil > 0.0)
+                .OrderBy(a => a.VonMinute))
+            {
+                double normalisierterAnteil = anteil.Anteil / anteilSumme;
+                if (minute >= anteil.BisMinute)
+                {
+                    kumuliert += normalisierterAnteil;
+                    continue;
+                }
+
+                if (minute > anteil.VonMinute)
+                {
+                    double fensterFortschritt = (minute - anteil.VonMinute) / (anteil.BisMinute - anteil.VonMinute);
+                    kumuliert += normalisierterAnteil * Math.Clamp(fensterFortschritt, 0.0, 1.0);
+                }
+
+                break;
+            }
+
+            return Math.Clamp(kumuliert, 0.0, 1.0);
         }
     }
 }

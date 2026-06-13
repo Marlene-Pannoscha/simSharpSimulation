@@ -11,15 +11,19 @@ namespace simSharpSimulation
      */
     public static class SchwesterPhase
     {
-        private static int GetPriority(PatientenTyp typ)
+        private static int GetPriority(PatientenTyp typ, bool hatTermin)
         {
-            return typ switch
+            int typPrioritaet = typ switch
             {
                 PatientenTyp.Kurz => 1,
                 PatientenTyp.Mittel => 2,
                 PatientenTyp.Lang => 3,
                 _ => 3
             };
+
+            return hatTermin
+                ? typPrioritaet
+                : typPrioritaet + PatientenKonfiguration.OHNE_TERMIN_PRIORITAETSZUSCHLAG;
         }
 
         public static IEnumerable<Event> DurchlaufeSchwester(
@@ -41,7 +45,7 @@ namespace simSharpSimulation
 
             bool schwesterSofortVerfuegbar = schwestern.IstFrei;
             bool betrittWarteschlange = !direktZurSchwester || !schwesterSofortVerfuegbar;
-            int prioritaet = GetPriority(patientenTyp);
+            int prioritaet = GetPriority(patientenTyp, hatTermin);
             prognoseStatus.RegistriereWartend(patientId, behandlungsdauer, prioritaet);
 
             if (betrittWarteschlange)
@@ -88,9 +92,9 @@ namespace simSharpSimulation
                 prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
 
                 double wartezeitSchwester = nowMinutes - ankunftszeit;
-                daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
+                daten.ErfasseSchwesterWartezeit(patientId, wartezeitSchwester, patientenTyp, hatTermin);
 
-                daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+                daten.ErfasseSchwesterBehandlungszeit(patientId, behandlungsdauer, hatTermin, patientenTyp);
                 yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;

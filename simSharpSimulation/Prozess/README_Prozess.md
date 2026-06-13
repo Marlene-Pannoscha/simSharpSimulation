@@ -19,9 +19,11 @@ Die Prognoselogik sitzt aktuell zentral im Unterordner `PatientenProzess/`, fach
 
 Verantwortung:
 
-- erzeugt pro Tag bis zu `PatientenKonfiguration.ANZAHL_PATIENTEN_TAG` Ankunftszeitpunkte
-- verwendet eine Normalverteilung mit `ERWARTUNGSWERT` und `STANDARDABWEICHUNG`
-- verwirft Ankünfte nach `SimulationKonfiguration.SIMULATIONSDAUER`
+- erzeugt pro Tag genau `PatientenKonfiguration.ANZAHL_PATIENTEN_TAG` geplante Ankunftszeitpunkte
+- berechnet daraus `mit Termin = round(AnzahlPatientenTag * TerminWahrscheinlichkeit)`
+- berechnet `ohne Termin = AnzahlPatientenTag - mit Termin`
+- verwendet fuer Terminpatienten eine Normalverteilung mit `ERWARTUNGSWERT` und `STANDARDABWEICHUNG`
+- verwendet fuer Patienten ohne Termin exponentiell verteilte Zwischenankuenfte innerhalb der konfigurierten `OHNE_TERMIN_TAGESANTEILE`
 - sortiert alle Ankünfte chronologisch
 - behandelt Patienten vor Öffnung explizit als FIFO-Warteschlange
 - startet für jede Ankunft einen separaten Patientenprozess mit `env.Process(...)`

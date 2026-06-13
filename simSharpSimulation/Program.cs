@@ -97,14 +97,29 @@ namespace simSharpSimulation
             double avgArztBehOhneTermin = daten.DurchschnittlicheBehandlungszeitArztOhneTermin;
             double avgGesamtprozesszeitMitTermin = daten.DurchschnittlicheGesamtprozesszeitMitTermin;
             double avgGesamtprozesszeitOhneTermin = daten.DurchschnittlicheGesamtprozesszeitOhneTermin;
+            double avgSummeStationenMitTermin = daten.DurchschnittlicheSummeStationenMitTermin;
+            double avgSummeStationenOhneTermin = daten.DurchschnittlicheSummeStationenOhneTermin;
+            double avgSonstigeZeitMitTermin = daten.DurchschnittlicheSonstigeZeitMitTermin;
+            double avgSonstigeZeitOhneTermin = daten.DurchschnittlicheSonstigeZeitOhneTermin;
 
+            int geplantePatientenProTag = PatientenKonfiguration.ANZAHL_PATIENTEN_TAG;
+            int geplanteMitTerminProTag = PatientenKonfiguration.BerechneAnzahlPatientenMitTermin();
+            int geplanteOhneTerminProTag = PatientenKonfiguration.BerechneAnzahlPatientenOhneTermin();
+            int empfangenMitTermin = daten.EchteAnkunftszeitenMitTermin.Count;
+            int empfangenOhneTermin = daten.EchteAnkunftszeitenOhneTermin.Count;
             int anzahlMitTermin = daten.GesamtprozesszeitenMitTermin.Count;
             int anzahlOhneTermin = daten.GesamtprozesszeitenOhneTermin.Count;
+            int nichtBeendetMitTermin = Math.Max(0, empfangenMitTermin - anzahlMitTermin);
+            int nichtBeendetOhneTermin = Math.Max(0, empfangenOhneTermin - anzahlOhneTermin);
             Console.WriteLine($"Simulation beendet. {daten.EchteAnkunftszeiten.Count} Patienten empfangen.");
+            Console.WriteLine($"Geplante Patienten pro Tag: {geplantePatientenProTag} = {geplanteMitTerminProTag} mit Termin + {geplanteOhneTerminProTag} ohne Termin");
+            Console.WriteLine($"Geplante Patienten gesamt: {geplantePatientenProTag * SimulierteArbeitstage} = {geplanteMitTerminProTag * SimulierteArbeitstage} mit Termin + {geplanteOhneTerminProTag * SimulierteArbeitstage} ohne Termin");
+            Console.WriteLine($"Empfangene Patienten: {daten.EchteAnkunftszeiten.Count} = {empfangenMitTermin} mit Termin + {empfangenOhneTermin} ohne Termin");
             Console.WriteLine($"Durchschnittliche Wartezeit (Rezeption): {avgRezeptionsWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Schwester): {avgSchwesternWartezeit:F2} Minuten");
             Console.WriteLine($"Durchschnittliche Wartezeit (Arzt): {avgWartezeit:F2} Minuten");
             Console.WriteLine($"Nicht behandelte Patienten gesamt: {daten.AnzahlNichtBehandeltRezeptionGesamt + daten.AnzahlNichtBehandeltSchwesterGesamt + daten.AnzahlNichtBehandeltArztGesamt}");
+            Console.WriteLine($"Nicht beendete Patienten nach Gruppe: {nichtBeendetMitTermin} mit Termin + {nichtBeendetOhneTermin} ohne Termin");
             Console.WriteLine($"  davon Rezeption-Schichtende: {daten.AnzahlNichtBehandeltRezeptionFeierabend}");
             Console.WriteLine($"  davon Schwester-Schichtende: {daten.AnzahlNichtBehandeltSchwesterFeierabend}");
             Console.WriteLine($"  davon Arzt-Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend}");
@@ -112,18 +127,12 @@ namespace simSharpSimulation
 
             Console.WriteLine();
             Console.WriteLine("--- Vergleich mit Termin vs. ohne Termin (Wartezeiten, Behandlungszeiten & Gesamtprozess) ---");
-            Console.WriteLine($"{"Gruppe",-12} | {"Anz",5} | {"Rezept.W",8} | {"Rezept.B",8} | {"Schwest.W",8} | {"Schwest.B",8} | {"Arzt.W",8} | {"Arzt.B",8} | {"GesamtΣ",8}");
-            Console.WriteLine(new string('-', 116));
+            Console.WriteLine($"{"Gruppe",-12} | {"Anz",5} | {"Rezept.W",8} | {"Rezept.B",8} | {"Schwest.W",8} | {"Schwest.B",8} | {"Arzt.W",8} | {"Arzt.B",8} | {"Stationen",9} | {"Sonstige",8} | {"Prozess",8}");
+            Console.WriteLine(new string('-', 140));
 
-            double gesamtSumMitTermin = avgRezeptionMitTermin + avgRezeptionBehMitTermin
-                + avgSchwesterMitTermin + avgSchwesterBehMitTermin
-                + avgWartezeitMitTermin + avgArztBehMitTermin;
-            double gesamtSumOhneTermin = avgRezeptionOhneTermin + avgRezeptionBehOhneTermin
-                + avgSchwesterOhneTermin + avgSchwesterBehOhneTermin
-                + avgWartezeitOhneTermin + avgArztBehOhneTermin;
-
-            Console.WriteLine($"{"Mit Termin",-12} | {anzahlMitTermin,5} | {avgRezeptionMitTermin,8:F2} | {avgRezeptionBehMitTermin,8:F2} | {avgSchwesterMitTermin,8:F2} | {avgSchwesterBehMitTermin,8:F2} | {avgWartezeitMitTermin,8:F2} | {avgArztBehMitTermin,8:F2} | {gesamtSumMitTermin,8:F2}");
-            Console.WriteLine($"{"Ohne Termin",-12} | {anzahlOhneTermin,5} | {avgRezeptionOhneTermin,8:F2} | {avgRezeptionBehOhneTermin,8:F2} | {avgSchwesterOhneTermin,8:F2} | {avgSchwesterBehOhneTermin,8:F2} | {avgWartezeitOhneTermin,8:F2} | {avgArztBehOhneTermin,8:F2} | {gesamtSumOhneTermin,8:F2}");
+            Console.WriteLine($"{"Mit Termin",-12} | {anzahlMitTermin,5} | {avgRezeptionMitTermin,8:F2} | {avgRezeptionBehMitTermin,8:F2} | {avgSchwesterMitTermin,8:F2} | {avgSchwesterBehMitTermin,8:F2} | {avgWartezeitMitTermin,8:F2} | {avgArztBehMitTermin,8:F2} | {avgSummeStationenMitTermin,9:F2} | {avgSonstigeZeitMitTermin,8:F2} | {avgGesamtprozesszeitMitTermin,8:F2}");
+            Console.WriteLine($"{"Ohne Termin",-12} | {anzahlOhneTermin,5} | {avgRezeptionOhneTermin,8:F2} | {avgRezeptionBehOhneTermin,8:F2} | {avgSchwesterOhneTermin,8:F2} | {avgSchwesterBehOhneTermin,8:F2} | {avgWartezeitOhneTermin,8:F2} | {avgArztBehOhneTermin,8:F2} | {avgSummeStationenOhneTermin,9:F2} | {avgSonstigeZeitOhneTermin,8:F2} | {avgGesamtprozesszeitOhneTermin,8:F2}");
+            Console.WriteLine($"{"Differenz",-12} | {"",5} | {avgRezeptionOhneTermin - avgRezeptionMitTermin,8:F2} | {avgRezeptionBehOhneTermin - avgRezeptionBehMitTermin,8:F2} | {avgSchwesterOhneTermin - avgSchwesterMitTermin,8:F2} | {avgSchwesterBehOhneTermin - avgSchwesterBehMitTermin,8:F2} | {avgWartezeitOhneTermin - avgWartezeitMitTermin,8:F2} | {avgArztBehOhneTermin - avgArztBehMitTermin,8:F2} | {avgSummeStationenOhneTermin - avgSummeStationenMitTermin,9:F2} | {avgSonstigeZeitOhneTermin - avgSonstigeZeitMitTermin,8:F2} | {avgGesamtprozesszeitOhneTermin - avgGesamtprozesszeitMitTermin,8:F2}");
 
             Console.WriteLine();
             Console.WriteLine("--- Patienten-Typen: Verteilung + Wartezeiten ---");

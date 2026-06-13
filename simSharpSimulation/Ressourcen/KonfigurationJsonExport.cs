@@ -44,12 +44,14 @@ namespace simSharpSimulation
             RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION = rezeption.VariationskoeffizientRezeption;
 
             var patienten = LeseJson<PatientenKonfigurationJson>(Path.Combine(zielOrdner, "patienten-konfiguration.json"));
+            ValidierePatientenKonfiguration(patienten);
             PatientenKonfiguration.ANZAHL_PATIENTEN_TAG = patienten.AnzahlPatientenTag;
             PatientenKonfiguration.ERWARTUNGSWERT = patienten.Erwartungswert;
             PatientenKonfiguration.STANDARDABWEICHUNG = patienten.Standardabweichung;
             PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT = patienten.TerminWahrscheinlichkeit;
-            PatientenKonfiguration.OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN =
-                patienten.OhneTerminMittlereZwischenankunftszeitMinuten;
+            PatientenKonfiguration.OHNE_TERMIN_TAGESANTEILE = patienten.OhneTerminTagesanteile
+                .Select(a => new OhneTerminTagesanteil(a.VonMinute, a.BisMinute, a.Anteil))
+                .ToArray();
             PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = patienten.TerminVorbereitungWahrscheinlichkeit;
             PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = patienten.OhneTerminVorbereitungWahrscheinlichkeit;
             PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER = patienten.MittlereWartezimmerDauerSchwester;
@@ -58,6 +60,7 @@ namespace simSharpSimulation
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = patienten.OhneTerminWartezimmerFaktorSchwester;
             PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.MitTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.OhneTerminWartezimmerFaktorArzt;
+            PatientenKonfiguration.OHNE_TERMIN_PRIORITAETSZUSCHLAG = patienten.OhneTerminPrioritaetszuschlag;
             PatientenKonfiguration.TYPEN_VERTEILUNG = patienten.TypenVerteilung
                 .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.VariationskoeffizientArzt, t.BehandlungszeitSchwester, t.VariationskoeffizientSchwester, t.Behandlungskosten))
                 .ToArray();
@@ -87,6 +90,61 @@ namespace simSharpSimulation
         public static void ExportiereAlle()
         {
             throw new InvalidOperationException("ExportiereAlle ist deaktiviert. Bitte JSON-Konfigurationen bereitstellen.");
+        }
+
+        private static void ValidierePatientenKonfiguration(PatientenKonfigurationJson patienten)
+        {
+            if (patienten.AnzahlPatientenTag <= 0)
+                throw new InvalidDataException("Patienten-Konfiguration: AnzahlPatientenTag muss groesser als 0 sein.");
+
+            if (patienten.Erwartungswert < 0.0)
+                throw new InvalidDataException("Patienten-Konfiguration: Erwartungswert darf nicht negativ sein.");
+
+            if (patienten.Standardabweichung <= 0.0)
+                throw new InvalidDataException("Patienten-Konfiguration: Standardabweichung muss groesser als 0 sein.");
+
+            if (patienten.TerminWahrscheinlichkeit < 0.0 || patienten.TerminWahrscheinlichkeit > 1.0)
+                throw new InvalidDataException("Patienten-Konfiguration: TerminWahrscheinlichkeit muss zwischen 0 und 1 liegen.");
+
+            if (patienten.TerminVorbereitungWahrscheinlichkeit < 0.0 || patienten.TerminVorbereitungWahrscheinlichkeit > 1.0)
+                throw new InvalidDataException("Patienten-Konfiguration: TerminVorbereitungWahrscheinlichkeit muss zwischen 0 und 1 liegen.");
+
+            if (patienten.OhneTerminVorbereitungWahrscheinlichkeit < 0.0 || patienten.OhneTerminVorbereitungWahrscheinlichkeit > 1.0)
+                throw new InvalidDataException("Patienten-Konfiguration: OhneTerminVorbereitungWahrscheinlichkeit muss zwischen 0 und 1 liegen.");
+
+            if (patienten.OhneTerminPrioritaetszuschlag < 0)
+                throw new InvalidDataException("Patienten-Konfiguration: OhneTerminPrioritaetszuschlag darf nicht negativ sein.");
+
+            if (patienten.OhneTerminTagesanteile.Count == 0)
+                throw new InvalidDataException("Patienten-Konfiguration: OhneTerminTagesanteile darf nicht leer sein.");
+
+            foreach (var anteil in patienten.OhneTerminTagesanteile)
+            {
+                if (anteil.BisMinute <= anteil.VonMinute)
+                    throw new InvalidDataException("Patienten-Konfiguration: Jeder OhneTerminTagesanteil braucht BisMinute > VonMinute.");
+
+                if (anteil.Anteil <= 0.0)
+                    throw new InvalidDataException("Patienten-Konfiguration: Jeder OhneTerminTagesanteil braucht Anteil > 0.");
+            }
+
+            if (patienten.TypenVerteilung.Count == 0)
+                throw new InvalidDataException("Patienten-Konfiguration: TypenVerteilung darf nicht leer sein.");
+
+            double typenSumme = patienten.TypenVerteilung.Sum(t => t.Wahrscheinlichkeit);
+            if (Math.Abs(typenSumme - 1.0) > 0.0001)
+                throw new InvalidDataException("Patienten-Konfiguration: Wahrscheinlichkeiten in TypenVerteilung muessen zusammen 1 ergeben.");
+
+            foreach (var typ in patienten.TypenVerteilung)
+            {
+                if (typ.Wahrscheinlichkeit <= 0.0)
+                    throw new InvalidDataException("Patienten-Konfiguration: Jeder Patiententyp braucht Wahrscheinlichkeit > 0.");
+
+                if (typ.BehandlungszeitArzt <= 0.0 || typ.BehandlungszeitSchwester <= 0.0)
+                    throw new InvalidDataException("Patienten-Konfiguration: Behandlungszeiten muessen groesser als 0 sein.");
+
+                if (typ.VariationskoeffizientArzt < 0.0 || typ.VariationskoeffizientSchwester < 0.0)
+                    throw new InvalidDataException("Patienten-Konfiguration: Variationskoeffizienten duerfen nicht negativ sein.");
+            }
         }
 
         private static T LeseJson<T>(string pfad)
@@ -153,7 +211,7 @@ namespace simSharpSimulation
         public double Erwartungswert { get; set; }
         public double Standardabweichung { get; set; }
         public double TerminWahrscheinlichkeit { get; set; }
-        public double OhneTerminMittlereZwischenankunftszeitMinuten { get; set; } = 7.5;
+        public List<OhneTerminTagesanteilJson> OhneTerminTagesanteile { get; set; } = new();
         public double TerminVorbereitungWahrscheinlichkeit { get; set; }
         public double OhneTerminVorbereitungWahrscheinlichkeit { get; set; }
         public double MittlereWartezimmerDauerSchwester { get; set; }
@@ -162,8 +220,16 @@ namespace simSharpSimulation
         public double OhneTerminWartezimmerFaktorSchwester { get; set; }
         public double MitTerminWartezimmerFaktorArzt { get; set; }
         public double OhneTerminWartezimmerFaktorArzt { get; set; }
+        public int OhneTerminPrioritaetszuschlag { get; set; }
         public List<PatientenTypKonfigurationJson> TypenVerteilung { get; set; } = new();
         public string Beschreibung { get; set; } = string.Empty;
+    }
+
+    internal sealed class OhneTerminTagesanteilJson
+    {
+        public double VonMinute { get; set; }
+        public double BisMinute { get; set; }
+        public double Anteil { get; set; }
     }
 
     internal sealed class PatientenTypKonfigurationJson

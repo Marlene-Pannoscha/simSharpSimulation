@@ -80,6 +80,7 @@ namespace simSharpSimulation
                     patientId,
                     schwesterBehandlungsdauer,
                     patientenTyp,
+                    hatTermin,
                     eingangZurRezeptionDauer.TotalMinutes + ersteRezeptionsdauer + interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer) : 0.0) +
                 BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
                 SchaetzeArztQueueWartezeit(
@@ -87,6 +88,7 @@ namespace simSharpSimulation
                     patientId,
                     arztBehandlungsdauer,
                     patientenTyp,
+                    hatTermin,
                     eingangZurRezeptionDauer.TotalMinutes +
                     ersteRezeptionsdauer +
                     (brauchtVorbereitung ? ((2.0 * interneBewegungsdauer.TotalMinutes) + schwesterWartezimmerdauer + schwesterBehandlungsdauer) : 0.0) +
@@ -234,7 +236,8 @@ namespace simSharpSimulation
                     patientId,
                     direktZurSchwester ? 0.0 : interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer,
                     schwesterBehandlungsdauer,
-                    patientenTyp);
+                    patientenTyp,
+                    hatTermin);
             }
             else
             {
@@ -243,7 +246,8 @@ namespace simSharpSimulation
                     patientId,
                     interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer,
                     arztBehandlungsdauer,
-                    patientenTyp);
+                    patientenTyp,
+                    hatTermin);
             }
 
             if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
@@ -269,6 +273,7 @@ namespace simSharpSimulation
                     patientId,
                     schwesterBehandlungsdauer,
                     patientenTyp,
+                    hatTermin,
                     direktZurSchwester ? 0.0 : interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer) : 0.0) +
                 BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
                 SchaetzeArztQueueWartezeit(
@@ -276,6 +281,7 @@ namespace simSharpSimulation
                     patientId,
                     arztBehandlungsdauer,
                     patientenTyp,
+                    hatTermin,
                     brauchtVorbereitung
                         ? ((direktZurSchwester ? 0.0 : interneBewegungsdauer.TotalMinutes + schwesterWartezimmerdauer) +
                            schwesterBehandlungsdauer +
@@ -316,13 +322,14 @@ namespace simSharpSimulation
                     "VorSchwester",
                     interneBewegungsdauer.TotalMinutes +
                     schwesterBehandlungsdauer +
-                    SchaetzeSchwesterQueueWartezeit(env, patientId, schwesterBehandlungsdauer, patientenTyp) +
+                    SchaetzeSchwesterQueueWartezeit(env, patientId, schwesterBehandlungsdauer, patientenTyp, hatTermin) +
                     BerechneRestzeitAbSchwester(interneBewegungsdauer, arztBehandlungsdauer, arztWartezimmerdauer) +
                     SchaetzeArztQueueWartezeit(
                         env,
                         patientId,
                         arztBehandlungsdauer,
                         patientenTyp,
+                        hatTermin,
                         schwesterBehandlungsdauer + interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer) +
                     (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
                     BerechneRestzeitNachArztMitKonkretemPfad(
@@ -343,13 +350,14 @@ namespace simSharpSimulation
                 }
 
                 var schwesterErgebnis = new BehandlungsPhaseErgebnis();
+                double ankunftszeitSchwester = (env.Now - env.StartDate).TotalMinutes;
                 // --- SCHWESTER (NURSE) PHASE ---
                 foreach (var ev in SchwesterPhase.DurchlaufeSchwester(
                     env,
                     patientId,
                     schwestern,
                     patientenTyp,
-                    ankunftszeit,
+                    ankunftszeitSchwester,
                     hatTermin,
                     direktZurSchwester,
                     interneBewegungsdauer,
@@ -377,7 +385,8 @@ namespace simSharpSimulation
                     patientId,
                     interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer,
                     arztBehandlungsdauer,
-                    patientenTyp);
+                    patientenTyp,
+                    hatTermin);
 
                 if (!ErfassePrognoseCheckpoint(
                     env,
@@ -389,6 +398,7 @@ namespace simSharpSimulation
                         patientId,
                         arztBehandlungsdauer,
                         patientenTyp,
+                        hatTermin,
                         interneBewegungsdauer.TotalMinutes + arztWartezimmerdauer) +
                     (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
                     BerechneRestzeitNachArztMitKonkretemPfad(
@@ -437,7 +447,7 @@ namespace simSharpSimulation
                 "VorArzt",
                 interneBewegungsdauer.TotalMinutes +
                 arztBehandlungsdauer +
-                SchaetzeArztQueueWartezeit(env, patientId, arztBehandlungsdauer, patientenTyp) +
+                SchaetzeArztQueueWartezeit(env, patientId, arztBehandlungsdauer, patientenTyp, hatTermin) +
                 (gehtNachArztZurRezeption ? SchaetzeRezeptionsQueueWartezeit(env, patientId, zweiteRezeptionsdauer) : 0.0) +
                 BerechneRestzeitNachArztMitKonkretemPfad(
                     gehtNachArztZurRezeption,
@@ -459,7 +469,8 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var arztErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis, arztStatus))
+            double ankunftszeitArzt = (env.Now - env.StartDate).TotalMinutes;
+            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeitArzt, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis, arztStatus))
                 yield return ev;
 
             if (arztErgebnis.PatientHatKlinikVerlassen)
@@ -549,7 +560,7 @@ namespace simSharpSimulation
                 (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0) +
                 arztBehandlungsdauer +
                 (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
-            daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
+            daten.ErfasseGesamtprozesszeit(patientId, gesamtprozesszeit, hatTermin);
             daten.SchliessePrognosen(patientId, nowMinutes, gesampelteBearbeitungszeitGesamt);
             EntferneAktivePatientenPrognose(patientId);
         }

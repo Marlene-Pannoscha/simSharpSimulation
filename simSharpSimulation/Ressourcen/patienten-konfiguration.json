@@ -1,17 +1,29 @@
 {
-  "AnzahlPatientenTag": 105,
+  "AnzahlPatientenTag": 140,
   "Erwartungswert": 180,
   "Standardabweichung": 80,
   "TerminWahrscheinlichkeit": 0.7,
-  "OhneTerminMittlereZwischenankunftszeitMinuten": 7.5,
+  "OhneTerminTagesanteile": [
+    {
+      "VonMinute": 0,
+      "BisMinute": 240,
+      "Anteil": 0.7
+    },
+    {
+      "VonMinute": 240,
+      "BisMinute": 480,
+      "Anteil": 0.3
+    }
+  ],
   "TerminVorbereitungWahrscheinlichkeit": 0.4,
   "OhneTerminVorbereitungWahrscheinlichkeit": 0.8,
   "MittlereWartezimmerDauerSchwester": 2,
   "MittlereWartezimmerDauerArzt": 5,
-  "MitTerminWartezimmerFaktorSchwester": 0.6,
-  "OhneTerminWartezimmerFaktorSchwester": 2.5,
-  "MitTerminWartezimmerFaktorArzt": 0.4,
-  "OhneTerminWartezimmerFaktorArzt": 3,
+  "MitTerminWartezimmerFaktorSchwester": 0.4,
+  "OhneTerminWartezimmerFaktorSchwester": 4,
+  "MitTerminWartezimmerFaktorArzt": 0.2,
+  "OhneTerminWartezimmerFaktorArzt": 14.5,
+  "OhneTerminPrioritaetszuschlag": 0,
   "TypenVerteilung": [
     {
       "Typ": "Kurz",

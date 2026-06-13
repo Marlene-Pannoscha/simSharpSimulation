@@ -368,6 +368,7 @@ namespace simSharpSimulation
             int patientId,
             double behandlungsdauer,
             PatientenTyp patientenTyp,
+            bool hatTermin,
             double minutenBisAnkunft = 0.0)
         {
             double jetztMinuten = AktuelleMinute(env);
@@ -376,7 +377,7 @@ namespace simSharpSimulation
                 jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
                 patientId,
                 behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+                ErmittlePrioritaet(patientenTyp, hatTermin));
         }
 
         private void PlaneSchwesterAnkunft(
@@ -384,13 +385,14 @@ namespace simSharpSimulation
             int patientId,
             double minutenBisAnkunft,
             double behandlungsdauer,
-            PatientenTyp patientenTyp)
+            PatientenTyp patientenTyp,
+            bool hatTermin)
         {
             schwesterStatus.RegistriereGeplanteAnkunft(
                 patientId,
                 AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
                 behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+                ErmittlePrioritaet(patientenTyp, hatTermin));
         }
 
         private double SchaetzeArztQueueWartezeit(
@@ -398,6 +400,7 @@ namespace simSharpSimulation
             int patientId,
             double behandlungsdauer,
             PatientenTyp patientenTyp,
+            bool hatTermin,
             double minutenBisAnkunft = 0.0)
         {
             double jetztMinuten = AktuelleMinute(env);
@@ -406,7 +409,7 @@ namespace simSharpSimulation
                 jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
                 patientId,
                 behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+                ErmittlePrioritaet(patientenTyp, hatTermin));
         }
 
         private void PlaneArztAnkunft(
@@ -414,13 +417,14 @@ namespace simSharpSimulation
             int patientId,
             double minutenBisAnkunft,
             double behandlungsdauer,
-            PatientenTyp patientenTyp)
+            PatientenTyp patientenTyp,
+            bool hatTermin)
         {
             arztStatus.RegistriereGeplanteAnkunft(
                 patientId,
                 AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
                 behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+                ErmittlePrioritaet(patientenTyp, hatTermin));
         }
 
         private static double AktuelleMinute(Simulation env)
@@ -428,15 +432,19 @@ namespace simSharpSimulation
             return (env.Now - env.StartDate).TotalMinutes;
         }
 
-        private static int ErmittlePrioritaet(PatientenTyp typ)
+        private static int ErmittlePrioritaet(PatientenTyp typ, bool hatTermin)
         {
-            return typ switch
+            int typPrioritaet = typ switch
             {
                 PatientenTyp.Kurz => 1,
                 PatientenTyp.Mittel => 2,
                 PatientenTyp.Lang => 3,
                 _ => 3
             };
+
+            return hatTermin
+                ? typPrioritaet
+                : typPrioritaet + PatientenKonfiguration.OHNE_TERMIN_PRIORITAETSZUSCHLAG;
         }
     }
 }

@@ -11,17 +11,21 @@ namespace simSharpSimulation
      */
     public static class ArztPhase
     {
-        private static int GetPriority(PatientenTyp typ)
+        private static int GetPriority(PatientenTyp typ, bool hatTermin)
         {
             // Kuerzere Behandlungen erhalten eine hoehere Prioritaet, damit der Arzt
             // kurze Faelle schneller abarbeiten kann und die Warteschlange beweglich bleibt.
-            return typ switch
+            int typPrioritaet = typ switch
             {
                 PatientenTyp.Kurz => 1,
                 PatientenTyp.Mittel => 2,
                 PatientenTyp.Lang => 3,
                 _ => 3
             };
+
+            return hatTermin
+                ? typPrioritaet
+                : typPrioritaet + PatientenKonfiguration.OHNE_TERMIN_PRIORITAETSZUSCHLAG;
         }
 
         /*
@@ -52,7 +56,7 @@ namespace simSharpSimulation
             // Aktuelle Simulationszeit fuer das Logging holen.
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            int prioritaet = GetPriority(patientenTyp);
+            int prioritaet = GetPriority(patientenTyp, hatTermin);
             prognoseStatus.RegistriereWartend(patientId, behandlungsdauer, prioritaet);
 
             // Schritt A2: Vor dem eigentlichen Warten wird geprueft, ob der Arztbereich
@@ -103,9 +107,9 @@ namespace simSharpSimulation
 
                 // Wartezeit erfassen.
                 double wartezeitArzt = nowMinutes - ankunftszeit;
-                daten.ErfasseArztWartezeit(wartezeitArzt, hatTermin, patientenTyp);
+                daten.ErfasseArztWartezeit(patientId, wartezeitArzt, hatTermin, patientenTyp);
 
-                daten.ErfasseArztBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+                daten.ErfasseArztBehandlungszeit(patientId, behandlungsdauer, hatTermin, patientenTyp);
 
                 yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
