@@ -1,10 +1,14 @@
 using SimSharp;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace simSharpSimulation
 {
     public sealed class BeweglicherArztPool
     {
+        private static readonly FieldInfo? RequestQueueField =
+            typeof(PriorityResource).GetField("<RequestQueue>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance);
+
         private readonly Queue<int> freieArztIds;
         private readonly PriorityResource ressource;
 
@@ -22,9 +26,15 @@ namespace simSharpSimulation
 
         public int Anzahl { get; }
 
+        public int Frei => ressource.Remaining;
+
+        public int InBenutzung => ressource.InUse;
+
+        public int WarteschlangeLaenge => ErmittleWarteschlangeLaenge();
+
         public bool IstFrei => ressource.Remaining > 0;
 
-        public Event WennMitarbeiterFreiWird()
+        public Event WennMitarbeiterVerfuegbar()
         {
             return ressource.WhenAny();
         }
@@ -42,6 +52,13 @@ namespace simSharpSimulation
         public void GibMitarbeiterZurueck(int arztId)
         {
             freieArztIds.Enqueue(arztId);
+        }
+
+        private int ErmittleWarteschlangeLaenge()
+        {
+            object? queue = RequestQueueField?.GetValue(ressource);
+            object? count = queue?.GetType().GetProperty("Count")?.GetValue(queue);
+            return count is int value ? value : 0;
         }
     }
 }

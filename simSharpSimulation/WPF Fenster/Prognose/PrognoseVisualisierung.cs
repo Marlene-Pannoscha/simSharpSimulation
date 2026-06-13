@@ -92,6 +92,8 @@ internal static class PrognoseVisualisierung
             ? daten.Ergebnisse.Max(e => Math.Max(e.PrognoseRestMinuten, e.IstRestMinuten))
             : 1.0;
 
+        FuegeToleranzbandHinzu(plot, maxWert, daten.PrognoseTrefferToleranzProzent, daten.PrognoseTrefferMindestToleranzMinuten);
+
         var diagonal = plot.AddLine(0, 0, maxWert, maxWert, Color.DimGray);
         diagonal.LineStyle = LineStyle.Dash;
         diagonal.Label = "Ideal: Prognose = Ist";
@@ -102,6 +104,28 @@ internal static class PrognoseVisualisierung
         plot.Legend(location: Alignment.UpperLeft);
         plot.Grid(enable: true, lineStyle: LineStyle.Dot);
         plot.SaveFig(outputPfad);
+    }
+
+    private static void FuegeToleranzbandHinzu(
+        Plot plot,
+        double maxWert,
+        double toleranzProzent,
+        double mindestToleranzMinuten)
+    {
+        double anteil = toleranzProzent / 100.0;
+        double[] xs = Enumerable.Range(0, 200)
+            .Select(i => maxWert * i / 199.0)
+            .ToArray();
+        double[] obereGrenze = xs
+            .Select(x => x + Math.Max(mindestToleranzMinuten, x * anteil))
+            .ToArray();
+        double[] untereGrenze = xs
+            .Select(x => Math.Max(0.0, x - Math.Max(mindestToleranzMinuten, x * anteil)))
+            .ToArray();
+
+        var obereLinie = plot.AddScatter(xs, obereGrenze, color: Color.Gray, lineStyle: LineStyle.Dot, lineWidth: 1);
+        obereLinie.Label = "Toleranzband";
+        plot.AddScatter(xs, untereGrenze, color: Color.Gray, lineStyle: LineStyle.Dot, lineWidth: 1);
     }
 
     private static void ErzeugePrognoseAbbruecheZeitachseDiagramm(PrognoseVisualDaten daten, string outputPfad)
@@ -225,6 +249,8 @@ internal static class PrognoseVisualisierung
         int AnzahlPrognosePruefungen,
         int AnzahlPrognoseRichtig,
         int AnzahlPrognoseAbbruch,
+        double PrognoseTrefferToleranzProzent,
+        double PrognoseTrefferMindestToleranzMinuten,
         double PrognoseTrefferquote,
         Abbruchgruende Abbruchgruende,
         List<PrognosePhasePunkt> Phasen,

@@ -17,6 +17,10 @@ namespace simSharpSimulation
             int patientIdStart,
             Func<Simulation, int, Resource, BeweglicherSchwesterPool, BeweglicherArztPool, IEnumerable<Event>> patientFactory)
         {
+            double aufnahmeStoppMinuten = BerechneAufnahmeStoppZeitpunkt();
+
+            // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
+            // drawIndex sorgt bei gleichen Zeiten für eine stabile (FIFO-)Reihenfolge.
             var ankunftszeiten = new List<(double zeit, int drawIndex)>();
 
             for (int i = 0; i < PatientenKonfiguration.ANZAHL_PATIENTEN_TAG; i++)
@@ -51,6 +55,14 @@ namespace simSharpSimulation
             foreach (var eintrag in warteschlangeVorOeffnung)
             {
                 daten.LogEvent(eintrag.zeit, "wartet_vor_oeffnung", patientCount);
+
+                // Bei Öffnung werden wartende Patienten nacheinander in FIFO-Reihenfolge gestartet.
+                // Der Praxisprozess startet erst bei Oeffnung, nicht zum negativen Ankunftszeitpunkt.
+                if ((env.Now - env.StartDate).TotalMinutes < 0.0)
+                {
+                    yield return env.Timeout(TimeSpan.FromMinutes(0.0 - (env.Now - env.StartDate).TotalMinutes));
+                }
+
                 env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
                 patientCount++;
             }
@@ -63,23 +75,14 @@ namespace simSharpSimulation
                 if (warteBisAnkunft > 0)
                     yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
 
-                double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (nowMinutes >= aufnahmeStoppMinuten)
+                // Startet den individuellen Ablauf für genau diesen Patienten.
+                if (ankunftszeit >= aufnahmeStoppMinuten)
                 {
-                    if (restAufnahmeplaetze <= 0)
-                    {
-                        daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientCount);
-                        daten.LogEvent(nowMinutes, "abgewiesen_vor_klinik_wegen_aufnahmeprognose", patientCount);
-                        patientCount++;
-                        continue;
-                    }
-
-                    restAufnahmeplaetze--;
-                    daten.ErfassePrognoseAufnahmeZugelassen(
-                        env.StartDate,
-                        nowMinutes,
-                        patientCount,
-                        restAufnahmeplaetze);
+                    double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                    daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientCount);
+                    daten.LogEvent(nowMinutes, "abgewiesen_vor_klinik_wegen_aufnahmeprognose", patientCount);
+                    patientCount++;
+                    continue;
                 }
 
                 env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
@@ -93,13 +96,6 @@ namespace simSharpSimulation
                 0.0,
                 SimulationKonfiguration.SIMULATIONSDAUER -
                 SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
-        }
-
-        private static int BerechneAufnahmestoppKapazitaet()
-        {
-            double restMinuten = SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN;
-            double mittlereArztDauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
-            return Math.Max(0, (int)Math.Floor((restMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztDauer));
         }
     }
 }

@@ -20,6 +20,13 @@ namespace simSharpSimulation
         private const double WahrscheinlichkeitNachArztZurRezeption = 0.6;
         private readonly Random rnd;
         private readonly SimulationsDaten daten;
+        private int? restAufnahmeplaetzeEineStundeVorSchliessung;
+        private readonly Dictionary<int, AktiverPatientPrognose> aktivePatientenPrognosen = new();
+        private readonly HashSet<int> aufnahmeprognoseZugelassenePatienten = new();
+        private readonly HashSet<int> aufnahmeprognoseAbgewiesenePatienten = new();
+        private PrognoseRessourcenStatus rezeptionStatus = null!;
+        private PrognoseRessourcenStatus schwesterStatus = null!;
+        private PrognoseRessourcenStatus arztStatus = null!;
 
         // Schritt P1: Vorbereitung (Konstruktor)
         // Erhält einen Startwert für den Zufallsgenerator und ein Objekt zum Speichern der Ergebnisse.
@@ -45,9 +52,17 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
+                restAufnahmeplaetzeEineStundeVorSchliessung = null;
+                aktivePatientenPrognosen.Clear();
+                aufnahmeprognoseZugelassenePatienten.Clear();
+                aufnahmeprognoseAbgewiesenePatienten.Clear();
                 var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
                 var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
+                rezeptionStatus = new PrognoseRessourcenStatus(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
+                schwesterStatus = new PrognoseRessourcenStatus(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+                arztStatus = new PrognoseRessourcenStatus(ArztKonfiguration.ANZAHL_AERZTE);
+                env.Process(AktiviereAufnahmeprognoseEineStundeVorSchliessung(env));
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
                 // PatientenGenerator liefert die Ankunftszeiten und startet für jede Ankunft
@@ -69,5 +84,10 @@ namespace simSharpSimulation
             const double nachlaufPufferMinuten = 180.0;
             return TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER + nachlaufPufferMinuten);
         }
+
+        private sealed record AktiverPatientPrognose(
+            int PatientId,
+            double ZeitpunktMinuten,
+            double PrognoseRestMinuten);
     }
 }
