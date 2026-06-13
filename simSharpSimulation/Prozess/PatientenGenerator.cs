@@ -47,7 +47,6 @@ namespace simSharpSimulation
                 .Where(x => x.zeit >= 0)
                 .ToList();
 
-            double aufnahmeStoppMinuten = BerechneAufnahmeStoppZeitpunkt();
             int restAufnahmeplaetze = BerechneAufnahmestoppKapazitaet();
             daten.ErfassePrognoseAufnahmepruefung(env.StartDate, aufnahmeStoppMinuten, restAufnahmeplaetze);
 
@@ -97,5 +96,13 @@ namespace simSharpSimulation
                 SimulationKonfiguration.SIMULATIONSDAUER -
                 SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
         }
+
+            private static int BerechneAufnahmestoppKapazitaet()
+            {
+                double restMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
+                double mittlereArztBehandlungsdauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
+                int kapazitaet = (int)Math.Floor((restMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztBehandlungsdauer);
+                return Math.Max(0, kapazitaet);
+            }
     }
 }

@@ -65,6 +65,10 @@ namespace simSharpSimulation
         private readonly Dictionary<int, List<PrognosePruefung>> prognoseOffen = new();
         private readonly List<PrognoseErgebnis> prognoseErgebnisse = new();
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
+        private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
+        private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
+        private readonly Dictionary<string, PrognoseKalibrierung> prognoseKalibrierungNachPhase = new();
+        private bool PrognoseRestzeitKalibrierungAktiv = true;
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -276,6 +280,21 @@ namespace simSharpSimulation
             {
                 Console.WriteLine($"[Prognose] Erste Prüfung: Patient {patientId}, Phase {phase}, t={zeitpunktMinuten:F2}, Rest={prognoseRestMinuten:F2}");
             }
+        }
+
+        public void ErfassePrognoseAufnahmepruefung(
+            DateTime tag,
+            double zeitpunktMinuten,
+            int aufnahmeKapazitaet)
+        {
+            prognoseAufnahmePruefungen.Add(new PrognoseAufnahmePruefung(tag, zeitpunktMinuten, aufnahmeKapazitaet));
+            AnzahlPrognosePruefungen++;
+        }
+
+        public void ErfassePrognoseAufnahmeAbgewiesen(DateTime tag, double zeitpunktMinuten, int patientId)
+        {
+            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(tag, zeitpunktMinuten, patientId, false, 0));
+            AnzahlPrognoseAufnahmeAbgewiesen++;
         }
 
         public double ErmittlePrognoseRestzeitKorrektur(string phase)

@@ -15,18 +15,18 @@
     {
       "Typ": "Kurz",
       "Wahrscheinlichkeit": 0.3,
-      "BehandlungszeitArzt": 3,
+      "BehandlungszeitArzt": 4,
       "VariationskoeffizientArzt": 0.5,
-      "BehandlungszeitSchwester": 2,
+      "BehandlungszeitSchwester": 3,
       "VariationskoeffizientSchwester": 0.4,
       "Behandlungskosten": 18.0
     },
     {
       "Typ": "Mittel",
       "Wahrscheinlichkeit": 0.6,
-      "BehandlungszeitArzt": 7,
+      "BehandlungszeitArzt": 8,
       "VariationskoeffizientArzt": 0.4,
-      "BehandlungszeitSchwester": 5,
+      "BehandlungszeitSchwester": 6,
       "VariationskoeffizientSchwester": 0.3,
       "Behandlungskosten": 35.0
     },
@@ -35,7 +35,7 @@
       "Wahrscheinlichkeit": 0.1,
       "BehandlungszeitArzt": 15,
       "VariationskoeffizientArzt": 0.3,
-      "BehandlungszeitSchwester": 10,
+      "BehandlungszeitSchwester": 12,
       "VariationskoeffizientSchwester": 0.2,
       "Behandlungskosten": 60.0
     }

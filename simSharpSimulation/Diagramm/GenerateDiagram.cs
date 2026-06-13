@@ -23,6 +23,7 @@ namespace simSharpSimulation
         // 6) Histogramm der Gesamtprozesszeit (Eintritt bis Austritt).
         // 7) Zeitachse für einen einzelnen Patienten (vom Eintritt bis Austritt).
         // 8) Vergleichs-Zeitachse für 3-10 Patienten mit unterschiedlichen Prozesspfaden.
+        // 15) Verteilung der Auslastung fuer Personal und Behandlungszimmer.
         public static void GeneriereDiagramme(
             IReadOnlyList<double> echteAnkunftszeiten,
             IReadOnlyList<double> wartezeiten,
@@ -85,6 +86,15 @@ namespace simSharpSimulation
             ErzeugeHitMissProTagDiagramm(hitMissProTag);
             // [Diagramm 14] Zeitachse eines Miss-Patienten (Wartezeit/Feierabend)
             ErzeugeMissPatientenZeitachsenDiagramm(traceData);
+            // [Diagramm 15] Verteilung der Auslastung
+            ErzeugeAuslastungsVerteilungsDiagramm(
+                traceData,
+                arztBehandlungszeitenNachTyp,
+                schwesternBehandlungszeitenNachTyp,
+                rezeptionsBehandlungszeiten,
+                simulationsdauer,
+                anzahlAerzte,
+                anzahlSchwestern);
         }
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)
