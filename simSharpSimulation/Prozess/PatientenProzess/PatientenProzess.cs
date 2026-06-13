@@ -20,7 +20,7 @@ namespace simSharpSimulation
         private const double WahrscheinlichkeitNachArztZurRezeption = 0.6;
         private readonly Random rnd;
         private readonly SimulationsDaten daten;
-        private int? restAufnahmeplaetzeEineStundeVorSchliessung;
+        private bool aufnahmeprognoseAktiviert;
         private readonly Dictionary<int, AktiverPatientPrognose> aktivePatientenPrognosen = new();
         private readonly HashSet<int> aufnahmeprognoseZugelassenePatienten = new();
         private readonly HashSet<int> aufnahmeprognoseAbgewiesenePatienten = new();
@@ -52,7 +52,7 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
-                restAufnahmeplaetzeEineStundeVorSchliessung = null;
+                aufnahmeprognoseAktiviert = false;
                 aktivePatientenPrognosen.Clear();
                 aufnahmeprognoseZugelassenePatienten.Clear();
                 aufnahmeprognoseAbgewiesenePatienten.Clear();
@@ -88,6 +88,9 @@ namespace simSharpSimulation
         private sealed record AktiverPatientPrognose(
             int PatientId,
             double ZeitpunktMinuten,
-            double PrognoseRestMinuten);
+            double PrognoseRestMinuten,
+            double RestRezeptionMinuten,
+            double RestSchwesterMinuten,
+            double RestArztMinuten);
     }
 }

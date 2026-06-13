@@ -25,6 +25,8 @@ namespace simSharpSimulation
         // 8) Vergleichs-Zeitachse für 3-10 Patienten mit unterschiedlichen Prozesspfaden.
         public static void GeneriereDiagramme(
             IReadOnlyList<double> echteAnkunftszeiten,
+            IReadOnlyList<double> echteAnkunftszeitenMitTermin,
+            IReadOnlyList<double> echteAnkunftszeitenOhneTermin,
             IReadOnlyList<double> wartezeiten,
             IReadOnlyList<double> wartezeitenMitTermin,
             IReadOnlyList<double> wartezeitenOhneTermin,
@@ -58,9 +60,18 @@ namespace simSharpSimulation
 
             // Ruft die Methoden zur Erstellung der einzelnen Diagramme auf.
             // [Diagramm 1] Theorie: PDF + CDF
-            ErzeugeTheorieDiagramm(x, pdf, cdf, erwartungswert, standardabweichung);
+            ErzeugeTheorieDiagramm(x, pdf, cdf, simulationsdauer, erwartungswert, standardabweichung);
             // [Diagramm 2] Simulation vs. Theorie: Ankünfte
-            ErzeugeAnkuenfteVergleichsDiagramm(echteAnkunftszeiten, x, pdf, cdf, simulationsdauer, erwartungswert, standardabweichung);
+            ErzeugeAnkuenfteVergleichsDiagramm(
+                echteAnkunftszeiten,
+                echteAnkunftszeitenMitTermin,
+                echteAnkunftszeitenOhneTermin,
+                x,
+                pdf,
+                cdf,
+                simulationsdauer,
+                erwartungswert,
+                standardabweichung);
             // [Diagramm 3] Wartezeiten beim Arzt
             ErzeugeWartezeitenDiagramm(wartezeiten, anzahlAerzte);
             // [Diagramm 4] Wartezeiten bei der Schwester

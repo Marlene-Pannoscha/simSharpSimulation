@@ -26,7 +26,7 @@ def _aggregate(data):
     entscheidungen = data.get("AufnahmeprognoseEntscheidungen", [])
 
     tags = []
-    capacity_by_tag = {}
+    freeze_selection_by_tag = {}
     allowed_by_tag = defaultdict(int)
     rejected_by_tag = defaultdict(int)
 
@@ -34,7 +34,7 @@ def _aggregate(data):
         tag = _tag_label(item.get("Tag"))
         if tag not in tags:
             tags.append(tag)
-        capacity_by_tag[tag] = int(item.get("AufnahmeKapazitaet", 0))
+        freeze_selection_by_tag[tag] = int(item.get("AufnahmeKapazitaet", 0))
 
     for item in entscheidungen:
         tag = _tag_label(item.get("Tag"))
@@ -45,12 +45,12 @@ def _aggregate(data):
         else:
             rejected_by_tag[tag] += 1
 
-    return tags, capacity_by_tag, allowed_by_tag, rejected_by_tag, pruefungen, entscheidungen
+    return tags, freeze_selection_by_tag, allowed_by_tag, rejected_by_tag, pruefungen, entscheidungen
 
 
 def create_plot(json_path, output_path):
     data = _load(json_path)
-    tags, capacity_by_tag, allowed_by_tag, rejected_by_tag, pruefungen, entscheidungen = _aggregate(data)
+    tags, freeze_selection_by_tag, allowed_by_tag, rejected_by_tag, pruefungen, entscheidungen = _aggregate(data)
 
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -62,7 +62,7 @@ def create_plot(json_path, output_path):
         gridspec_kw={"height_ratios": [1.0, 1.25]},
         constrained_layout=True,
     )
-    fig.suptitle("Aufnahmeprognose eine Stunde vor Praxisschluss", fontsize=16, fontweight="bold")
+    fig.suptitle("Queue-Freeze und Aufnahmeprognose eine Stunde vor Praxisschluss", fontsize=16, fontweight="bold")
 
     if not tags:
         axes[0].axis("off")
@@ -81,19 +81,20 @@ def create_plot(json_path, output_path):
 
     x = list(range(len(tags)))
     width = 0.25
-    capacities = [capacity_by_tag.get(tag, 0) for tag in tags]
+    freeze_selection = [freeze_selection_by_tag.get(tag, 0) for tag in tags]
     allowed = [allowed_by_tag.get(tag, 0) for tag in tags]
     rejected = [rejected_by_tag.get(tag, 0) for tag in tags]
 
-    axes[0].bar([v - width for v in x], capacities, width, label="Restkapazitaet", color="#4f7cac")
-    axes[0].bar(x, allowed, width, label="Zugelassen", color="#2e8b57")
+    axes[0].bar([v - width for v in x], freeze_selection, width, label="Freeze-Auswahl (Engpassbudget)", color="#4f7cac")
+    axes[0].bar(x, allowed, width, label="Tatsaechlich zugelassen", color="#2e8b57")
     axes[0].bar([v + width for v in x], rejected, width, label="Abgewiesen", color="#c95f5f")
     axes[0].set_ylabel("Patienten")
+    axes[0].set_title("Bei Minute 420 werden nur bereits aktive Patienten gegen Rezeption-, Schwester- und Arztbudget geprueft.")
     axes[0].set_xticks(x, tags, rotation=25, ha="right")
     axes[0].grid(axis="y", linestyle=":", alpha=0.55)
     axes[0].legend(loc="upper right")
 
-    for values, offset in ((capacities, -width), (allowed, 0), (rejected, width)):
+    for values, offset in ((freeze_selection, -width), (allowed, 0), (rejected, width)):
         for idx, value in enumerate(values):
             if value > 0:
                 axes[0].text(idx + offset, value, str(value), ha="center", va="bottom", fontsize=9)
@@ -125,12 +126,13 @@ def create_plot(json_path, output_path):
     pruefzeiten = [p.get("ZeitpunktMinuten", 0) for p in pruefungen]
     pruefzeit = min(pruefzeiten) if pruefzeiten else 420
     schliesszeit = pruefzeit + 60
-    axes[1].axvline(pruefzeit, color="#4f7cac", linestyle="--", linewidth=1.5, label="Pruefung")
+    axes[1].axvline(pruefzeit, color="#4f7cac", linestyle="--", linewidth=1.5, label="Queue-Freeze")
     axes[1].axvline(schliesszeit, color="#555555", linestyle=":", linewidth=1.5, label="Praxisschluss")
 
     axes[1].set_yticks(x, tags)
     axes[1].set_xlabel("Zeitpunkt im Tag (Minuten seit Tagesstart)")
     axes[1].set_ylabel("Simulationstag")
+    axes[1].set_title("Nach dem Freeze werden neue Ankuenfte vor der Klinik abgewiesen; bereits aktive Abweisungen bleiben sichtbar.")
     axes[1].grid(axis="x", linestyle=":", alpha=0.55)
     axes[1].legend(loc="upper right")
 

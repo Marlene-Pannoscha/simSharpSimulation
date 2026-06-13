@@ -48,6 +48,8 @@ namespace simSharpSimulation
             PatientenKonfiguration.ERWARTUNGSWERT = patienten.Erwartungswert;
             PatientenKonfiguration.STANDARDABWEICHUNG = patienten.Standardabweichung;
             PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT = patienten.TerminWahrscheinlichkeit;
+            PatientenKonfiguration.OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN =
+                patienten.OhneTerminMittlereZwischenankunftszeitMinuten;
             PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = patienten.TerminVorbereitungWahrscheinlichkeit;
             PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = patienten.OhneTerminVorbereitungWahrscheinlichkeit;
             PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER = patienten.MittlereWartezimmerDauerSchwester;
@@ -151,6 +153,7 @@ namespace simSharpSimulation
         public double Erwartungswert { get; set; }
         public double Standardabweichung { get; set; }
         public double TerminWahrscheinlichkeit { get; set; }
+        public double OhneTerminMittlereZwischenankunftszeitMinuten { get; set; } = 7.5;
         public double TerminVorbereitungWahrscheinlichkeit { get; set; }
         public double OhneTerminVorbereitungWahrscheinlichkeit { get; set; }
         public double MittlereWartezimmerDauerSchwester { get; set; }

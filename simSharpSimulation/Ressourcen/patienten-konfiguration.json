@@ -3,6 +3,7 @@
   "Erwartungswert": 180,
   "Standardabweichung": 80,
   "TerminWahrscheinlichkeit": 0.7,
+  "OhneTerminMittlereZwischenankunftszeitMinuten": 7.5,
   "TerminVorbereitungWahrscheinlichkeit": 0.4,
   "OhneTerminVorbereitungWahrscheinlichkeit": 0.8,
   "MittlereWartezimmerDauerSchwester": 2,

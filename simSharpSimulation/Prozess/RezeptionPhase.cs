@@ -45,48 +45,54 @@ namespace simSharpSimulation
             }
 
             bool brichtWartenAb = false;
-            using (Request req = rezeption.Request())
+            bool behandlungGestartet = false;
+            Request req = rezeption.Request();
+            double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
+            Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+            yield return req | schichtEnde;
+
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
             {
-                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
-                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return req | schichtEnde;
+                brichtWartenAb = true;
+            }
+            else
+            {
+                behandlungGestartet = true;
+
+                if (!rezeptionWarFrei)
+                {
+                    daten.LogEvent(nowMinutes, "rezeption_frei", patientId);
+                }
+
+                daten.LogEvent(nowMinutes, "betritt_rezeption", patientId);
+                daten.LogEvent(nowMinutes, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
+                daten.LogEvent(nowMinutes, "startet_rezeption", patientId);
+                prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
+
+                double wartezeitRezeption = nowMinutes - ankunftszeit;
+                daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
+
+                daten.ErfasseRezeptionBehandlungszeit(behandlungsdauer, hatTermin);
+
+                yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
                 nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
+                daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
+                prognoseStatus.BeendeBehandlung(patientId);
+                if (behandlungBereitsFertig)
                 {
-                    brichtWartenAb = true;
+                    daten.LogEvent(nowMinutes, "macht_folgetermin_aus_oder_rezept", patientId);
                 }
                 else
                 {
-                    if (!rezeptionWarFrei)
-                    {
-                        daten.LogEvent(nowMinutes, "rezeption_frei", patientId);
-                    }
-
-                    daten.LogEvent(nowMinutes, "betritt_rezeption", patientId);
-                    daten.LogEvent(nowMinutes, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
-                    daten.LogEvent(nowMinutes, "startet_rezeption", patientId);
-                    prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
-
-                    double wartezeitRezeption = nowMinutes - ankunftszeit;
-                    daten.ErfasseRezeptionWartezeit(wartezeitRezeption, hatTermin);
-
-                    daten.ErfasseRezeptionBehandlungszeit(behandlungsdauer, hatTermin);
-
-                    yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
-
-                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                    daten.LogEvent(nowMinutes, "beendet_rezeption", patientId);
-                    prognoseStatus.BeendeBehandlung(patientId);
-                    if (behandlungBereitsFertig)
-                    {
-                        daten.LogEvent(nowMinutes, "macht_folgetermin_aus_oder_rezept", patientId);
-                    }
-                    else
-                    {
-                        daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
-                    }
+                    daten.LogEvent(nowMinutes, hatTermin ? "rezeption_hat_termin" : "rezeption_ohne_termin", patientId);
                 }
+            }
+
+            if (behandlungGestartet)
+            {
+                req.Dispose();
             }
 
             if (brichtWartenAb)

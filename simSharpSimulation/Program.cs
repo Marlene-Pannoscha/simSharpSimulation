@@ -40,6 +40,8 @@ namespace simSharpSimulation
             // --- 6. VISUALISIERUNG (Diagramme) ---
             GenerateDiagramme.GeneriereDiagramme(
                 daten.EchteAnkunftszeiten,
+                daten.EchteAnkunftszeitenMitTermin,
+                daten.EchteAnkunftszeitenOhneTermin,
                 daten.Wartezeiten,
                 daten.WartezeitenMitTermin,
                 daten.WartezeitenOhneTermin,

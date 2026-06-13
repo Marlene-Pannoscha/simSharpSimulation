@@ -16,6 +16,7 @@ namespace simSharpSimulation
         public static double ERWARTUNGSWERT { get; internal set; } = 180.0;
         public static double STANDARDABWEICHUNG { get; internal set; } = 80.0;
         public static double TERMIN_WAHRSCHEINLICHKEIT { get; internal set; } = 0.7;
+        public static double OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN { get; internal set; } = 7.5;
         public static double TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT { get; internal set; } = 0.4;
         public static double OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT { get; internal set; } = 0.80;
         public static double MITTLERE_WARTEZIMMER_DAUER_SCHWESTER { get; internal set; } = 2.0;

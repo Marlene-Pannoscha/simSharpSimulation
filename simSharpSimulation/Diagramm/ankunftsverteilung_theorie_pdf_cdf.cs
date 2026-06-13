@@ -1,25 +1,53 @@
 using System;
 using System.Drawing;
+using System.Linq;
 
 namespace simSharpSimulation
 {
-    // Dateirolle: Diagramm 1 - theoretische Ankunftsverteilung (Normalverteilung) als PDF/CDF.
     internal static partial class GenerateDiagramme
     {
-        // Diagramm 1
-        private static void ErzeugeTheorieDiagramm(double[] x, double[] pdf, double[] cdf, double erwartungswert, double standardabweichung)
+        private static void ErzeugeTheorieDiagramm(
+            double[] x,
+            double[] terminPdf,
+            double[] terminCdf,
+            double simulationsdauer,
+            double erwartungswert,
+            double standardabweichung)
         {
             var plot = new ScottPlot.Plot(1000, 600);
-            plot.AddScatter(x, pdf, color: Color.RoyalBlue, lineWidth: 2, label: "PDF (Dichtefunktion)");
+            plot.AddScatter(x, terminPdf, color: Color.RoyalBlue, lineWidth: 2, label: "Mit Termin: Normal-PDF");
+
+            double freezeZeitpunkt = Math.Max(
+                0.0,
+                simulationsdauer - SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
+            double mittlereZwischenankunftszeit = Math.Max(
+                0.0001,
+                PatientenKonfiguration.OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN);
+            double poissonDichte = 1.0 / mittlereZwischenankunftszeit;
+            double[] poissonPdf = x.Select(v => v <= simulationsdauer ? poissonDichte : 0.0).ToArray();
+            plot.AddScatter(x, poissonPdf, color: Color.DarkOrange, lineWidth: 2, label: "Ohne Termin: Poisson-Rate");
+            plot.AddScatter(
+                new[] { freezeZeitpunkt, freezeZeitpunkt },
+                new[] { 0.0, poissonDichte * 1.15 },
+                color: Color.DarkGreen,
+                lineStyle: ScottPlot.LineStyle.Dot,
+                lineWidth: 2,
+                label: "Queue-Freeze / Aufnahmeprognose");
 
             var axisRight = plot.AddAxis(ScottPlot.Renderable.Edge.Right);
-            var cdfLine = plot.AddScatter(x, cdf, color: Color.Red, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "CDF (Verteilungsfunktion)");
-            cdfLine.YAxisIndex = axisRight.AxisIndex;
+            var terminCdfLine = plot.AddScatter(x, terminCdf, color: Color.Red, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Mit Termin: Normal-CDF");
+            terminCdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            plot.Title($"Theoretische Patientenankünfte (Normalverteilung)\n(Erwartungswert: {erwartungswert}, StdAbw: {standardabweichung})");
+            double[] poissonCdf = x
+                .Select(v => simulationsdauer > 0.0 ? Math.Clamp(v / simulationsdauer, 0.0, 1.0) : 0.0)
+                .ToArray();
+            var poissonCdfLine = plot.AddScatter(x, poissonCdf, color: Color.SaddleBrown, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 2, label: "Ohne Termin: kumulierte Rate");
+            poissonCdfLine.YAxisIndex = axisRight.AxisIndex;
+
+            plot.Title($"Theoretische Patientenankuenfte\nMit Termin: Normalverteilung | Ohne Termin: Poisson bis Praxisschluss, Queue-Freeze bei Minute {freezeZeitpunkt:N0}");
             plot.XLabel("Zeit in Minuten (0 bis 480)");
-            plot.YLabel("Wahrscheinlichkeitsdichte (PDF)");
-            axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");
+            plot.YLabel("Dichte / Rate");
+            axisRight.Label("Kumulierte Wahrscheinlichkeit / Rate");
             plot.Legend(location: ScottPlot.Alignment.UpperLeft);
 
             string outputPath = ErzeugeOutputPfad("ankunftsverteilung_theorie_pdf_cdf.png");

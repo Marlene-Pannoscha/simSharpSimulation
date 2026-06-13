@@ -19,26 +19,31 @@ namespace simSharpSimulation
             string phase,
             double prognoseRestMinuten,
             double prognoseBearbeitungsRestMinuten,
-            double verbrauchteBearbeitungsMinuten)
+            double verbrauchteBearbeitungsMinuten,
+            double restRezeptionMinuten,
+            double restSchwesterMinuten,
+            double restArztMinuten)
         {
             double zeitpunktMinuten = (env.Now - env.StartDate).TotalMinutes;
-            double prognoseKorrekturMinuten = daten.ErmittlePrognoseRestzeitKorrektur(phase);
-            double kalibriertePrognoseRestMinuten = Math.Max(
-                0.0,
-                prognoseRestMinuten + prognoseKorrekturMinuten);
+            double begrenztePrognoseRestMinuten = Math.Max(0.0, prognoseRestMinuten);
             // Die Schichtgrenze wird hier hart gegen den prognostizierten Rest geprüft.
             // Damit kann der Hauptprozess sofort entscheiden, ob der Patient weiterlaufen darf.
-            bool fertigBisSchichtende = zeitpunktMinuten + kalibriertePrognoseRestMinuten <= SimulationKonfiguration.SIMULATIONSDAUER;
+            bool fertigBisSchichtende = zeitpunktMinuten + begrenztePrognoseRestMinuten <= SimulationKonfiguration.SIMULATIONSDAUER;
             daten.ErfassePrognosePruefung(
                 patientId,
                 phase,
                 zeitpunktMinuten,
-                kalibriertePrognoseRestMinuten,
-                prognoseKorrekturMinuten,
+                begrenztePrognoseRestMinuten,
                 Math.Max(0.0, prognoseBearbeitungsRestMinuten),
                 Math.Max(0.0, verbrauchteBearbeitungsMinuten),
                 fertigBisSchichtende);
-            AktualisiereAktivePatientenPrognose(patientId, zeitpunktMinuten, kalibriertePrognoseRestMinuten);
+            AktualisiereAktivePatientenPrognose(
+                patientId,
+                zeitpunktMinuten,
+                begrenztePrognoseRestMinuten,
+                restRezeptionMinuten,
+                restSchwesterMinuten,
+                restArztMinuten);
             return fertigBisSchichtende;
         }
 
@@ -108,40 +113,60 @@ namespace simSharpSimulation
             EntferneAktivePatientenPrognose(patientId);
         }
 
+        private void WeiseVorKlinikWegenAufnahmeprognoseAb(Simulation env, int patientId)
+        {
+            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientId);
+            daten.LogEvent(nowMinutes, "abgewiesen_vor_klinik_wegen_aufnahmeprognose", patientId);
+            EntferneAktivePatientenPrognose(patientId);
+        }
+
         private void AktiviereAufnahmeprognose(Simulation env)
         {
-            if (restAufnahmeplaetzeEineStundeVorSchliessung.HasValue)
+            if (aufnahmeprognoseAktiviert)
             {
                 return;
             }
 
             double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
             double restMinuten = Math.Max(0.0, SimulationKonfiguration.SIMULATIONSDAUER - nowMinutes);
-            double mittlereArztBehandlungsdauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
-            int kapazitaet = (int)Math.Floor(
-                (restMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztBehandlungsdauer);
-            int aufnahmeKapazitaet = Math.Max(0, kapazitaet);
+            double restRezeptionKapazitaet = restMinuten * RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN;
+            double restSchwesterKapazitaet = restMinuten * SchwesterKonfiguration.ANZAHL_SCHWESTERN;
+            double restArztKapazitaet = restMinuten * ArztKonfiguration.ANZAHL_AERZTE;
             var aktivePatienten = aktivePatientenPrognosen.Values
                 .OrderBy(p => p.PrognoseRestMinuten)
                 .ThenBy(p => p.ZeitpunktMinuten)
                 .ThenBy(p => p.PatientId)
                 .ToList();
+            int anzahlZugelassen = 0;
 
-            foreach (var patient in aktivePatienten.Take(aufnahmeKapazitaet))
+            foreach (var patient in aktivePatienten)
             {
-                aufnahmeprognoseZugelassenePatienten.Add(patient.PatientId);
-            }
+                if (patient.RestRezeptionMinuten <= restRezeptionKapazitaet + 0.0001 &&
+                    patient.RestSchwesterMinuten <= restSchwesterKapazitaet + 0.0001 &&
+                    patient.RestArztMinuten <= restArztKapazitaet + 0.0001)
+                {
+                    aufnahmeprognoseZugelassenePatienten.Add(patient.PatientId);
+                    restRezeptionKapazitaet -= patient.RestRezeptionMinuten;
+                    restSchwesterKapazitaet -= patient.RestSchwesterMinuten;
+                    restArztKapazitaet -= patient.RestArztMinuten;
+                    anzahlZugelassen++;
+                    daten.ErfassePrognoseAufnahmeZugelassen(
+                        env.StartDate,
+                        nowMinutes,
+                        patient.PatientId,
+                        aktivePatienten.Count - anzahlZugelassen);
+                    continue;
+                }
 
-            foreach (var patient in aktivePatienten.Skip(aufnahmeKapazitaet))
-            {
                 aufnahmeprognoseAbgewiesenePatienten.Add(patient.PatientId);
             }
 
-            restAufnahmeplaetzeEineStundeVorSchliessung = Math.Max(0, aufnahmeKapazitaet - aktivePatienten.Count);
+            aufnahmeprognoseAktiviert = true;
             daten.ErfassePrognoseAufnahmepruefung(
                 env.StartDate,
                 nowMinutes,
-                aufnahmeKapazitaet);
+                anzahlZugelassen);
         }
 
         private static double BerechneAufnahmeprognoseZeitpunkt()
@@ -162,12 +187,21 @@ namespace simSharpSimulation
             return aufnahmeprognoseAbgewiesenePatienten.Contains(patientId);
         }
 
-        private void AktualisiereAktivePatientenPrognose(int patientId, double zeitpunktMinuten, double prognoseRestMinuten)
+        private void AktualisiereAktivePatientenPrognose(
+            int patientId,
+            double zeitpunktMinuten,
+            double prognoseRestMinuten,
+            double restRezeptionMinuten,
+            double restSchwesterMinuten,
+            double restArztMinuten)
         {
             aktivePatientenPrognosen[patientId] = new AktiverPatientPrognose(
                 patientId,
                 zeitpunktMinuten,
-                Math.Max(0.0, prognoseRestMinuten));
+                Math.Max(0.0, prognoseRestMinuten),
+                Math.Max(0.0, restRezeptionMinuten),
+                Math.Max(0.0, restSchwesterMinuten),
+                Math.Max(0.0, restArztMinuten));
         }
 
         private void EntferneAktivePatientenPrognose(int patientId)

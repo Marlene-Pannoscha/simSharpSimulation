@@ -16,9 +16,6 @@ namespace simSharpSimulation
         private const string ZustandUnveraendert = "UNVERAENDERT";
         private const double PrognoseTrefferToleranzAnteil = 0.30;
         private const double PrognoseTrefferMindestToleranzMinuten = 5.0;
-        private const int PrognoseKalibrierungMindestStichprobe = 12;
-        private const double PrognoseKalibrierungLernrate = 0.04;
-        private const double PrognoseKalibrierungMaxKorrekturMinuten = 12.0;
 
         private static readonly Dictionary<string, (string Von, string Zu)> EventZustandsMapping =
             ErstelleEventZustandsMapping();
@@ -50,6 +47,8 @@ namespace simSharpSimulation
         public List<double> GesamtprozesszeitenMitTermin { get; } = new();
         public List<double> GesamtprozesszeitenOhneTermin { get; } = new();
         public List<double> EchteAnkunftszeiten { get; } = new();
+        public List<double> EchteAnkunftszeitenMitTermin { get; } = new();
+        public List<double> EchteAnkunftszeitenOhneTermin { get; } = new();
 
         public Dictionary<PatientenTyp, int> PatientenTypZaehler { get; } =
             Enum.GetValues<PatientenTyp>().ToDictionary(typ => typ, _ => 0);
@@ -67,8 +66,6 @@ namespace simSharpSimulation
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
         private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
         private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
-        private readonly Dictionary<string, PrognoseKalibrierung> prognoseKalibrierungNachPhase = new();
-        private static readonly bool PrognoseRestzeitKalibrierungAktiv = false;
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -277,12 +274,21 @@ namespace simSharpSimulation
                 GesamtprozesszeitenOhneTermin);
         }
 
+        public void ErfasseAnkunftszeit(double ankunftszeit, bool hatTermin)
+        {
+            EchteAnkunftszeiten.Add(ankunftszeit);
+            FuegeNachTerminHinzu(
+                ankunftszeit,
+                hatTermin,
+                EchteAnkunftszeitenMitTermin,
+                EchteAnkunftszeitenOhneTermin);
+        }
+
         public void ErfassePrognosePruefung(
             int patientId,
             string phase,
             double zeitpunktMinuten,
             double prognoseRestMinuten,
-            double prognoseKorrekturMinuten,
             double prognoseBearbeitungsRestMinuten,
             double verbrauchteBearbeitungsMinuten,
             bool prognoseFertigBisSchichtende)
@@ -298,7 +304,6 @@ namespace simSharpSimulation
                 phase,
                 zeitpunktMinuten,
                 prognoseRestMinuten,
-                prognoseKorrekturMinuten,
                 prognoseBearbeitungsRestMinuten,
                 verbrauchteBearbeitungsMinuten,
                 prognoseFertigBisSchichtende));
@@ -308,23 +313,6 @@ namespace simSharpSimulation
             {
                 Console.WriteLine($"[Prognose] Erste Prüfung: Patient {patientId}, Phase {phase}, t={zeitpunktMinuten:F2}, Rest={prognoseRestMinuten:F2}");
             }
-        }
-
-        public double ErmittlePrognoseRestzeitKorrektur(string phase)
-        {
-            if (!PrognoseRestzeitKalibrierungAktiv)
-            {
-                return 0.0;
-            }
-
-            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out PrognoseKalibrierung? kalibrierung))
-            {
-                return 0.0;
-            }
-
-            return kalibrierung.Anzahl >= PrognoseKalibrierungMindestStichprobe
-                ? kalibrierung.GekappteKorrekturMinuten
-                : 0.0;
         }
 
         public void SchliessePrognosen(
@@ -367,8 +355,6 @@ namespace simSharpSimulation
                 if (korrekt)
                     AnzahlPrognoseRichtig++;
 
-                double basisPrognoseRestMinuten = pruefung.PrognoseRestMinuten - pruefung.PrognoseKorrekturMinuten;
-                AktualisierePrognoseKalibrierung(pruefung.Phase, actualRest - basisPrognoseRestMinuten);
                 prognoseErgebnisse.Add(new PrognoseErgebnis(
                     pruefung.PatientId,
                     pruefung.Phase,
@@ -386,17 +372,6 @@ namespace simSharpSimulation
             }
 
             prognoseOffen.Remove(patientId);
-        }
-
-        private void AktualisierePrognoseKalibrierung(string phase, double abweichungMinuten)
-        {
-            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out PrognoseKalibrierung? kalibrierung))
-            {
-                kalibrierung = new PrognoseKalibrierung();
-                prognoseKalibrierungNachPhase[phase] = kalibrierung;
-            }
-
-            kalibrierung.Aktualisiere(abweichungMinuten);
         }
 
         private static double BerechnePrognoseTrefferToleranz(double istRestMinuten)
@@ -716,36 +691,11 @@ namespace simSharpSimulation
             public int Miss { get; set; }
         }
 
-        private sealed class PrognoseKalibrierung
-        {
-            public int Anzahl { get; set; }
-            public double GeglaetteteAbweichungMinuten { get; set; }
-            public double GekappteKorrekturMinuten => Math.Clamp(
-                GeglaetteteAbweichungMinuten,
-                -PrognoseKalibrierungMaxKorrekturMinuten,
-                PrognoseKalibrierungMaxKorrekturMinuten);
-
-            public void Aktualisiere(double abweichungMinuten)
-            {
-                Anzahl++;
-                if (Anzahl == 1)
-                {
-                    GeglaetteteAbweichungMinuten = abweichungMinuten;
-                    return;
-                }
-
-                GeglaetteteAbweichungMinuten =
-                    ((1.0 - PrognoseKalibrierungLernrate) * GeglaetteteAbweichungMinuten) +
-                    (PrognoseKalibrierungLernrate * abweichungMinuten);
-            }
-        }
-
         private sealed record PrognosePruefung(
             int PatientId,
             string Phase,
             double ZeitpunktMinuten,
             double PrognoseRestMinuten,
-            double PrognoseKorrekturMinuten,
             double PrognoseBearbeitungsRestMinuten,
             double VerbrauchteBearbeitungsMinuten,
             bool PrognoseFertigBisSchichtende);

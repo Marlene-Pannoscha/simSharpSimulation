@@ -5,9 +5,6 @@ using SimSharp;
 
 namespace simSharpSimulation
 {
-    // Diese Klasse erzeugt die Patienten-Ankünfte für einen Tag.
-    // Sie entscheidet nur WANN Patienten ankommen –
-    // was danach passiert, übernimmt der eigentliche Patientenprozess.
     internal static class PatientenGenerator
     {
         public static IEnumerable<Event> Generiere(
@@ -18,91 +15,86 @@ namespace simSharpSimulation
             Random rnd,
             SimulationsDaten daten,
             int patientIdStart,
-            Func<Simulation, int, Resource, BeweglicherSchwesterPool, BeweglicherArztPool, IEnumerable<Event>> patientFactory)
+            Func<Simulation, int, bool, Resource, BeweglicherSchwesterPool, BeweglicherArztPool, IEnumerable<Event>> patientFactory)
         {
-            double aufnahmeStoppMinuten = BerechneAufnahmeStoppZeitpunkt();
+            List<Ankunft> ankunftszeiten = ErzeugeAnkunftszeiten(rnd)
+                .OrderBy(a => a.Zeit)
+                .ThenBy(a => a.DrawIndex)
+                .ToList();
 
-            // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
-            // drawIndex sorgt bei gleichen Zeiten für eine stabile (FIFO-)Reihenfolge.
-            var ankunftszeiten = new List<(double zeit, int drawIndex)>();
+            List<Ankunft> warteschlangeVorOeffnung = ankunftszeiten
+                .Where(a => a.Zeit < 0.0)
+                .ToList();
+            List<Ankunft> ankuenfteAbOeffnung = ankunftszeiten
+                .Where(a => a.Zeit >= 0.0)
+                .ToList();
 
-            // Wir ziehen zunächst viele mögliche Ankunftszeiten aus einer Normalverteilung.
-            // Idee: Die meisten Patienten kommen um den Mittelwert herum,
-            // wenige sehr früh oder sehr spät.
-            for (int i = 0; i < PatientenKonfiguration.ANZAHL_PATIENTEN_TAG; i++)
+            int patientCount = patientIdStart;
+            foreach (Ankunft ankunft in warteschlangeVorOeffnung)
             {
-                double z = MathNet.Numerics.Distributions.Normal.Sample(
+                daten.LogEvent(ankunft.Zeit, "wartet_vor_oeffnung", patientCount);
+                env.Process(patientFactory(env, patientCount, ankunft.HatTermin, rezeption, schwestern, aerzte));
+                patientCount++;
+            }
+
+            foreach (Ankunft ankunft in ankuenfteAbOeffnung)
+            {
+                double warteBisAnkunft = ankunft.Zeit - (env.Now - env.StartDate).TotalMinutes;
+                if (warteBisAnkunft > 0.0)
+                {
+                    yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
+                }
+
+                env.Process(patientFactory(env, patientCount, ankunft.HatTermin, rezeption, schwestern, aerzte));
+                patientCount++;
+            }
+        }
+
+        private static List<Ankunft> ErzeugeAnkunftszeiten(Random rnd)
+        {
+            var ankunftszeiten = new List<Ankunft>();
+            int drawIndex = 0;
+            int terminPatienten = (int)Math.Round(
+                PatientenKonfiguration.ANZAHL_PATIENTEN_TAG *
+                PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT);
+
+            for (int i = 0; i < terminPatienten; i++)
+            {
+                double zeit = MathNet.Numerics.Distributions.Normal.Sample(
                     rnd,
                     PatientenKonfiguration.ERWARTUNGSWERT,
                     PatientenKonfiguration.STANDARDABWEICHUNG);
 
-                // Nur Ankünfte innerhalb des Simulationstages übernehmen.
-                // Alles darüber liegt außerhalb der Tagesdauer und wird verworfen.
-                if (z <= SimulationKonfiguration.SIMULATIONSDAUER)
-                    ankunftszeiten.Add((z, i));
-            }
-
-            // Wichtig: chronologische Reihenfolge, damit die Simulation realistisch abläuft.
-            ankunftszeiten = ankunftszeiten
-                .OrderBy(x => x.zeit)
-                .ThenBy(x => x.drawIndex)
-                .ToList();
-
-            // Vor Öffnungszeit (t < 0) kommende Patienten warten in einer expliziten FIFO-Warteschlange.
-            // Bei Öffnung (t = 0) werden sie in genau dieser Reihenfolge in den Prozess gegeben.
-            var warteschlangeVorOeffnung = ankunftszeiten
-                .Where(x => x.zeit < 0)
-                .ToList();
-
-            var ankuenfteAbOeffnung = ankunftszeiten
-                .Where(x => x.zeit >= 0)
-                .ToList();
-
-            int patientCount = patientIdStart;
-            foreach (var eintrag in warteschlangeVorOeffnung)
-            {
-                // Optionales Trace-Event: Patient ist vor Öffnungszeit da und wartet.
-                daten.LogEvent(eintrag.zeit, "wartet_vor_oeffnung", patientCount);
-
-                // Bei Öffnung werden wartende Patienten nacheinander in FIFO-Reihenfolge gestartet.
-                env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
-                patientCount++;
-            }
-
-            foreach (var eintrag in ankuenfteAbOeffnung)
-            {
-                double ankunftszeit = eintrag.zeit;
-
-                // Berechnet, wie lange die Simulation noch warten muss,
-                // bis der nächste Patient "ankommt".
-                double warteBisAnkunft = ankunftszeit - (env.Now - env.StartDate).TotalMinutes;
-
-                // "yield return" pausiert den Generator bis der Timeout vorbei ist.
-                // Danach läuft er hier weiter und erzeugt den nächsten Prozess.
-                if (warteBisAnkunft > 0)
-                    yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
-
-                // Startet den individuellen Ablauf für genau diesen Patienten.
-                if (ankunftszeit >= aufnahmeStoppMinuten)
+                if (zeit <= SimulationKonfiguration.SIMULATIONSDAUER)
                 {
-                    double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                    daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientCount);
-                    daten.LogEvent(nowMinutes, "abgewiesen_vor_klinik_wegen_aufnahmeprognose", patientCount);
-                    patientCount++;
-                    continue;
+                    ankunftszeiten.Add(new Ankunft(zeit, true, drawIndex));
                 }
 
-                env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
-                patientCount++;
+                drawIndex++;
             }
-        }
 
-        private static double BerechneAufnahmeStoppZeitpunkt()
-        {
-            return Math.Max(
-                0.0,
-                SimulationKonfiguration.SIMULATIONSDAUER -
-                SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
+            double mittlereZwischenankunftszeit = Math.Max(
+                0.0001,
+                PatientenKonfiguration.OHNE_TERMIN_MITTLERE_ZWISCHENANKUNFTSZEIT_MINUTEN);
+            double rateProMinute = 1.0 / mittlereZwischenankunftszeit;
+            if (rateProMinute > 0.0)
+            {
+                double zeit = 0.0;
+                while (true)
+                {
+                    zeit += MathNet.Numerics.Distributions.Exponential.Sample(rnd, rateProMinute);
+                    if (zeit > SimulationKonfiguration.SIMULATIONSDAUER)
+                    {
+                        break;
+                    }
+
+                    ankunftszeiten.Add(new Ankunft(zeit, false, drawIndex));
+                    drawIndex++;
+                }
+            }
+
+            return ankunftszeiten;
         }
+        private readonly record struct Ankunft(double Zeit, bool HatTermin, int DrawIndex);
     }
 }
