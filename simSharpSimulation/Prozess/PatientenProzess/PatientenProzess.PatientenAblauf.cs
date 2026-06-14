@@ -17,7 +17,14 @@ namespace simSharpSimulation
         - Terminpatienten warten im Schnitt kürzer über kürzere Wartezimmerdauer.
         - Patienten ohne Termin warten im Schnitt länger, laufen aber parallel weiter.
         */
-        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, BeweglicherSchwesterPool schwestern, BeweglicherArztPool aerzte)
+        private IEnumerable<Event> Patient(
+            Simulation env,
+            int patientId,
+            Resource rezeption,
+            BeweglicherSchwesterPool schwestern,
+            BeweglicherArztPool aerzte,
+            Resource arztzimmer,
+            Resource schwesterzimmer)
         {
             TimeSpan eingangZurRezeptionDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN);
             TimeSpan interneBewegungsdauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN);
@@ -347,6 +354,7 @@ namespace simSharpSimulation
                     direktZurSchwester,
                     interneBewegungsdauer,
                     schwesterBehandlungsdauer,
+                    schwesterzimmer,
                     daten,
                     schwesterErgebnis,
                     schwesterStatus))
@@ -446,7 +454,19 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var arztErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis, arztStatus))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(
+                env,
+                patientId,
+                aerzte,
+                patientenTyp,
+                ankunftszeit,
+                hatTermin,
+                interneBewegungsdauer,
+                arztBehandlungsdauer,
+                arztzimmer,
+                daten,
+                arztErgebnis,
+                arztStatus))
                 yield return ev;
 
             if (arztErgebnis.PatientHatKlinikVerlassen)

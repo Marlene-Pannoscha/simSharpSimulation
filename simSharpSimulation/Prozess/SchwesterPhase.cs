@@ -27,6 +27,7 @@ namespace simSharpSimulation
             bool direktZurSchwester,
             TimeSpan interneBewegungsdauer,
             double behandlungsdauer,
+            Resource schwesterzimmer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis,
             PrognoseRessourcenStatus prognoseStatus)
@@ -53,46 +54,71 @@ namespace simSharpSimulation
 
             bool brichtWartenAb = false;
             Request req = schwestern.FordereMitarbeiterAn(prioritaet);
-            double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
-            Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-            yield return req | schichtEnde;
+            try
+            {
+                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
+                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                yield return req | schichtEnde;
 
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
-            {
-                brichtWartenAb = true;
-            }
-            else
-            {
-                using (req)
+                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
                 {
-                    int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
-
-                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                    if (betrittWarteschlange)
+                    brichtWartenAb = true;
+                }
+                else
+                {
+                    Request raumReq = schwesterzimmer.Request();
+                    try
                     {
-                        daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_schwester", patientId);
+                        restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
+                        schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+                        yield return raumReq | schichtEnde;
+
+                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                        if (!raumReq.IsProcessed || nowMinutes >= schichtEndeMinuten)
+                        {
+                            brichtWartenAb = true;
+                        }
+                    }
+                    finally
+                    {
+                        DisposeWennVerarbeitet(raumReq);
                     }
 
-                    daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
-                    yield return env.Timeout(interneBewegungsdauer);
+                    if (!brichtWartenAb)
+                    {
+                        int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
 
-                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                    daten.LogEvent(nowMinutes, "betritt_schwesterzimmer", patientId);
-                    daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
-                    prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
+                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                        if (betrittWarteschlange)
+                        {
+                            daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_schwester", patientId);
+                        }
 
-                    double wartezeitSchwester = nowMinutes - ankunftszeit;
-                    daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
+                        daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
+                        yield return env.Timeout(interneBewegungsdauer);
 
-                    daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
-                    yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                        daten.LogEvent(nowMinutes, "betritt_schwesterzimmer", patientId);
+                        daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
+                        prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
 
-                    nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                    daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
-                    prognoseStatus.BeendeBehandlung(patientId);
-                    schwestern.GibMitarbeiterZurueck(schwesterId);
+                        double wartezeitSchwester = nowMinutes - ankunftszeit;
+                        daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
+
+                        daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+                        yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+
+                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                        daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
+                        prognoseStatus.BeendeBehandlung(patientId);
+                        schwestern.GibMitarbeiterZurueck(schwesterId);
+                    }
                 }
+            }
+            finally
+            {
+                DisposeWennVerarbeitet(req);
             }
 
             if (brichtWartenAb)
@@ -100,6 +126,12 @@ namespace simSharpSimulation
                 foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis, prognoseStatus))
                     yield return ev;
             }
+        }
+
+        private static void DisposeWennVerarbeitet(Request request)
+        {
+            if (request.IsProcessed)
+                request.Dispose();
         }
 
         private static IEnumerable<Event> BrichSchwesterWartenAb(

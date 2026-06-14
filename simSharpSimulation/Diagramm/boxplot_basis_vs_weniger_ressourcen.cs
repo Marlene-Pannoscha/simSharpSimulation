@@ -21,8 +21,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> arztWartezeiten,
             int behandeltePatientenGesamt)
         {
-            RessourcenSzenario basis = new("Basis 1R/1S/2A", 1, 1, 2);
-            RessourcenSzenario weniger = new("Weniger 1R/1S/1A", 1, 1, 1);
+            RessourcenSzenario basis = new("Basis", 1, 1, 2, 2, 1);
+            RessourcenSzenario weniger = new("Weniger", 1, 1, 1, 1, 1);
 
             SzenarioBoxplotDaten basisDaten = ErzeugeBoxplotDatenAusVorhandenerSimulation(
                 basis,
@@ -35,7 +35,7 @@ namespace simSharpSimulation
 
             ErzeugeSzenarioBoxplotDiagramm(
                 "Diagramm 16: Boxplot Basis-Szenario vs. weniger Ressourcen",
-                "Normale Ressourcen: 1 Rezeption, 1 Schwester, 2 Aerzte | weniger Ressourcen: 1 Rezeption, 1 Schwester, 1 Arzt",
+                "Basis: 1 Rezeption, 1 Schwester, 2 Aerzte, 2 Arztzimmer, 1 Schwesterzimmer | weniger: 1 Arzt, 1 Arztzimmer",
                 basisDaten,
                 wenigerDaten,
                 "boxplot_basis_vs_weniger_ressourcen.png",
@@ -47,12 +47,16 @@ namespace simSharpSimulation
             int alteRezeption = RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN;
             int alteSchwestern = SchwesterKonfiguration.ANZAHL_SCHWESTERN;
             int alteAerzte = ArztKonfiguration.ANZAHL_AERZTE;
+            int alteArztzimmer = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt;
+            int alteSchwesterzimmer = KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester;
 
             try
             {
                 RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = szenario.Rezeptionisten;
                 SchwesterKonfiguration.ANZAHL_SCHWESTERN = szenario.Schwestern;
                 ArztKonfiguration.ANZAHL_AERZTE = szenario.Aerzte;
+                KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt = szenario.Arztzimmer;
+                KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester = szenario.Schwesterzimmer;
 
                 SimulationsDaten daten = new();
                 PatientenProzess simulation = new(SimulationKonfiguration.RANDOM_SEED, daten);
@@ -65,6 +69,8 @@ namespace simSharpSimulation
                 RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = alteRezeption;
                 SchwesterKonfiguration.ANZAHL_SCHWESTERN = alteSchwestern;
                 ArztKonfiguration.ANZAHL_AERZTE = alteAerzte;
+                KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt = alteArztzimmer;
+                KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester = alteSchwesterzimmer;
             }
         }
 
@@ -103,7 +109,8 @@ namespace simSharpSimulation
             return new SzenarioBoxplotDaten(
                 szenario.Name,
                 wartezeiten,
-                tageswerte.Select(t => t.AuslastungProzent).ToList(),
+                tageswerte.Select(t => t.PersonalAuslastungProzent).ToList(),
+                tageswerte.Select(t => t.RaumAuslastungProzent).ToList(),
                 tageswerte.Select(t => t.Gesamtkosten).ToList(),
                 new KostenKomponenten(
                     tageswerte.Count > 0 ? tageswerte.Average(t => t.Personalkosten) : 0.0,
@@ -138,14 +145,20 @@ namespace simSharpSimulation
                     szenario.Rezeptionisten,
                     behandelteProTag);
 
-                double kapazitaetsMinuten = (szenario.Rezeptionisten + szenario.Schwestern + szenario.Aerzte)
+                double personalKapazitaetsMinuten = (szenario.Rezeptionisten + szenario.Schwestern + szenario.Aerzte)
                     * SimulationKonfiguration.SIMULATIONSDAUER;
-                double auslastung = kapazitaetsMinuten > 0.0
-                    ? (statistik.BelegtePersonalMinuten / kapazitaetsMinuten) * 100.0
+                double personalAuslastung = personalKapazitaetsMinuten > 0.0
+                    ? (statistik.BelegtePersonalMinuten / personalKapazitaetsMinuten) * 100.0
+                    : 0.0;
+                double raumKapazitaetsMinuten = (szenario.Arztzimmer + szenario.Schwesterzimmer)
+                    * SimulationKonfiguration.SIMULATIONSDAUER;
+                double raumAuslastung = raumKapazitaetsMinuten > 0.0
+                    ? (statistik.BelegteRaumMinuten / raumKapazitaetsMinuten) * 100.0
                     : 0.0;
 
                 result.Add(new TagesBoxplotStatistik(
-                    Math.Round(auslastung, 2),
+                    Math.Round(personalAuslastung, 2),
+                    Math.Round(raumAuslastung, 2),
                     Math.Round(finanzen.Kosten.Gesamtkosten, 2),
                     Math.Round(finanzen.Kosten.Personalkosten, 2),
                     Math.Round(finanzen.Kosten.Fixkosten, 2),
@@ -164,10 +177,13 @@ namespace simSharpSimulation
             HashSet<int> rezeptionBelegt = new();
             HashSet<int> schwesterBelegt = new();
             HashSet<int> arztBelegt = new();
+            HashSet<int> schwesterzimmerBelegt = new();
+            HashSet<int> arztzimmerBelegt = new();
 
             double letzteZeit = 0.0;
             double queueMinuten = 0.0;
             double belegtePersonalMinuten = 0.0;
+            double belegteRaumMinuten = 0.0;
 
             foreach (BoxplotTraceEvent traceEvent in events)
             {
@@ -175,6 +191,7 @@ namespace simSharpSimulation
                 double dauer = Math.Max(0.0, zeit - letzteZeit);
                 queueMinuten += dauer * (rezeptionQueue.Count + schwesterQueue.Count + arztQueue.Count);
                 belegtePersonalMinuten += dauer * (rezeptionBelegt.Count + schwesterBelegt.Count + arztBelegt.Count);
+                belegteRaumMinuten += dauer * (schwesterzimmerBelegt.Count + arztzimmerBelegt.Count);
 
                 VerarbeiteBoxplotEvent(
                     traceEvent,
@@ -183,7 +200,9 @@ namespace simSharpSimulation
                     arztQueue,
                     rezeptionBelegt,
                     schwesterBelegt,
-                    arztBelegt);
+                    arztBelegt,
+                    schwesterzimmerBelegt,
+                    arztzimmerBelegt);
 
                 letzteZeit = zeit;
             }
@@ -191,6 +210,7 @@ namespace simSharpSimulation
             double auswertungsdauer = Math.Max(1.0, SimulationKonfiguration.SIMULATIONSDAUER);
             return new TagesTraceStatistik(
                 belegtePersonalMinuten,
+                belegteRaumMinuten,
                 queueMinuten / auswertungsdauer);
         }
 
@@ -201,7 +221,9 @@ namespace simSharpSimulation
             HashSet<int> arztQueue,
             HashSet<int> rezeptionBelegt,
             HashSet<int> schwesterBelegt,
-            HashSet<int> arztBelegt)
+            HashSet<int> arztBelegt,
+            HashSet<int> schwesterzimmerBelegt,
+            HashSet<int> arztzimmerBelegt)
         {
             int patientId = traceEvent.PatientId;
             switch (traceEvent.EventTyp)
@@ -226,14 +248,16 @@ namespace simSharpSimulation
                 case "verlaesst_wartezimmer_schwester":
                 case "betritt_schwesterzimmer":
                     schwesterQueue.Remove(patientId);
+                    schwesterzimmerBelegt.Add(patientId);
                     break;
-                case "geht_zur_schwester":
+                case "startet_schwester_prozess":
                     schwesterBelegt.Add(patientId);
                     break;
                 case "beendet_schwester_prozess":
                 case "bricht_ab_wegen_feierabend_schwester":
                     schwesterQueue.Remove(patientId);
                     schwesterBelegt.Remove(patientId);
+                    schwesterzimmerBelegt.Remove(patientId);
                     break;
                 case "betritt_wartezimmer_fuer_arzt":
                     arztQueue.Add(patientId);
@@ -241,14 +265,16 @@ namespace simSharpSimulation
                 case "verlaesst_wartezimmer_fuer_arzt":
                 case "betritt_arztzimmer":
                     arztQueue.Remove(patientId);
+                    arztzimmerBelegt.Add(patientId);
                     break;
-                case "geht_zum_arzt":
+                case "startet_arzt_behandlung":
                     arztBelegt.Add(patientId);
                     break;
                 case "beendet_arzt_behandlung":
                 case "bricht_ab_wegen_feierabend_arzt":
                     arztQueue.Remove(patientId);
                     arztBelegt.Remove(patientId);
+                    arztzimmerBelegt.Remove(patientId);
                     break;
                 case "geht_zum_ausgang":
                 case "verlaesst_klinik":
@@ -258,6 +284,8 @@ namespace simSharpSimulation
                     rezeptionBelegt.Remove(patientId);
                     schwesterBelegt.Remove(patientId);
                     arztBelegt.Remove(patientId);
+                    schwesterzimmerBelegt.Remove(patientId);
+                    arztzimmerBelegt.Remove(patientId);
                     break;
             }
         }
@@ -291,8 +319,8 @@ namespace simSharpSimulation
             BoxplotGruppe[] gruppen =
             {
                 new("Wartezeit (min)", erstesSzenario.Wartezeiten, zweitesSzenario.Wartezeiten),
-                new("Auslastung (%)", erstesSzenario.AuslastungenProzent, zweitesSzenario.AuslastungenProzent),
-                new("Warteschlangenlaenge (Patienten)", erstesSzenario.Warteschlangenlaengen, zweitesSzenario.Warteschlangenlaengen)
+                new("Personalauslastung (%)", erstesSzenario.PersonalAuslastungenProzent, zweitesSzenario.PersonalAuslastungenProzent),
+                new("Raumauslastung (%)", erstesSzenario.RaumAuslastungenProzent, zweitesSzenario.RaumAuslastungenProzent)
             };
 
             Color basisFarbe = Color.FromArgb(55, 116, 181);
@@ -616,12 +644,19 @@ namespace simSharpSimulation
             return sortierteWerte[links] + (sortierteWerte[rechts] - sortierteWerte[links]) * anteil;
         }
 
-        private sealed record RessourcenSzenario(string Name, int Rezeptionisten, int Schwestern, int Aerzte);
+        private sealed record RessourcenSzenario(
+            string Name,
+            int Rezeptionisten,
+            int Schwestern,
+            int Aerzte,
+            int Arztzimmer,
+            int Schwesterzimmer);
 
         private sealed record SzenarioBoxplotDaten(
             string Name,
             IReadOnlyList<double> Wartezeiten,
-            IReadOnlyList<double> AuslastungenProzent,
+            IReadOnlyList<double> PersonalAuslastungenProzent,
+            IReadOnlyList<double> RaumAuslastungenProzent,
             IReadOnlyList<double> KostenProTag,
             KostenKomponenten Kosten,
             IReadOnlyList<double> Warteschlangenlaengen);
@@ -640,10 +675,14 @@ namespace simSharpSimulation
 
         private sealed record BoxplotTraceEvent(int Index, int TagIndex, double Zeit, string EventTyp, int PatientId);
 
-        private sealed record TagesTraceStatistik(double BelegtePersonalMinuten, double DurchschnittlicheWarteschlangenlaenge);
+        private sealed record TagesTraceStatistik(
+            double BelegtePersonalMinuten,
+            double BelegteRaumMinuten,
+            double DurchschnittlicheWarteschlangenlaenge);
 
         private sealed record TagesBoxplotStatistik(
-            double AuslastungProzent,
+            double PersonalAuslastungProzent,
+            double RaumAuslastungProzent,
             double Gesamtkosten,
             double Personalkosten,
             double Fixkosten,

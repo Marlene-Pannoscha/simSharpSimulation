@@ -168,7 +168,7 @@ namespace simSharpSimulation
                 case "betritt_schwesterzimmer":
                     patientenJeZaehler["Schwesterzimmer"].Add(patientId);
                     break;
-                case "geht_zur_schwester":
+                case "startet_schwester_prozess":
                     patientenJeZaehler["Schwester belegt"].Add(patientId);
                     break;
                 case "beendet_schwester_prozess":
@@ -179,7 +179,7 @@ namespace simSharpSimulation
                 case "betritt_arztzimmer":
                     patientenJeZaehler["Arztzimmer"].Add(patientId);
                     break;
-                case "geht_zum_arzt":
+                case "startet_arzt_behandlung":
                     patientenJeZaehler["Arzt belegt"].Add(patientId);
                     break;
                 case "beendet_arzt_behandlung":

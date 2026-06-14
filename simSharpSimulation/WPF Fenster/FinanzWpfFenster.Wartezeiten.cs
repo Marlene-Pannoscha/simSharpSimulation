@@ -361,7 +361,7 @@ internal sealed partial class FinanzWpfFenster
                     patientenJeZaehler["Schwesterzimmer"].Add(patientId);
                     BeendeWarten("Schwester", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
                     break;
-                case "geht_zur_schwester":
+                case "startet_schwester_prozess":
                     patientenJeZaehler["Schwester belegt"].Add(patientId);
                     break;
                 case "beendet_schwester_prozess":
@@ -384,7 +384,7 @@ internal sealed partial class FinanzWpfFenster
                     patientenJeZaehler["Arztzimmer"].Add(patientId);
                     BeendeWarten("Arzt", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
                     break;
-                case "geht_zum_arzt":
+                case "startet_arzt_behandlung":
                     patientenJeZaehler["Arzt belegt"].Add(patientId);
                     break;
                 case "beendet_arzt_behandlung":

@@ -96,6 +96,19 @@ namespace simSharpSimulation
                 simulationsdauer,
                 anzahlAerzte,
                 anzahlSchwestern);
+            // [Diagramm 16/17] Szenario-Boxplots mit echten Personal- und Raumressourcen
+            ErzeugeBoxplotBasisVsWenigerRessourcen(
+                traceData,
+                rezeptionsWartezeiten,
+                schwesternWartezeiten,
+                wartezeiten,
+                gesamtprozesszeiten.Count);
+            ErzeugeBoxplotBasisVsMehrRessourcen(
+                traceData,
+                rezeptionsWartezeiten,
+                schwesternWartezeiten,
+                wartezeiten,
+                gesamtprozesszeiten.Count);
 
         }
 
