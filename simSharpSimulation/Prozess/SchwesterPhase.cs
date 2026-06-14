@@ -52,18 +52,19 @@ namespace simSharpSimulation
             }
 
             bool brichtWartenAb = false;
-            using (Request req = schwestern.FordereMitarbeiterAn(prioritaet))
-            {
-                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
-                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return req | schichtEnde;
+            Request req = schwestern.FordereMitarbeiterAn(prioritaet);
+            double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
+            Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+            yield return req | schichtEnde;
 
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
-                {
-                    brichtWartenAb = true;
-                }
-                else
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
+            {
+                brichtWartenAb = true;
+            }
+            else
+            {
+                using (req)
                 {
                     int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
 

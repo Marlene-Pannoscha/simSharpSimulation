@@ -30,6 +30,7 @@ namespace simSharpSimulation
             IReadOnlyList<double> wartezeitenMitTermin,
             IReadOnlyList<double> wartezeitenOhneTermin,
             IReadOnlyList<double> schwesternWartezeiten,
+            IReadOnlyList<double> rezeptionsWartezeiten,
             IReadOnlyList<double> gesamtprozesszeiten,
             IReadOnlyList<TagesHitMissPunkt> hitMissProTag,
             IReadOnlyList<string> traceData,
@@ -95,6 +96,7 @@ namespace simSharpSimulation
                 simulationsdauer,
                 anzahlAerzte,
                 anzahlSchwestern);
+
         }
 
         private static void ErzeugeArztBehandlungszeitenJeTyp(IReadOnlyDictionary<PatientenTyp, List<double>> arztBehandlungszeitenNachTyp)

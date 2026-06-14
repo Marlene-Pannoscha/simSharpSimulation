@@ -46,6 +46,13 @@ internal sealed partial class FinanzWpfFenster
         int nichtBehandeltGesamt = daten.AnzahlNichtBehandeltRezeptionGesamt
             + daten.AnzahlNichtBehandeltSchwesterGesamt
             + daten.AnzahlNichtBehandeltArztGesamt;
+        var traceGesamtprozess = SimulationsTraceAuswertung.BerechneGesamtprozesszeitenNachTermin(daten.TraceData);
+        double avgTraceGesamtprozesszeitMitTermin = traceGesamtprozess.MitTermin.Count > 0
+            ? traceGesamtprozess.MitTermin.Average()
+            : 0.0;
+        double avgTraceGesamtprozesszeitOhneTermin = traceGesamtprozess.OhneTermin.Count > 0
+            ? traceGesamtprozess.OhneTermin.Average()
+            : 0.0;
 
         double gesamtSumMitTermin = daten.DurchschnittlicheWartezeitRezeptionMitTermin
             + daten.DurchschnittlicheBehandlungszeitRezeptionMitTermin
@@ -85,8 +92,8 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Davon Arzt-Schichtende: {daten.AnzahlNichtBehandeltArztFeierabend.ToString("N0", DeCulture)}");
         sb.AppendLine();
         sb.AppendLine("Vergleich mit Termin vs. ohne Termin");
-        sb.AppendLine($"{"Gruppe",-12} | {"Anz",6} | {"Rezept.W",9} | {"Rezept.B",9} | {"Schwest.W",10} | {"Schwest.B",10} | {"Arzt.W",9} | {"Arzt.B",9} | {"Gesamt",9}");
-        sb.AppendLine(new string('-', 112));
+        sb.AppendLine($"{"Gruppe",-12} | {"Anz",6} | {"Rezept.W",9} | {"Rezept.B",9} | {"Schwest.W",10} | {"Schwest.B",10} | {"Arzt.W",9} | {"Arzt.B",9} | {"GesamtΣ",9} | {"TraceGes",9}");
+        sb.AppendLine(new string('-', 124));
         sb.AppendLine(ErzeugeTerminVergleichZeile(
             "Mit Termin",
             anzahlMitTermin,
@@ -96,7 +103,8 @@ internal sealed partial class FinanzWpfFenster
             daten.DurchschnittlicheBehandlungszeitSchwesterMitTermin,
             daten.DurchschnittlicheWartezeitArztMitTermin,
             daten.DurchschnittlicheBehandlungszeitArztMitTermin,
-            gesamtSumMitTermin));
+            gesamtSumMitTermin,
+            avgTraceGesamtprozesszeitMitTermin));
         sb.AppendLine(ErzeugeTerminVergleichZeile(
             "Ohne Termin",
             anzahlOhneTermin,
@@ -106,7 +114,9 @@ internal sealed partial class FinanzWpfFenster
             daten.DurchschnittlicheBehandlungszeitSchwesterOhneTermin,
             daten.DurchschnittlicheWartezeitArztOhneTermin,
             daten.DurchschnittlicheBehandlungszeitArztOhneTermin,
-            gesamtSumOhneTermin));
+            gesamtSumOhneTermin,
+            avgTraceGesamtprozesszeitOhneTermin));
+        sb.AppendLine("Hinweis: GesamtΣ ist die Summe der Einzelmittelwerte; TraceGes ist die echte End-to-End-Zeit aus dem Trace (betritt_klinik bis verlaesst_klinik).");
         sb.AppendLine();
         sb.AppendLine("Patienten-Typen: Verteilung und Wartezeiten");
         sb.AppendLine($"{"Typ",-10} | {"Anzahl",8} | {"Anteil (%)",10} | {"Arzt (min)",12} | {"Schwester (min)",17}");
@@ -139,8 +149,9 @@ internal sealed partial class FinanzWpfFenster
         double schwesterBehandlungszeit,
         double arztWartezeit,
         double arztBehandlungszeit,
-        double gesamt)
+        double gesamt,
+        double traceGesamt)
     {
-        return $"{gruppe,-12} | {anzahl,6:N0} | {rezeptionsWartezeit,9:N2} | {rezeptionsBehandlungszeit,9:N2} | {schwesterWartezeit,10:N2} | {schwesterBehandlungszeit,10:N2} | {arztWartezeit,9:N2} | {arztBehandlungszeit,9:N2} | {gesamt,9:N2}";
+        return $"{gruppe,-12} | {anzahl,6:N0} | {rezeptionsWartezeit,9:N2} | {rezeptionsBehandlungszeit,9:N2} | {schwesterWartezeit,10:N2} | {schwesterBehandlungszeit,10:N2} | {arztWartezeit,9:N2} | {arztBehandlungszeit,9:N2} | {gesamt,9:N2} | {traceGesamt,9:N2}";
     }
 }

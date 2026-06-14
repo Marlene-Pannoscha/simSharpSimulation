@@ -45,18 +45,19 @@ namespace simSharpSimulation
             // Schritt A3: Der Request wird sofort gestellt, damit die PriorityResource
             // die Reihenfolge nach Prioritaet und FIFO korrekt verwalten kann.
             bool brichtWartenAb = false;
-            using (Request req = aerzte.FordereMitarbeiterAn(prioritaet))
-            {
-                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
-                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return req | schichtEnde;
+            Request req = aerzte.FordereMitarbeiterAn(prioritaet);
+            double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
+            Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
+            yield return req | schichtEnde;
 
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
-                {
-                    brichtWartenAb = true;
-                }
-                else
+            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
+            {
+                brichtWartenAb = true;
+            }
+            else
+            {
+                using (req)
                 {
                     int arztId = aerzte.UebernehmeFreienMitarbeiter();
 
