@@ -47,10 +47,6 @@ namespace simSharpSimulation
                 .Where(x => x.zeit >= 0)
                 .ToList();
 
-            double aufnahmeStoppMinuten = BerechneAufnahmeStoppZeitpunkt();
-            int restAufnahmeplaetze = BerechneAufnahmestoppKapazitaet();
-            daten.ErfassePrognoseAufnahmepruefung(env.StartDate, aufnahmeStoppMinuten, restAufnahmeplaetze);
-
             int patientCount = patientIdStart;
             foreach (var eintrag in warteschlangeVorOeffnung)
             {

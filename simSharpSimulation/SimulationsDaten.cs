@@ -19,6 +19,7 @@ namespace simSharpSimulation
         private const int PrognoseKalibrierungMindestStichprobe = 12;
         private const double PrognoseKalibrierungLernrate = 0.04;
         private const double PrognoseKalibrierungMaxKorrekturMinuten = 12.0;
+        private static readonly bool PrognoseRestzeitKalibrierungAktiv = true;
 
         private static readonly Dictionary<string, (string Von, string Zu)> EventZustandsMapping =
             ErstelleEventZustandsMapping();
@@ -65,6 +66,9 @@ namespace simSharpSimulation
         private readonly Dictionary<int, List<PrognosePruefung>> prognoseOffen = new();
         private readonly List<PrognoseErgebnis> prognoseErgebnisse = new();
         private readonly List<PrognoseAbbruchPunkt> prognoseAbbrueche = new();
+        private readonly List<PrognoseAufnahmePruefung> prognoseAufnahmePruefungen = new();
+        private readonly List<PrognoseAufnahmeEntscheidung> prognoseAufnahmeEntscheidungen = new();
+        private readonly Dictionary<string, PrognoseKalibrierung> prognoseKalibrierungNachPhase = new();
 
         public int AnzahlBehandeltHit { get; private set; }
         public int AnzahlAbgebrochenMiss { get; private set; }
@@ -184,6 +188,32 @@ namespace simSharpSimulation
             prognoseAbbrueche.Add(new PrognoseAbbruchPunkt(zeitpunktMinuten, phase));
         }
 
+        public void ErfassePrognoseAufnahmepruefung(
+            DateTime tag,
+            double zeitpunktMinuten,
+            int aufnahmeKapazitaet)
+        {
+            prognoseAufnahmePruefungen.Add(new PrognoseAufnahmePruefung(
+                tag.Date,
+                zeitpunktMinuten,
+                aufnahmeKapazitaet));
+        }
+
+        public void ErfassePrognoseAufnahmeAbgewiesen(
+            DateTime tag,
+            double zeitpunktMinuten,
+            int patientId)
+        {
+            AnzahlPrognoseAufnahmeAbgewiesen++;
+            ErmittleOderErzeugeTagesHitMiss(tag).Miss++;
+            prognoseAufnahmeEntscheidungen.Add(new PrognoseAufnahmeEntscheidung(
+                tag.Date,
+                zeitpunktMinuten,
+                patientId,
+                Zugelassen: false,
+                RestKapazitaet: 0));
+        }
+
         public void ErfasseSchwesterWartezeit(double wartezeitSchwester, PatientenTyp patientenTyp, bool hatTermin)
         {
             SchwesternWartezeiten.Add(wartezeitSchwester);
@@ -285,7 +315,7 @@ namespace simSharpSimulation
                 return 0.0;
             }
 
-            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out PrognoseKalibrierung? kalibrierung))
+            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out var kalibrierung))
             {
                 return 0.0;
             }
@@ -358,7 +388,7 @@ namespace simSharpSimulation
 
         private void AktualisierePrognoseKalibrierung(string phase, double abweichungMinuten)
         {
-            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out PrognoseKalibrierung? kalibrierung))
+            if (!prognoseKalibrierungNachPhase.TryGetValue(phase, out var kalibrierung))
             {
                 kalibrierung = new PrognoseKalibrierung();
                 prognoseKalibrierungNachPhase[phase] = kalibrierung;
@@ -515,6 +545,20 @@ namespace simSharpSimulation
                 {
                     a.ZeitpunktMinuten,
                     a.Phase
+                }),
+                AufnahmeprognosePruefungen = prognoseAufnahmePruefungen.Select(p => new
+                {
+                    p.Tag,
+                    p.ZeitpunktMinuten,
+                    p.AufnahmeKapazitaet
+                }),
+                AufnahmeprognoseEntscheidungen = prognoseAufnahmeEntscheidungen.Select(e => new
+                {
+                    e.Tag,
+                    e.ZeitpunktMinuten,
+                    e.PatientId,
+                    e.Zugelassen,
+                    e.RestKapazitaet
                 })
             };
 

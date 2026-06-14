@@ -106,7 +106,6 @@ namespace simSharpSimulation
             SimulationsDaten daten,
             int patientId,
             int? schwesterId,
-            int? schwesterId,
             TimeSpan interneBewegungsdauer,
             BehandlungsPhaseErgebnis ergebnis,
             PrognoseRessourcenStatus prognoseStatus)
