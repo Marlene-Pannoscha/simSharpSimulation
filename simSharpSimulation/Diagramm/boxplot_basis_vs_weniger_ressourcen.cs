@@ -21,8 +21,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> arztWartezeiten,
             int behandeltePatientenGesamt)
         {
-            RessourcenSzenario basis = new("Basis", 1, 1, 2, 2, 1);
-            RessourcenSzenario weniger = new("Weniger", 1, 1, 1, 1, 1);
+            RessourcenSzenario basis = new("Basis:1R/1S/2A", 1, 1, 2, 2, 1);
+            RessourcenSzenario weniger = new("Weniger: 1R/1S/1A", 1, 1, 1, 1, 1);
 
             SzenarioBoxplotDaten basisDaten = ErzeugeBoxplotDatenAusVorhandenerSimulation(
                 basis,
@@ -314,13 +314,13 @@ namespace simSharpSimulation
             string dateiname,
             int diagrammNummer)
         {
-            const int breite = 1600;
-            const int hoehe = 900;
+            const int breite = 1800;
+            const int hoehe = 1040;
             BoxplotGruppe[] gruppen =
             {
                 new("Wartezeit (min)", erstesSzenario.Wartezeiten, zweitesSzenario.Wartezeiten),
                 new("Personalauslastung (%)", erstesSzenario.PersonalAuslastungenProzent, zweitesSzenario.PersonalAuslastungenProzent),
-                new("Raumauslastung (%)", erstesSzenario.RaumAuslastungenProzent, zweitesSzenario.RaumAuslastungenProzent)
+                new("Warteschlange (Patienten)", erstesSzenario.Warteschlangenlaengen, zweitesSzenario.Warteschlangenlaengen)
             };
 
             Color basisFarbe = Color.FromArgb(55, 116, 181);
@@ -332,21 +332,20 @@ namespace simSharpSimulation
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.Clear(Color.White);
 
-            using Font panelTitelFont = new("Arial", 12, FontStyle.Bold);
+            using Font panelTitelFont = new("Arial", 14, FontStyle.Bold);
             using Font achsenFont = new("Arial", 12, FontStyle.Regular);
             using Font kleinFont = new("Arial", 11, FontStyle.Regular);
-            using Brush textBrush = new SolidBrush(Color.FromArgb(28, 32, 36));
+            using Brush textBrush = new SolidBrush(Color.Black);
             using Pen achsenPen = new(Color.FromArgb(45, 50, 55), 1.2f);
 
-            ZeichneKostenLegendeHorizontal(g, new PointF(55, 24), kleinFont);
-            ZeichneLegende(g, erstesSzenario.Name, zweitesSzenario.Name, basisFarbe, vergleichFarbe, new PointF(breite - 420, 24));
+            ZeichneLegende(g, erstesSzenario.Name, zweitesSzenario.Name, basisFarbe, vergleichFarbe, new PointF(breite - 500, 26));
 
             RectangleF[] panels =
             {
-                new(55, 70, 705, 365),
-                new(840, 70, 705, 365),
-                new(55, 490, 705, 365),
-                new(840, 490, 705, 365)
+                new(60, 82, 800, 410),
+                new(940, 82, 800, 410),
+                new(60, 560, 800, 410),
+                new(940, 560, 800, 410)
             };
 
             ZeichneBoxplotPanel(
@@ -411,16 +410,16 @@ namespace simSharpSimulation
             Color zweitesFarbe,
             PointF start)
         {
-            using Font font = new("Arial", 13, FontStyle.Regular);
+            using Font font = new("Arial", 14, FontStyle.Regular);
             using Brush erstesBrush = new SolidBrush(erstesFarbe);
             using Brush zweitesBrush = new SolidBrush(zweitesFarbe);
             using Pen rahmenPen = new(Color.FromArgb(80, 80, 80), 1);
             g.FillRectangle(erstesBrush, start.X, start.Y, 22, 14);
             g.DrawRectangle(rahmenPen, start.X, start.Y, 22, 14);
-            g.DrawString(erstesLabel, font, Brushes.DimGray, start.X + 32, start.Y - 4);
+            g.DrawString(erstesLabel, font, Brushes.Black, start.X + 32, start.Y - 4);
             g.FillRectangle(zweitesBrush, start.X, start.Y + 28, 22, 14);
             g.DrawRectangle(rahmenPen, start.X, start.Y + 28, 22, 14);
-            g.DrawString(zweitesLabel, font, Brushes.DimGray, start.X + 32, start.Y + 24);
+            g.DrawString(zweitesLabel, font, Brushes.Black, start.X + 32, start.Y + 24);
         }
 
         private static void ZeichneBoxplotPanel(
@@ -437,7 +436,7 @@ namespace simSharpSimulation
             Brush textBrush,
             Pen achsenPen)
         {
-            RectangleF plotArea = new(panel.Left + 92, panel.Top + 46, panel.Width - 128, panel.Height - 96);
+            RectangleF plotArea = new(panel.Left + 104, panel.Top + 46, panel.Width - 154, panel.Height - 126);
             BoxplotStatistik erstes = BerechneBoxplotStatistik(gruppe.ErstesSzenario);
             BoxplotStatistik zweites = BerechneBoxplotStatistik(gruppe.ZweitesSzenario);
             double maxY = Math.Max(1.0, Math.Max(erstes.Max, zweites.Max));
@@ -445,7 +444,8 @@ namespace simSharpSimulation
 
             using Pen gridPen = new(Color.FromArgb(224, 229, 234), 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
             using Pen panelPen = new(Color.FromArgb(224, 228, 232), 1);
-            g.DrawString(gruppe.Name, titelFont, textBrush, panel.Left + 8, panel.Top + 8);
+            using Font szenarioFont = new("Arial", 12, FontStyle.Bold);
+            ZeichneTitelUeberPanel(g, gruppe.Name, titelFont, textBrush, panel);
             g.DrawRectangle(panelPen, panel.Left, panel.Top, panel.Width, panel.Height);
 
             for (int i = 0; i <= 4; i++)
@@ -455,7 +455,7 @@ namespace simSharpSimulation
                 g.DrawLine(gridPen, plotArea.Left, y, plotArea.Right, y);
                 string label = wert.ToString("N1", BoxplotCulture);
                 SizeF labelSize = g.MeasureString(label, achsenFont);
-                g.DrawString(label, achsenFont, Brushes.DimGray, plotArea.Left - labelSize.Width - 8, y - labelSize.Height / 2);
+                g.DrawString(label, achsenFont, Brushes.Black, plotArea.Left - labelSize.Width - 8, y - labelSize.Height / 2);
             }
 
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom);
@@ -463,11 +463,11 @@ namespace simSharpSimulation
 
             float erstesX = plotArea.Left + plotArea.Width * 0.33f;
             float zweitesX = plotArea.Left + plotArea.Width * 0.67f;
-            ZeichneBoxplot(g, plotArea, erstes, gruppe.ErstesSzenario.Count, erstesX, 0.0, yMax, erstesFarbe, kleinFont);
-            ZeichneBoxplot(g, plotArea, zweites, gruppe.ZweitesSzenario.Count, zweitesX, 0.0, yMax, zweitesFarbe, kleinFont);
+            ZeichneBoxplot(g, plotArea, erstes, gruppe.ErstesSzenario.Count, erstesX, 0.0, yMax, erstesFarbe, kleinFont, true);
+            ZeichneBoxplot(g, plotArea, zweites, gruppe.ZweitesSzenario.Count, zweitesX, 0.0, yMax, zweitesFarbe, kleinFont, false);
 
-            ZeichneZentriertenText(g, erstesLabel, achsenFont, Brushes.DimGray, erstesX, plotArea.Bottom + 18);
-            ZeichneZentriertenText(g, zweitesLabel, achsenFont, Brushes.DimGray, zweitesX, plotArea.Bottom + 18);
+            ZeichneZentriertenText(g, FormatiereSzenarioAchsenLabel(erstesLabel), szenarioFont, Brushes.Black, erstesX, plotArea.Bottom + 18);
+            ZeichneZentriertenText(g, FormatiereSzenarioAchsenLabel(zweitesLabel), szenarioFont, Brushes.Black, zweitesX, plotArea.Bottom + 18);
         }
 
         private static void ZeichneKostenPanel(
@@ -481,13 +481,15 @@ namespace simSharpSimulation
             Brush textBrush,
             Pen achsenPen)
         {
-            RectangleF plotArea = new(panel.Left + 92, panel.Top + 46, panel.Width - 128, panel.Height - 96);
+            RectangleF plotArea = new(panel.Left + 104, panel.Top + 46, panel.Width - 250, panel.Height - 126);
             double maxY = Math.Max(erstesSzenario.Kosten.Gesamt, zweitesSzenario.Kosten.Gesamt) * 1.12;
             maxY = Math.Max(1.0, maxY);
+            using Font szenarioFont = new("Arial", 12, FontStyle.Bold);
+            using Font legendaFont = new("Arial", 10, FontStyle.Regular);
 
             using Pen gridPen = new(Color.FromArgb(224, 229, 234), 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
             using Pen panelPen = new(Color.FromArgb(224, 228, 232), 1);
-            g.DrawString("Kostenstruktur (EUR/Tag)", titelFont, textBrush, panel.Left + 8, panel.Top + 8);
+            ZeichneTitelUeberPanel(g, "Kostenstruktur (EUR/Tag)", titelFont, textBrush, panel);
             g.DrawRectangle(panelPen, panel.Left, panel.Top, panel.Width, panel.Height);
 
             for (int i = 0; i <= 4; i++)
@@ -497,19 +499,21 @@ namespace simSharpSimulation
                 g.DrawLine(gridPen, plotArea.Left, y, plotArea.Right, y);
                 string label = wert.ToString("N0", BoxplotCulture);
                 SizeF labelSize = g.MeasureString(label, achsenFont);
-                g.DrawString(label, achsenFont, Brushes.DimGray, plotArea.Left - labelSize.Width - 8, y - labelSize.Height / 2);
+                g.DrawString(label, achsenFont, Brushes.Black, plotArea.Left - labelSize.Width - 8, y - labelSize.Height / 2);
             }
 
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom);
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Top, plotArea.Left, plotArea.Bottom);
 
-            float erstesX = plotArea.Left + plotArea.Width * 0.33f;
-            float zweitesX = plotArea.Left + plotArea.Width * 0.67f;
+            float erstesX = plotArea.Left + plotArea.Width * 0.29f;
+            float zweitesX = plotArea.Left + plotArea.Width * 0.71f;
             ZeichneKostenBalken(g, plotArea, erstesSzenario.Kosten, erstesX, maxY, kleinFont);
             ZeichneKostenBalken(g, plotArea, zweitesSzenario.Kosten, zweitesX, maxY, kleinFont);
 
-            ZeichneZentriertenText(g, erstesSzenario.Name, achsenFont, Brushes.DimGray, erstesX, plotArea.Bottom + 18);
-            ZeichneZentriertenText(g, zweitesSzenario.Name, achsenFont, Brushes.DimGray, zweitesX, plotArea.Bottom + 18);
+            ZeichneKostenLegendeImPanel(g, panel, legendaFont);
+
+            ZeichneZentriertenText(g, FormatiereSzenarioAchsenLabel(erstesSzenario.Name), szenarioFont, Brushes.Black, erstesX, plotArea.Bottom + 18);
+            ZeichneZentriertenText(g, FormatiereSzenarioAchsenLabel(zweitesSzenario.Name), szenarioFont, Brushes.Black, zweitesX, plotArea.Bottom + 18);
         }
 
         private static void ZeichneKostenBalken(
@@ -541,10 +545,10 @@ namespace simSharpSimulation
             }
 
             string summe = kosten.Gesamt.ToString("N0", BoxplotCulture) + " EUR";
-            ZeichneZentriertenText(g, summe, kleinFont, Brushes.DimGray, centerX, SkaliereY(kosten.Gesamt, 0.0, maxY, plotArea) - 22);
+            ZeichneZentriertenText(g, summe, kleinFont, Brushes.Black, centerX, SkaliereY(kosten.Gesamt, 0.0, maxY, plotArea) - 22);
         }
 
-        private static void ZeichneKostenLegendeHorizontal(Graphics g, PointF start, Font font)
+        private static void ZeichneKostenLegendeImPanel(Graphics g, RectangleF panel, Font font)
         {
             (string Label, Color Farbe)[] items =
             {
@@ -553,15 +557,18 @@ namespace simSharpSimulation
                 ("Behandlung", Color.FromArgb(231, 120, 70))
             };
 
-            using Brush labelBrush = new SolidBrush(Color.FromArgb(90, 94, 98));
-            float x = start.X;
-            for (int i = 0; i < items.Length; i++)
+            float x = panel.Right - 166;
+            float y = panel.Top + 84;
+            using Brush textBrush = new SolidBrush(Color.Black);
+            using Pen rahmenPen = new(Color.FromArgb(90, 90, 90), 1);
+
+            foreach ((string label, Color farbe) in items)
             {
-                using Brush brush = new SolidBrush(Color.FromArgb(210, items[i].Farbe));
-                g.FillRectangle(brush, x, start.Y + 3, 18, 12);
-                g.DrawRectangle(Pens.Gray, x, start.Y + 3, 18, 12);
-                g.DrawString(items[i].Label, font, labelBrush, x + 25, start.Y - 1);
-                x += 138;
+                using Brush brush = new SolidBrush(Color.FromArgb(210, farbe));
+                g.FillRectangle(brush, x, y + 4, 16, 11);
+                g.DrawRectangle(rahmenPen, x, y + 4, 16, 11);
+                g.DrawString(label, font, textBrush, x + 22, y);
+                y += 22;
             }
         }
 
@@ -574,18 +581,19 @@ namespace simSharpSimulation
             double minY,
             double maxY,
             Color farbe,
-            Font kleinFont)
+            Font kleinFont,
+            bool beschriftungLinks)
         {
-            float boxHalbeBreite = 48;
+            float boxHalbeBreite = 58;
             float min = SkaliereY(statistik.Min, minY, maxY, plotArea);
             float q1 = SkaliereY(statistik.Q1, minY, maxY, plotArea);
             float median = SkaliereY(statistik.Median, minY, maxY, plotArea);
             float q3 = SkaliereY(statistik.Q3, minY, maxY, plotArea);
             float max = SkaliereY(statistik.Max, minY, maxY, plotArea);
 
-            using Brush boxBrush = new SolidBrush(Color.FromArgb(82, farbe));
-            using Pen farbPen = new(farbe, 2.4f);
-            using Pen medianPen = new(Color.Black, 2);
+            using Brush boxBrush = new SolidBrush(Color.FromArgb(105, farbe));
+            using Pen farbPen = new(farbe, 3.0f);
+            using Pen medianPen = new(Color.FromArgb(35, 35, 35), 2.4f);
 
             float boxTop = Math.Min(q1, q3);
             float boxHeight = Math.Max(2, Math.Abs(q3 - q1));
@@ -598,8 +606,21 @@ namespace simSharpSimulation
             g.DrawLine(farbPen, x - boxHalbeBreite * 0.6f, max, x + boxHalbeBreite * 0.6f, max);
 
             string info = $"n={anzahl}\nMed={statistik.Median.ToString("N1", BoxplotCulture)}";
-            using Brush infoBrush = new SolidBrush(farbe);
-            g.DrawString(info, kleinFont, infoBrush, x + boxHalbeBreite + 12, Math.Max(plotArea.Top + 4, q3 - 18));
+            using Brush infoBrush = new SolidBrush(Color.Black);
+            ZeichneInfoText(
+                g,
+                info,
+                kleinFont,
+                infoBrush,
+                beschriftungLinks ? x - boxHalbeBreite - 18 : x + boxHalbeBreite + 18,
+                Math.Max(plotArea.Top + 8, q3 - 20),
+                plotArea,
+                beschriftungLinks);
+        }
+
+        private static void ZeichneTitelUeberPanel(Graphics g, string titel, Font font, Brush brush, RectangleF panel)
+        {
+            g.DrawString(titel, font, brush, panel.Left + 8, panel.Top - 28);
         }
 
         private static float SkaliereY(double wert, double minY, double maxY, RectangleF plotArea)
@@ -612,6 +633,38 @@ namespace simSharpSimulation
         {
             SizeF size = g.MeasureString(text, font);
             g.DrawString(text, font, brush, centerX - size.Width / 2, y);
+        }
+
+        private static void ZeichneInfoText(
+            Graphics g,
+            string text,
+            Font font,
+            Brush textBrush,
+            float anchorX,
+            float y,
+            RectangleF plotArea,
+            bool linksAusgerichtet)
+        {
+            SizeF size = g.MeasureString(text, font);
+            float x = linksAusgerichtet ? anchorX - size.Width : anchorX;
+            x = Math.Clamp(x, plotArea.Left + 6, plotArea.Right - size.Width - 6);
+            y = Math.Clamp(y, plotArea.Top + 6, plotArea.Bottom - size.Height - 6);
+
+            RectangleF hintergrund = new(x - 5, y - 3, size.Width + 10, size.Height + 6);
+            using Brush hintergrundBrush = new SolidBrush(Color.FromArgb(235, Color.White));
+            using Pen hintergrundPen = new(Color.FromArgb(210, 215, 220), 1);
+            g.FillRectangle(hintergrundBrush, hintergrund);
+            g.DrawRectangle(hintergrundPen, hintergrund.Left, hintergrund.Top, hintergrund.Width, hintergrund.Height);
+            g.DrawString(text, font, textBrush, x, y);
+        }
+
+        private static string FormatiereSzenarioAchsenLabel(string label)
+        {
+            int trennstelle = label.IndexOf(':');
+            if (trennstelle < 0 || trennstelle == label.Length - 1)
+                return label;
+
+            return label[..trennstelle].Trim() + "\n" + label[(trennstelle + 1)..].Trim();
         }
 
         private static BoxplotStatistik BerechneBoxplotStatistik(IReadOnlyList<double> werte)

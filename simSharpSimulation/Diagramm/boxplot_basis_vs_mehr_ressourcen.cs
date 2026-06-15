@@ -12,8 +12,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> arztWartezeiten,
             int behandeltePatientenGesamt)
         {
-            RessourcenSzenario basis = new("Basis", 1, 1, 2, 2, 1);
-            RessourcenSzenario mehr = new("Mehr", 1, 2, 3, 3, 2);
+            RessourcenSzenario basis = new("Basis: 1R/1S/2A", 1, 1, 2, 2, 1);
+            RessourcenSzenario mehr = new("Mehr: 1R/2S/3A", 1, 2, 3, 3, 2);
 
             SzenarioBoxplotDaten basisDaten = ErzeugeBoxplotDatenAusVorhandenerSimulation(
                 basis,

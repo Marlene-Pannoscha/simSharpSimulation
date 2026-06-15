@@ -74,6 +74,11 @@ namespace simSharpSimulation
             };
 
             var plot = new ScottPlot.Plot(1200, 620);
+            const float titelSchriftgroesse = 32;
+            const float achsenTitelSchriftgroesse = 18;
+            const float achsenTickSchriftgroesse = 16;
+            const float legendenSchriftgroesse = 18;
+            const float prozentwertSchriftgroesse = 15;
             double[] xs = Enumerable.Range(0, auslastungen.Count).Select(i => (double)i).ToArray();
             double[] zeitbasiert = auslastungen.Select(a => a.ZeitbasierteAuslastungProzent).ToArray();
             double[] patientenbasiert = auslastungen.Select(a => a.PatientenbasierteAuslastungProzent).ToArray();
@@ -86,6 +91,9 @@ namespace simSharpSimulation
             zeitBalken.Label = "Zeitbasierte Auslastung";
             zeitBalken.ShowValuesAboveBars = true;
             zeitBalken.ValueFormatter = wert => wert.ToString("N1", CultureInfo.GetCultureInfo("de-DE")) + " %";
+            zeitBalken.Font.Size = prozentwertSchriftgroesse;
+            zeitBalken.Font.Bold = true;
+            zeitBalken.Font.Color = Color.Black;
 
             var patientenBalken = plot.AddBar(patientenbasiert, xs.Select(x => x + 0.18).ToArray());
             patientenBalken.BarWidth = 0.34;
@@ -94,6 +102,9 @@ namespace simSharpSimulation
             patientenBalken.Label = "Patientenbasierte Auslastung";
             patientenBalken.ShowValuesAboveBars = true;
             patientenBalken.ValueFormatter = wert => wert.ToString("N1", CultureInfo.GetCultureInfo("de-DE")) + " %";
+            patientenBalken.Font.Size = prozentwertSchriftgroesse;
+            patientenBalken.Font.Bold = true;
+            patientenBalken.Font.Color = Color.Black;
 
             var vollauslastung = plot.AddHorizontalLine(100.0, color: Color.DarkSlateGray);
             vollauslastung.LineStyle = ScottPlot.LineStyle.Dash;
@@ -101,10 +112,14 @@ namespace simSharpSimulation
 
             double hoechsterWert = Math.Max(100.0, zeitbasiert.Concat(patientenbasiert).DefaultIfEmpty(0.0).Max());
             plot.XTicks(xs, labels);
-            plot.Title("Verteilung der Auslastung");
-            plot.XLabel("Ressource");
-            plot.YLabel("Auslastung in Prozent");
-            plot.Legend(location: ScottPlot.Alignment.UpperRight);
+            plot.Title("Verteilung der Auslastung", bold: true, color: Color.Black, size: titelSchriftgroesse);
+            plot.XAxis.Label("Ressource", color: Color.Black, size: achsenTitelSchriftgroesse, bold: false);
+            plot.YAxis.Label("Auslastung in Prozent", color: Color.Black, size: achsenTitelSchriftgroesse, bold: false);
+            plot.XAxis.TickLabelStyle(fontSize: achsenTickSchriftgroesse, fontBold: false, color: Color.Black);
+            plot.YAxis.TickLabelStyle(fontSize: achsenTickSchriftgroesse, fontBold: false, color: Color.Black);
+            var legende = plot.Legend(location: ScottPlot.Alignment.UpperRight);
+            legende.FontSize = legendenSchriftgroesse;
+            legende.FontBold = false;
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
             plot.SetAxisLimits(yMin: 0, yMax: hoechsterWert * 1.18);
 
