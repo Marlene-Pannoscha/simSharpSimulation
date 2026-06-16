@@ -21,6 +21,13 @@ namespace simSharpSimulation
         [STAThread]
         static void Main(string[] args)
         {
+            if (args.Any(a => string.Equals(a, "--help", StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(a, "-h", StringComparison.OrdinalIgnoreCase)))
+            {
+                SchreibeHilfe();
+                return;
+            }
+
             if (args.Any(a => string.Equals(a, "--finanz-wpf", StringComparison.OrdinalIgnoreCase)))
             {
                 KonfigurationJsonExport.LadeAlle();
@@ -28,7 +35,25 @@ namespace simSharpSimulation
                 return;
             }
 
+            bool nurSimulation = args.Any(a => string.Equals(a, "--simulation-only", StringComparison.OrdinalIgnoreCase) ||
+                                                string.Equals(a, "--no-images", StringComparison.OrdinalIgnoreCase));
+            bool mitBildern = args.Any(a => string.Equals(a, "--with-images", StringComparison.OrdinalIgnoreCase) ||
+                                             string.Equals(a, "--images", StringComparison.OrdinalIgnoreCase));
+
+            if (nurSimulation && mitBildern)
+            {
+                Console.WriteLine("Bitte entweder '--simulation-only' oder '--with-images' verwenden, nicht beide gleichzeitig.");
+                SchreibeHilfe();
+                return;
+            }
+
+            // Ohne Flag bleibt der Konsolenlauf bewusst schlank: Simulation + Text/JSON, aber keine PNG-Erzeugung.
+            bool bilderErzeugen = mitBildern && !nurSimulation;
+
             Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
+            Console.WriteLine(bilderErzeugen
+                ? "--- Modus: Simulation mit Diagrammen/Bildern ---"
+                : "--- Modus: Nur Simulation ohne Diagramm-/Bilderzeugung ---");
             KonfigurationJsonExport.LadeAlle();
 
             var daten = new SimulationsDaten();
@@ -38,23 +63,30 @@ namespace simSharpSimulation
             Console.WriteLine("--- Ende der SimSharp-Simulation. ---");
 
             // --- 6. VISUALISIERUNG (Diagramme) ---
-            GenerateDiagramme.GeneriereDiagramme(
-                daten.EchteAnkunftszeiten,
-                daten.Wartezeiten,
-                daten.WartezeitenMitTermin,
-                daten.WartezeitenOhneTermin,
-                daten.SchwesternWartezeiten,
-                daten.Gesamtprozesszeiten,
-                daten.HitMissProTag,
-                daten.TraceData,
-                daten.ArztBehandlungszeitenNachTyp,
-                daten.SchwesternBehandlungszeitenNachTyp,
-                daten.RezeptionsBehandlungszeiten,
-                SimulationKonfiguration.SIMULATIONSDAUER,
-                PatientenKonfiguration.ERWARTUNGSWERT,
-                PatientenKonfiguration.STANDARDABWEICHUNG,
-                ArztKonfiguration.ANZAHL_AERZTE,
-                SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            if (bilderErzeugen)
+            {
+                GenerateDiagramme.GeneriereDiagramme(
+                    daten.EchteAnkunftszeiten,
+                    daten.Wartezeiten,
+                    daten.WartezeitenMitTermin,
+                    daten.WartezeitenOhneTermin,
+                    daten.SchwesternWartezeiten,
+                    daten.Gesamtprozesszeiten,
+                    daten.HitMissProTag,
+                    daten.TraceData,
+                    daten.ArztBehandlungszeitenNachTyp,
+                    daten.SchwesternBehandlungszeitenNachTyp,
+                    daten.RezeptionsBehandlungszeiten,
+                    SimulationKonfiguration.SIMULATIONSDAUER,
+                    PatientenKonfiguration.ERWARTUNGSWERT,
+                    PatientenKonfiguration.STANDARDABWEICHUNG,
+                    ArztKonfiguration.ANZAHL_AERZTE,
+                    SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            }
+            else
+            {
+                Console.WriteLine("--- Diagramm-/Bilderzeugung uebersprungen. Fuer Bilder: dotnet run -- --with-images ---");
+            }
 
 
             // --- 7. EXPORT IN TEXTDATEI ---
@@ -72,7 +104,8 @@ namespace simSharpSimulation
             string prognoseJsonPfad = "prognose_daten.json";
             daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
             Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
-            FuehreAufnahmeprognoseMatplotlibAus(prognoseJsonPfad);
+            if (bilderErzeugen)
+                FuehreAufnahmeprognoseMatplotlibAus(prognoseJsonPfad);
 
             Console.WriteLine();
             Console.WriteLine(daten.ErzeugePrognoseReportText());
@@ -149,7 +182,12 @@ namespace simSharpSimulation
 
             // Erzeuge ein vollständiges Finanz-Ergebnis wie in der WPF-Ansicht und gib den identischen Bericht aus.
             FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN, "Jahr");
-            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = bilderErzeugen
+                ? FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN)
+                : (
+                    "nicht erzeugt (--simulation-only)",
+                    "nicht erzeugt (--simulation-only)",
+                    "nicht erzeugt (--simulation-only)");
             string reportText = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
             Console.WriteLine(reportText);
 
@@ -161,6 +199,14 @@ namespace simSharpSimulation
             SchreibeFinanzwerte(finanzenProTag);
             Console.WriteLine();
             Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
+        }
+
+        private static void SchreibeHilfe()
+        {
+            Console.WriteLine("Verwendung:");
+            Console.WriteLine("  dotnet run -- --simulation-only   Simulation ohne PNG-Diagramme/Bilder");
+            Console.WriteLine("  dotnet run -- --with-images       Simulation mit allen Diagrammen/Bildern");
+            Console.WriteLine("  dotnet run -- --finanz-wpf        Finanz- und Auswertungsfenster starten");
         }
 
         private static void SchreibeFinanzwerte(Tagesergebnis finanzen)

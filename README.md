@@ -46,11 +46,23 @@ dotnet build
 
 ## Programm ausfuehren
 
-### Standard-Simulation in der Konsole
+### Nur Simulation in der Konsole
 
 ```powershell
-dotnet run
+dotnet run -- --simulation-only
 ```
+
+Das fuehrt die Simulation aus und schreibt die Text-/JSON-Ausgaben, erzeugt aber
+keine PNG-Diagramme.
+
+### Simulation mit Diagrammen und Bildern
+
+```powershell
+dotnet run -- --with-images
+```
+
+Das fuehrt die Simulation aus und erzeugt zusaetzlich die ScottPlot-Diagramme,
+das Matplotlib-Aufnahmeprognosebild und die Finanzdiagramme.
 
 ### Finanz- und Auswertungsfenster starten
 
@@ -61,6 +73,8 @@ dotnet run -- --finanz-wpf
 ### Alternativ von ausserhalb des Projektordners
 
 ```powershell
+dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --simulation-only
+dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --with-images
 dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --finanz-wpf
 ```
 
