@@ -74,10 +74,10 @@ namespace simSharpSimulation
             };
 
             var plot = new ScottPlot.Plot(1200, 620);
-            const float titelSchriftgroesse = 32;
+            const float titelSchriftgroesse = 28;
             const float achsenTitelSchriftgroesse = 18;
             const float achsenTickSchriftgroesse = 16;
-            const float legendenSchriftgroesse = 18;
+            const float legendenSchriftgroesse = 16;
             const float prozentwertSchriftgroesse = 15;
             double[] xs = Enumerable.Range(0, auslastungen.Count).Select(i => (double)i).ToArray();
             double[] zeitbasiert = auslastungen.Select(a => a.ZeitbasierteAuslastungProzent).ToArray();

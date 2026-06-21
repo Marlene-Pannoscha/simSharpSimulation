@@ -98,11 +98,18 @@ namespace simSharpSimulation
                 cdfOhneTerminLine.YAxisIndex = axisRight.AxisIndex;
             }
 
-            plot.Title("Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin");
+            const float titelSchriftgroesse = 18;
+            const float achsenTitelSchriftgroesse = 16;
+            const float legendenSchriftgroesse = 13;
+
+            plot.Title("Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin", bold: true, size: titelSchriftgroesse);
             plot.XLabel("Wartezeit in Minuten");
             plot.YLabel("Anzahl der Patienten / skalierte PDF");
-            axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");
-            plot.Legend(location: ScottPlot.Alignment.UpperRight);
+            plot.XAxis.LabelStyle(null, null, achsenTitelSchriftgroesse);
+            plot.YAxis.LabelStyle(null, null, achsenTitelSchriftgroesse);
+            axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)", size: achsenTitelSchriftgroesse);
+            var legende = plot.Legend(location: ScottPlot.Alignment.UpperRight);
+            legende.FontSize = legendenSchriftgroesse;
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
 
             string outputPath = ErzeugeOutputPfad("wartezeiten_theorie_exponential_mit_ohne_termin.png");
