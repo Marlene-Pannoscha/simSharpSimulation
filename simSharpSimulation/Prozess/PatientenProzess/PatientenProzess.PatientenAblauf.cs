@@ -305,11 +305,13 @@ namespace simSharpSimulation
 
             if (!ueberspringeSchwester)
             {
+                double ankunftszeitSchwesterWartebereich = (env.Now - env.StartDate).TotalMinutes;
                 if (!direktZurSchwester)
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_schwester", patientId);
                     yield return env.Timeout(interneBewegungsdauer);
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer_schwester", patientId);
+                    ankunftszeitSchwesterWartebereich = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(ankunftszeitSchwesterWartebereich, "betritt_wartezimmer_schwester", patientId);
                     yield return env.Timeout(TimeSpan.FromMinutes(schwesterWartezimmerdauer));
                 }
 
@@ -349,7 +351,7 @@ namespace simSharpSimulation
                     patientId,
                     schwestern,
                     patientenTyp,
-                    ankunftszeit,
+                    ankunftszeitSchwesterWartebereich,
                     hatTermin,
                     direktZurSchwester,
                     interneBewegungsdauer,
@@ -418,7 +420,8 @@ namespace simSharpSimulation
 
             // Der Weg ins Arzt-Wartezimmer ist ebenfalls eine interne Bewegung.
             yield return env.Timeout(interneBewegungsdauer);
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer_fuer_arzt", patientId);
+            double ankunftszeitArztWartebereich = (env.Now - env.StartDate).TotalMinutes;
+            daten.LogEvent(ankunftszeitArztWartebereich, "betritt_wartezimmer_fuer_arzt", patientId);
 
             yield return env.Timeout(TimeSpan.FromMinutes(arztWartezimmerdauer));
 
@@ -459,7 +462,7 @@ namespace simSharpSimulation
                 patientId,
                 aerzte,
                 patientenTyp,
-                ankunftszeit,
+                ankunftszeitArztWartebereich,
                 hatTermin,
                 interneBewegungsdauer,
                 arztBehandlungsdauer,

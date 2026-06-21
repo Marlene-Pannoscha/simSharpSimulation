@@ -13,6 +13,33 @@ namespace simSharpSimulation
             IReadOnlyList<double> wartezeitenMitTermin,
             IReadOnlyList<double> wartezeitenOhneTermin)
         {
+            ErzeugeWartezeitenTheorieExponentialDiagramm(
+                wartezeitenMitTermin,
+                wartezeitenOhneTermin,
+                "Arzt-Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin",
+                "wartezeiten_theorie_exponential_mit_ohne_termin.png",
+                "--- Diagramm 11 gespeichert");
+        }
+
+        private static void ErzeugeSchwesterWartezeitenTheorieExponentialDiagramm(
+            IReadOnlyList<double> wartezeitenMitTermin,
+            IReadOnlyList<double> wartezeitenOhneTermin)
+        {
+            ErzeugeWartezeitenTheorieExponentialDiagramm(
+                wartezeitenMitTermin,
+                wartezeitenOhneTermin,
+                "Schwester-Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin",
+                "schwester_wartezeiten_theorie_exponential_mit_ohne_termin.png",
+                "--- Diagramm Schwester-Wartezeiten-Theorie gespeichert");
+        }
+
+        private static void ErzeugeWartezeitenTheorieExponentialDiagramm(
+            IReadOnlyList<double> wartezeitenMitTermin,
+            IReadOnlyList<double> wartezeitenOhneTermin,
+            string titel,
+            string dateiname,
+            string logPraefix)
+        {
             if ((wartezeitenMitTermin == null || wartezeitenMitTermin.Count == 0) &&
                 (wartezeitenOhneTermin == null || wartezeitenOhneTermin.Count == 0))
                 return;
@@ -102,7 +129,7 @@ namespace simSharpSimulation
             const float achsenTitelSchriftgroesse = 16;
             const float legendenSchriftgroesse = 13;
 
-            plot.Title("Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin", bold: true, size: titelSchriftgroesse);
+            plot.Title(titel, bold: true, size: titelSchriftgroesse);
             plot.XLabel("Wartezeit in Minuten");
             plot.YLabel("Anzahl der Patienten / skalierte PDF");
             plot.XAxis.LabelStyle(null, null, achsenTitelSchriftgroesse);
@@ -112,9 +139,9 @@ namespace simSharpSimulation
             legende.FontSize = legendenSchriftgroesse;
             plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
 
-            string outputPath = ErzeugeOutputPfad("wartezeiten_theorie_exponential_mit_ohne_termin.png");
+            string outputPath = ErzeugeOutputPfad(dateiname);
             plot.SaveFig(outputPath);
-            Console.WriteLine($"--- Diagramm 11 gespeichert: {outputPath} ---");
+            Console.WriteLine($"{logPraefix}: {outputPath} ---");
         }
     }
 }

@@ -30,6 +30,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> wartezeitenMitTermin,
             IReadOnlyList<double> wartezeitenOhneTermin,
             IReadOnlyList<double> schwesternWartezeiten,
+            IReadOnlyList<double> schwesternWartezeitenMitTermin,
+            IReadOnlyList<double> schwesternWartezeitenOhneTermin,
             IReadOnlyList<double> rezeptionsWartezeiten,
             IReadOnlyList<double> gesamtprozesszeiten,
             IReadOnlyList<TagesHitMissPunkt> hitMissProTag,
@@ -106,6 +108,14 @@ namespace simSharpSimulation
             ErzeugeRezeptionBehandlungszeitenPdfCdfDiagramm(rezeptionsBehandlungszeiten);
             // [Diagramm 12] Wartezeiten-Theorie (Exponential): mit Termin vs. ohne Termin
             ErzeugeWartezeitenTheorieExponentialDiagramm(wartezeitenMitTermin, wartezeitenOhneTermin);
+            ErzeugeSchwesterWartezeitenTheorieExponentialDiagramm(
+                schwesternWartezeitenMitTermin,
+                schwesternWartezeitenOhneTermin);
+            ErzeugeGemeinsamesWartezeitenVergleichsDiagramm(
+                wartezeitenMitTermin,
+                wartezeitenOhneTermin,
+                schwesternWartezeitenMitTermin,
+                schwesternWartezeitenOhneTermin);
             // [Diagramm 13] Hit/Miss pro Tag
             ErzeugeHitMissProTagDiagramm(hitMissProTag);
             // [Diagramm 14] Zeitachse eines Miss-Patienten (Wartezeit/Feierabend)

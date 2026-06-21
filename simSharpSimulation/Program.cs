@@ -43,6 +43,8 @@ namespace simSharpSimulation
                 daten.WartezeitenMitTermin,
                 daten.WartezeitenOhneTermin,
                 daten.SchwesternWartezeiten,
+                daten.SchwesternWartezeitenMitTermin,
+                daten.SchwesternWartezeitenOhneTermin,
                 daten.RezeptionsWartezeiten,
                 daten.Gesamtprozesszeiten,
                 daten.HitMissProTag,
