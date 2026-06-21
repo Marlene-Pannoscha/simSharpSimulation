@@ -1,7 +1,7 @@
 {
-  "AnzahlPatientenTag": 105,
-  "Erwartungswert": 180,
-  "Standardabweichung": 80,
+  "ZwischenankunftErste2StundenMinuten": 5.5,
+  "ZwischenankunftNaechste3StundenMinuten": 2.5,
+  "ZwischenankunftLetzte3StundenMinuten": 30.0,
   "TerminWahrscheinlichkeit": 0.7,
   "TerminVorbereitungWahrscheinlichkeit": 0.4,
   "OhneTerminVorbereitungWahrscheinlichkeit": 0.8,

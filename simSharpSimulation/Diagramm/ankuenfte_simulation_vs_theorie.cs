@@ -15,8 +15,9 @@ namespace simSharpSimulation
             double[] pdf,
             double[] cdf,
             double simulationsdauer,
-            double erwartungswert,
-            double standardabweichung)
+            double erstePhase,
+            double zweitePhase,
+            double drittePhase)
         {
             int anzahlBins = 24;
             var (ankunftCounts, ankunftCenters, balkenBreite) = BuildHistogram(echteAnkunftszeiten, anzahlBins, 0, simulationsdauer);
@@ -35,7 +36,8 @@ namespace simSharpSimulation
             var cdfLine = plot.AddScatter(x, cdf, color: Color.Red, lineStyle: ScottPlot.LineStyle.Dash, lineWidth: 3, label: "CDF (Verteilungsfunktion)");
             cdfLine.YAxisIndex = axisRight.AxisIndex;
 
-            plot.Title($"Simulation vs. Theorie: Ankünfte\n(Mittelwert: {erwartungswert}, StdAbw: {standardabweichung})");
+            plot.Title($"Simulation vs. Theorie: Ankünfte\n" +
+                $"(mittlere Zwischenankunft: {erstePhase:0.0} / {zweitePhase:0.0} / {drittePhase:0.0} min)");
             plot.XLabel("Zeit der Simulation in Minuten (0 bis 480)");
             plot.YLabel("Anzahl der Patienten");
             axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");

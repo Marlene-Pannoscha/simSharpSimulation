@@ -422,11 +422,11 @@ internal static class FinanzVisualisierung
             _ => 1.0,
         };
 
-        double basisNachfrage = PatientenKonfiguration.ANZAHL_PATIENTEN_TAG;
+        double basisNachfrage = PatientenKonfiguration.BerechneErwarteteAnkuenfte(
+            SimulationKonfiguration.SIMULATIONSDAUER);
         double mean = basisNachfrage * saisonfaktor;
-        double std = Math.Max(3.0, mean * 0.15);
-        // Eine Normalverteilung erzeugt leichte Tagesschwankungen um den saisonalen Erwartungswert.
-        int nachfrage = (int)Math.Round(Normal.Sample(rnd, mean, std));
+        // Die exponentiellen Zwischenankunftszeiten erzeugen eine Poisson-verteilte Tagesanzahl.
+        int nachfrage = Poisson.Sample(rnd, mean);
         return Math.Max(0, nachfrage);
     }
 

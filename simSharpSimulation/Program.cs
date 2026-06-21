@@ -14,7 +14,7 @@ namespace simSharpSimulation
         - SimulationsDaten.cs sammelt alle Wartezeiten und Ereignisse.
         - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
         */
-        internal const int SimulierteArbeitstage = 10;
+        internal const int SimulierteArbeitstage = 30;
 
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
         [STAThread]
@@ -51,8 +51,9 @@ namespace simSharpSimulation
                 daten.SchwesternBehandlungszeitenNachTyp,
                 daten.RezeptionsBehandlungszeiten,
                 SimulationKonfiguration.SIMULATIONSDAUER,
-                PatientenKonfiguration.ERWARTUNGSWERT,
-                PatientenKonfiguration.STANDARDABWEICHUNG,
+                PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN,
+                PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN,
+                PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN,
                 ArztKonfiguration.ANZAHL_AERZTE,
                 SchwesterKonfiguration.ANZAHL_SCHWESTERN);
 

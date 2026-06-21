@@ -10,11 +10,11 @@ namespace simSharpSimulation
         Lang
     }
 
-    internal sealed class PatientenKonfiguration : PersonenKonfiguration
+    internal static class PatientenKonfiguration
     {
-        public static int ANZAHL_PATIENTEN_TAG { get; internal set; } = 95;
-        public static double ERWARTUNGSWERT { get; internal set; } = 180.0;
-        public static double STANDARDABWEICHUNG { get; internal set; } = 80.0;
+        public static double ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN { get; internal set; }
+        public static double ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN { get; internal set; }
+        public static double ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN { get; internal set; }
         public static double TERMIN_WAHRSCHEINLICHKEIT { get; internal set; } = 0.7;
         public static double TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT { get; internal set; } = 0.4;
         public static double OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT { get; internal set; } = 0.80;
@@ -52,8 +52,15 @@ namespace simSharpSimulation
             return TYPEN_VERTEILUNG.First(t => t.Typ == typ);
         }
 
-        public override int Anzahl => ANZAHL_PATIENTEN_TAG;
-        public override double MittlereServicezeit => ERWARTUNGSWERT;
-        public override string Beschreibung => "Patienten in der Klinik";
+        public static double BerechneErwarteteAnkuenfte(double simulationsdauerMinuten)
+        {
+            double dauer = Math.Max(0.0, simulationsdauerMinuten);
+            double erstePhase = Math.Min(dauer, 120.0) / ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN;
+            double zweitePhase = Math.Min(Math.Max(dauer - 120.0, 0.0), 180.0)
+                / ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN;
+            double drittePhase = Math.Max(dauer - 300.0, 0.0)
+                / ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN;
+            return erstePhase + zweitePhase + drittePhase;
+        }
     }
 }

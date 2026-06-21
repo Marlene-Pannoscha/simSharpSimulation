@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using SimSharp;
 
 namespace simSharpSimulation
@@ -19,54 +18,22 @@ namespace simSharpSimulation
         {
             double aufnahmeStoppMinuten = BerechneAufnahmeStoppZeitpunkt();
 
-            // Hier sammeln wir alle geplanten Ankunftszeitpunkte (in Minuten ab Tagesstart).
-            // drawIndex sorgt bei gleichen Zeiten für eine stabile (FIFO-)Reihenfolge.
+            // Exponentielle Zwischenankunftszeiten je Tagesphase ergeben einen
+            // inhomogenen Poisson-Prozess mit konstanter Rate pro Phase.
             var ankunftszeiten = new List<(double zeit, int drawIndex)>();
-
-            for (int i = 0; i < PatientenKonfiguration.ANZAHL_PATIENTEN_TAG; i++)
-            {
-                double z = MathNet.Numerics.Distributions.Normal.Sample(
-                    rnd,
-                    PatientenKonfiguration.ERWARTUNGSWERT,
-                    PatientenKonfiguration.STANDARDABWEICHUNG);
-
-                if (z <= SimulationKonfiguration.SIMULATIONSDAUER)
-                    ankunftszeiten.Add((z, i));
-            }
-
-            ankunftszeiten = ankunftszeiten
-                .OrderBy(x => x.zeit)
-                .ThenBy(x => x.drawIndex)
-                .ToList();
-
-            var warteschlangeVorOeffnung = ankunftszeiten
-                .Where(x => x.zeit < 0)
-                .ToList();
-
-            var ankuenfteAbOeffnung = ankunftszeiten
-                .Where(x => x.zeit >= 0)
-                .ToList();
+            int drawIndex = 0;
+            GenerierePhase(ankunftszeiten, rnd, 0.0, 120.0,
+                PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN, ref drawIndex);
+            GenerierePhase(ankunftszeiten, rnd, 120.0, 300.0,
+                PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN, ref drawIndex);
+            GenerierePhase(ankunftszeiten, rnd, 300.0, SimulationKonfiguration.SIMULATIONSDAUER,
+                PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN, ref drawIndex);
 
             int restAufnahmeplaetze = BerechneAufnahmestoppKapazitaet();
             daten.ErfassePrognoseAufnahmepruefung(env.StartDate, aufnahmeStoppMinuten, restAufnahmeplaetze);
 
             int patientCount = patientIdStart;
-            foreach (var eintrag in warteschlangeVorOeffnung)
-            {
-                daten.LogEvent(eintrag.zeit, "wartet_vor_oeffnung", patientCount);
-
-                // Bei Öffnung werden wartende Patienten nacheinander in FIFO-Reihenfolge gestartet.
-                // Der Praxisprozess startet erst bei Oeffnung, nicht zum negativen Ankunftszeitpunkt.
-                if ((env.Now - env.StartDate).TotalMinutes < 0.0)
-                {
-                    yield return env.Timeout(TimeSpan.FromMinutes(0.0 - (env.Now - env.StartDate).TotalMinutes));
-                }
-
-                env.Process(patientFactory(env, patientCount, rezeption, schwestern, aerzte));
-                patientCount++;
-            }
-
-            foreach (var eintrag in ankuenfteAbOeffnung)
+            foreach (var eintrag in ankunftszeiten)
             {
                 double ankunftszeit = eintrag.zeit;
                 double warteBisAnkunft = ankunftszeit - (env.Now - env.StartDate).TotalMinutes;
@@ -74,7 +41,6 @@ namespace simSharpSimulation
                 if (warteBisAnkunft > 0)
                     yield return env.Timeout(TimeSpan.FromMinutes(warteBisAnkunft));
 
-                // Startet den individuellen Ablauf für genau diesen Patienten.
                 if (ankunftszeit >= aufnahmeStoppMinuten)
                 {
                     double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
@@ -89,6 +55,32 @@ namespace simSharpSimulation
             }
         }
 
+        private static void GenerierePhase(
+            ICollection<(double zeit, int drawIndex)> ankunftszeiten,
+            Random rnd,
+            double phasenStart,
+            double phasenEnde,
+            double mittlereZwischenankunftMinuten,
+            ref int drawIndex)
+        {
+            phasenEnde = Math.Min(phasenEnde, SimulationKonfiguration.SIMULATIONSDAUER);
+            if (phasenEnde <= phasenStart)
+                return;
+            if (mittlereZwischenankunftMinuten <= 0.0)
+                throw new InvalidOperationException("Die mittlere Zwischenankunftszeit muss groesser als 0 sein.");
+
+            double zeit = phasenStart;
+            double rateProMinute = 1.0 / mittlereZwischenankunftMinuten;
+            while (true)
+            {
+                zeit += MathNet.Numerics.Distributions.Exponential.Sample(rnd, rateProMinute);
+                if (zeit >= phasenEnde)
+                    break;
+
+                ankunftszeiten.Add((zeit, drawIndex++));
+            }
+        }
+
         private static double BerechneAufnahmeStoppZeitpunkt()
         {
             return Math.Max(
@@ -97,12 +89,12 @@ namespace simSharpSimulation
                 SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
         }
 
-            private static int BerechneAufnahmestoppKapazitaet()
-            {
-                double restMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
-                double mittlereArztBehandlungsdauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
-                int kapazitaet = (int)Math.Floor((restMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztBehandlungsdauer);
-                return Math.Max(0, kapazitaet);
-            }
+        private static int BerechneAufnahmestoppKapazitaet()
+        {
+            double restMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
+            double mittlereArztBehandlungsdauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
+            int kapazitaet = (int)Math.Floor((restMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztBehandlungsdauer);
+            return Math.Max(0, kapazitaet);
+        }
     }
 }

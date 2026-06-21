@@ -44,9 +44,9 @@ namespace simSharpSimulation
             RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION = rezeption.VariationskoeffizientRezeption;
 
             var patienten = LeseJson<PatientenKonfigurationJson>(Path.Combine(zielOrdner, "patienten-konfiguration.json"));
-            PatientenKonfiguration.ANZAHL_PATIENTEN_TAG = patienten.AnzahlPatientenTag;
-            PatientenKonfiguration.ERWARTUNGSWERT = patienten.Erwartungswert;
-            PatientenKonfiguration.STANDARDABWEICHUNG = patienten.Standardabweichung;
+            PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN = patienten.ZwischenankunftErste2StundenMinuten;
+            PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN = patienten.ZwischenankunftNaechste3StundenMinuten;
+            PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN = patienten.ZwischenankunftLetzte3StundenMinuten;
             PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT = patienten.TerminWahrscheinlichkeit;
             PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = patienten.TerminVorbereitungWahrscheinlichkeit;
             PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT = patienten.OhneTerminVorbereitungWahrscheinlichkeit;
@@ -147,9 +147,9 @@ namespace simSharpSimulation
 
     internal sealed class PatientenKonfigurationJson
     {
-        public int AnzahlPatientenTag { get; set; }
-        public double Erwartungswert { get; set; }
-        public double Standardabweichung { get; set; }
+        public double ZwischenankunftErste2StundenMinuten { get; set; }
+        public double ZwischenankunftNaechste3StundenMinuten { get; set; }
+        public double ZwischenankunftLetzte3StundenMinuten { get; set; }
         public double TerminWahrscheinlichkeit { get; set; }
         public double TerminVorbereitungWahrscheinlichkeit { get; set; }
         public double OhneTerminVorbereitungWahrscheinlichkeit { get; set; }

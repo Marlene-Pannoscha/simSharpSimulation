@@ -15,7 +15,7 @@ namespace simSharpSimulation
         private static readonly Lazy<string> ProjektRoot = new(ErmittleProjektRoot);
 
         // Erstellt alle Diagramme analog zur SimPy-Version:
-        // 1) Theorie: PDF + CDF der Normalverteilung für Patientenankünfte.
+        // 1) Theorie: Intensität + kumulierter Anteil des phasenweisen Poisson-Prozesses.
         // 2) Simulation vs. Theorie: Ein Histogramm der tatsächlichen Ankünfte im Vergleich zur theoretischen Verteilung.
         // 3) Histogramm der Wartezeiten beim Arzt.
         // 4) Histogramm der Wartezeiten bei der Schwester.
@@ -38,8 +38,9 @@ namespace simSharpSimulation
             IReadOnlyDictionary<PatientenTyp, List<double>> schwesternBehandlungszeitenNachTyp,
             IReadOnlyList<double> rezeptionsBehandlungszeiten,
             double simulationsdauer,
-            double erwartungswert,
-            double standardabweichung,
+            double zwischenankunftErstePhase,
+            double zwischenankunftZweitePhase,
+            double zwischenankunftDrittePhase,
             int anzahlAerzte,
             int anzahlSchwestern)
         {
@@ -49,20 +50,42 @@ namespace simSharpSimulation
             double[] x = Linspace(0, simulationsdauer, 500);
 
             // Berechnet die Wahrscheinlichkeitsdichtefunktion (PDF) für jeden Zeitpunkt.
+            double erwarteteAnzahl = 120.0 / zwischenankunftErstePhase
+                + 180.0 / zwischenankunftZweitePhase
+                + Math.Max(0.0, simulationsdauer - 300.0) / zwischenankunftDrittePhase;
+
             double[] pdf = x
-                .Select(v => MathNet.Numerics.Distributions.Normal.PDF(erwartungswert, standardabweichung, v))
+                .Select(v => (v < 120.0
+                    ? 1.0 / zwischenankunftErstePhase
+                    : v < 300.0
+                        ? 1.0 / zwischenankunftZweitePhase
+                        : 1.0 / zwischenankunftDrittePhase) / erwarteteAnzahl)
                 .ToArray();
 
             // Berechnet die kumulative Verteilungsfunktion (CDF) für jeden Zeitpunkt.
             double[] cdf = x
-                .Select(v => MathNet.Numerics.Distributions.Normal.CDF(erwartungswert, standardabweichung, v))
+                .Select(v =>
+                {
+                    double kumuliert = Math.Min(v, 120.0) / zwischenankunftErstePhase;
+                    if (v > 120.0)
+                        kumuliert += Math.Min(v - 120.0, 180.0) / zwischenankunftZweitePhase;
+                    if (v > 300.0)
+                        kumuliert += (v - 300.0) / zwischenankunftDrittePhase;
+                    return kumuliert / erwarteteAnzahl;
+                })
                 .ToArray();
 
             // Ruft die Methoden zur Erstellung der einzelnen Diagramme auf.
             // [Diagramm 1] Theorie: PDF + CDF
-            ErzeugeTheorieDiagramm(x, pdf, cdf, erwartungswert, standardabweichung);
+            ErzeugeTheorieDiagramm(x, pdf, cdf, zwischenankunftErstePhase, zwischenankunftZweitePhase, zwischenankunftDrittePhase);
+            ErzeugeZwischenankunftszeitenExponentialDiagramm(
+                echteAnkunftszeiten,
+                zwischenankunftErstePhase,
+                zwischenankunftZweitePhase,
+                zwischenankunftDrittePhase);
             // [Diagramm 2] Simulation vs. Theorie: Ankünfte
-            ErzeugeAnkuenfteVergleichsDiagramm(echteAnkunftszeiten, x, pdf, cdf, simulationsdauer, erwartungswert, standardabweichung);
+            ErzeugeAnkuenfteVergleichsDiagramm(echteAnkunftszeiten, x, pdf, cdf, simulationsdauer,
+                zwischenankunftErstePhase, zwischenankunftZweitePhase, zwischenankunftDrittePhase);
             // [Diagramm 3] Wartezeiten beim Arzt
             ErzeugeWartezeitenDiagramm(wartezeiten, anzahlAerzte);
             // [Diagramm 4] Wartezeiten bei der Schwester
@@ -90,9 +113,6 @@ namespace simSharpSimulation
             // [Diagramm 15] Verteilung der Auslastung
             ErzeugeAuslastungsVerteilungsDiagramm(
                 traceData,
-                arztBehandlungszeitenNachTyp,
-                schwesternBehandlungszeitenNachTyp,
-                rezeptionsBehandlungszeiten,
                 simulationsdauer,
                 anzahlAerzte,
                 anzahlSchwestern);
