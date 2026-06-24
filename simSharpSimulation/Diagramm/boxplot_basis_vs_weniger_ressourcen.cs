@@ -582,7 +582,8 @@ namespace simSharpSimulation
             double maxY,
             Color farbe,
             Font kleinFont,
-            bool beschriftungLinks)
+            bool beschriftungLinks,
+            bool infoAnzeigen = true)
         {
             float boxHalbeBreite = 58;
             float min = SkaliereY(statistik.Min, minY, maxY, plotArea);
@@ -604,6 +605,9 @@ namespace simSharpSimulation
             g.DrawLine(farbPen, x, q3, x, max);
             g.DrawLine(farbPen, x - boxHalbeBreite * 0.6f, min, x + boxHalbeBreite * 0.6f, min);
             g.DrawLine(farbPen, x - boxHalbeBreite * 0.6f, max, x + boxHalbeBreite * 0.6f, max);
+
+            if (!infoAnzeigen)
+                return;
 
             string info = $"n={anzahl}\nMed={statistik.Median.ToString("N1", BoxplotCulture)}";
             using Brush infoBrush = new SolidBrush(Color.Black);

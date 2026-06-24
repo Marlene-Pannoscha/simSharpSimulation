@@ -51,7 +51,7 @@
     "FlaecheBehandlungsraumArztQuadratmeter": 18.0,
     "FlaecheWartezimmerQuadratmeter": 30.0,
     "InfrastrukturProTag": 600.0,
-    "MedizinischesMaterialProTag": 500.0,
+    "MedizinischesMaterialProTag": 1000.0,
     "GeraeteLeasingProTag": 300.0,
     "SonstigeFixkostenProTag": 500.0
   },

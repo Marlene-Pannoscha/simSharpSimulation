@@ -30,7 +30,7 @@ namespace simSharpSimulation
                 return;
 
             const int breite = 1400;
-            const int hoehe = 820;
+            const int hoehe = 900;
             string outputPath = ErzeugeOutputPfad("wartezeiten_vergleich_mit_ohne_termin.png");
 
             using Bitmap bitmap = new(breite, hoehe);
@@ -38,7 +38,7 @@ namespace simSharpSimulation
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.Clear(Color.White);
 
-            RectangleF plotArea = new(120, 138, breite - 185, hoehe - 330);
+            RectangleF plotArea = new(135, 160, breite - 205, 470);
             using Font titelFont = new("Arial", 22, FontStyle.Bold);
             using Font untertitelFont = new("Arial", 12, FontStyle.Regular);
             using Font achsenFont = new("Arial", 12, FontStyle.Regular);
@@ -58,13 +58,13 @@ namespace simSharpSimulation
                 titelFont,
                 textBrush,
                 58,
-                30);
+                24);
             g.DrawString(
                 "Stationsbezogene Wartezeit ab Betreten des jeweiligen Wartebereichs bis Behandlungsstart",
                 untertitelFont,
                 Brushes.DimGray,
                 60,
-                66);
+                76);
 
             double maxY = gruppen
                 .Select(g => BerechneBoxplotStatistik(g.Werte).Max)
@@ -91,7 +91,7 @@ namespace simSharpSimulation
 
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom);
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Top, plotArea.Left, plotArea.Bottom);
-            ZeichneGedrehtenText(g, "Wartezeit in Minuten", achsenFont, textBrush, 28, plotArea.Top + plotArea.Height / 2 + 62);
+            ZeichneGedrehtenText(g, "Wartezeit in Minuten", achsenFont, textBrush, 18, plotArea.Top + plotArea.Height / 2 + 70);
 
             ZeichneLegende(g, "mit Termin", "ohne Termin", mitTerminFarbe, ohneTerminFarbe, new PointF(breite - 310, 34));
 
@@ -109,12 +109,23 @@ namespace simSharpSimulation
                     maxY,
                     gruppen[i].Farbe,
                     kleinFont,
-                    i % 2 == 0);
-                ZeichneZentriertenText(g, gruppen[i].Terminstatus, labelFont, textBrush, x, plotArea.Bottom + 20);
+                    i % 2 == 0,
+                    false);
+
+                ZeichneStatistikUnterBoxplot(
+                    g,
+                    x,
+                    plotArea.Bottom + 18,
+                    gruppen[i].Werte.Count,
+                    statistik.Median,
+                    kleinFont,
+                    gruppen[i].Farbe);
+
+                ZeichneZentriertenText(g, gruppen[i].Terminstatus, labelFont, textBrush, x, plotArea.Bottom + 92);
             }
 
-            ZeichneZentriertenText(g, "Arzt", stationFont, textBrush, plotArea.Left + plotArea.Width * 0.25f, plotArea.Bottom + 58);
-            ZeichneZentriertenText(g, "Schwester", stationFont, textBrush, plotArea.Left + plotArea.Width * 0.75f, plotArea.Bottom + 58);
+            ZeichneZentriertenText(g, "Arzt", stationFont, textBrush, plotArea.Left + plotArea.Width * 0.25f, plotArea.Bottom + 134);
+            ZeichneZentriertenText(g, "Schwester", stationFont, textBrush, plotArea.Left + plotArea.Width * 0.75f, plotArea.Bottom + 134);
 
             using Font hinweisFont = new("Arial", 11, FontStyle.Italic);
             g.DrawString(
@@ -122,10 +133,45 @@ namespace simSharpSimulation
                 hinweisFont,
                 Brushes.DimGray,
                 plotArea.Left,
-                hoehe - 42);
+                hoehe - 48);
 
             bitmap.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
             Console.WriteLine($"--- Diagramm gemeinsamer Wartezeitenvergleich gespeichert: {outputPath} ---");
+        }
+
+        private static void ZeichneStatistikUnterBoxplot(
+            Graphics g,
+            float centerX,
+            float y,
+            int anzahl,
+            double median,
+            Font font,
+            Color akzentFarbe)
+        {
+            string text = $"n = {anzahl}\nMedian = {median.ToString("N1", BoxplotCulture)} min";
+            SizeF textGroesse = g.MeasureString(text, font);
+            const float horizontalerInnenabstand = 10;
+            const float vertikalerInnenabstand = 6;
+            float breite = textGroesse.Width + horizontalerInnenabstand * 2;
+            float hoehe = textGroesse.Height + vertikalerInnenabstand * 2;
+            RectangleF karte = new(
+                centerX - breite / 2,
+                y,
+                breite,
+                hoehe);
+
+            using Brush hintergrund = new SolidBrush(Color.FromArgb(248, 250, 252));
+            using Pen rahmen = new(Color.FromArgb(210, 216, 222), 1);
+            using Pen akzent = new(akzentFarbe, 3);
+            g.FillRectangle(hintergrund, karte);
+            g.DrawRectangle(rahmen, karte.Left, karte.Top, karte.Width, karte.Height);
+            g.DrawLine(akzent, karte.Left, karte.Top, karte.Left, karte.Bottom);
+            g.DrawString(
+                text,
+                font,
+                Brushes.Black,
+                karte.Left + horizontalerInnenabstand,
+                karte.Top + vertikalerInnenabstand);
         }
 
         private static void ZeichneGedrehtenText(
