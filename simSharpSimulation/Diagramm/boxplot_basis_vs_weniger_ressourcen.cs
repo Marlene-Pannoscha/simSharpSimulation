@@ -727,10 +727,19 @@ namespace simSharpSimulation
             float yStart = SkaliereY(skala.Start, 0.0, maxY, plotArea, skala);
             float yEnde = SkaliereY(skala.Ende, 0.0, maxY, plotArea, skala);
             float yMitte = (yStart + yEnde) / 2.0f;
+            float bandOben = Math.Min(yStart, yEnde);
+            float bandUnten = Math.Max(yStart, yEnde);
 
             using Pen bruchPen = new(Color.FromArgb(45, 50, 55), 1.4f);
             ZeichneAchsenZacken(g, plotArea.Left, yMitte - 5, bruchPen);
             ZeichneAchsenZacken(g, plotArea.Left, yMitte + 5, bruchPen);
+
+            using Pen komprimierungsPen = new(Color.FromArgb(185, 193, 201), 1)
+            {
+                DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
+            };
+            for (float y = bandOben + 6; y < bandUnten; y += 8)
+                g.DrawLine(komprimierungsPen, plotArea.Left + 1, y, plotArea.Right, y);
 
             string label = "50-200 komprimiert";
             SizeF labelSize = g.MeasureString(label, font);
