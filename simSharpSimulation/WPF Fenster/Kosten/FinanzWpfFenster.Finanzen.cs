@@ -60,7 +60,7 @@ internal sealed partial class FinanzWpfFenster
         Grid.SetRow(gewinnBorder, 2);
         bilderGrid.Children.Add(gewinnBorder);
 
-        Border kostenstrukturBorder = ErzeugeBildContainer("Kosten und Gewinnstruktur", out kostenstrukturImage);
+        Border kostenstrukturBorder = ErzeugeBildContainer("Gewinn und Kostenstruktur", out kostenstrukturImage);
         Grid.SetRow(kostenstrukturBorder, 4);
         bilderGrid.Children.Add(kostenstrukturBorder);
 
@@ -89,11 +89,15 @@ internal sealed partial class FinanzWpfFenster
         {
             PersonalkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0,
             MietkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0,
+            EnergiekostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtEnergiekosten / ergebnis.GesamtUmsatz : 0.0,
+            ReinigungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtReinigungskosten / ergebnis.GesamtUmsatz : 0.0,
             InfrastrukturkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0,
+            ITUndVerwaltungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtITUndVerwaltungskosten / ergebnis.GesamtUmsatz : 0.0,
+            VersicherungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtVersicherungskosten / ergebnis.GesamtUmsatz : 0.0,
             MaterialkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0,
             GeraeteLeasingAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0,
+            GeraeteWartungAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtWartungskosten / ergebnis.GesamtUmsatz : 0.0,
             SonstigeFixkostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0,
-            BehandlungskostenAnteil = ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0,
         };
         BreakEvenPoint breakEven = ergebnis.BreakEven;
 
@@ -123,15 +127,27 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Gesamtmietkosten pro Monat: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat)}");
         sb.AppendLine($"Gesamtmietkosten pro Jahr: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat * 12)}");
         sb.AppendLine();
-        sb.AppendLine("Kosten-und Gewinn-struktur (von Umsatz)");
+        sb.AppendLine("Gewinn und Kostenstruktur (Basis: Umsatz)");
         sb.AppendLine($"Personalkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Energie: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtEnergiekosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtEnergiekosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Reinigung: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtReinigungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtReinigungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Infrastruktur: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtInfrastrukturkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
-        sb.AppendLine($"Medizinisches Material: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"IT und Verwaltung: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtITUndVerwaltungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtITUndVerwaltungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Versicherungen: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtVersicherungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtVersicherungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Medizinisches Material (patientenabhaengig): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Geraete-Leasing: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtLeasingkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Geraete-Wartung: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtWartungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtWartungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Sonstige Fixkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtSonstigeFixkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
-        sb.AppendLine($"Behandlungskosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtBehandlungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Gewinn: {FinanzVisualisierung.FormatEuro(ergebnis.Gesamtgewinn)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine();
+        sb.AppendLine("Zielkorridore (Kostenanteile)");
+        sb.AppendLine($"Personalkosten: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel unter 50 %)");
+        sb.AppendLine($"IT, Verwaltung und Versicherungen: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtITVerwaltungVersicherung / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 8-15 %)");
+        sb.AppendLine($"Medizinisches Verbrauchsmaterial: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 15 %)");
+        sb.AppendLine($"Raeume, Energie und Reinigung: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtRaumkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 7-12 %)");
+        sb.AppendLine($"Geraete, Leasing und Wartung: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtGeraetekosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 5-10 %)");
+        sb.AppendLine($"Gewinnmarge: {(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2} (Ziel 7-10 %)");
         sb.AppendLine();
         sb.AppendLine("Saisonaler Gewinn (im gewaehlten Zeitraum)");
         foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
@@ -145,10 +161,9 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Gesetzlich ({gesetzlichAnteilProzent.ToString("N2", DeCulture)} %): {versicherungen.GesetzlichPatienten} Patienten / {FinanzVisualisierung.FormatEuro(umsatzverteilung.UmsatzGesetzlich)}");
         sb.AppendLine();
         sb.AppendLine("Behandlungsdauer");
-        sb.AppendLine($"Kurz: {behandlungsmix.KurzPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.KurzKosten)}");
-        sb.AppendLine($"Mittel: {behandlungsmix.MittelPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.MittelKosten)}");
-        sb.AppendLine($"Lang: {behandlungsmix.LangPatienten} Patienten / {FinanzVisualisierung.FormatEuro(behandlungsmix.LangKosten)}");
-        sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FinanzVisualisierung.FormatEuro(behandlungsmix.Gesamtkosten)}");
+        sb.AppendLine($"Kurz: {behandlungsmix.KurzPatienten} Patienten");
+        sb.AppendLine($"Mittel: {behandlungsmix.MittelPatienten} Patienten");
+        sb.AppendLine($"Lang: {behandlungsmix.LangPatienten} Patienten");
         sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");

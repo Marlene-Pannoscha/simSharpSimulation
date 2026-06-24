@@ -1,7 +1,7 @@
 {
-  "AnzahlPatientenTag": 105,
-  "Erwartungswert": 180,
-  "Standardabweichung": 80,
+  "ZwischenankunftErste2StundenMinuten": 5.5,
+  "ZwischenankunftNaechste3StundenMinuten": 2.5,
+  "ZwischenankunftLetzte3StundenMinuten": 30.0,
   "TerminWahrscheinlichkeit": 0.7,
   "TerminVorbereitungWahrscheinlichkeit": 0.4,
   "OhneTerminVorbereitungWahrscheinlichkeit": 0.8,
@@ -15,29 +15,26 @@
     {
       "Typ": "Kurz",
       "Wahrscheinlichkeit": 0.3,
-      "BehandlungszeitArzt": 3,
+      "BehandlungszeitArzt": 4,
       "VariationskoeffizientArzt": 0.5,
-      "BehandlungszeitSchwester": 2,
-      "VariationskoeffizientSchwester": 0.4,
-      "Behandlungskosten": 18.0
+      "BehandlungszeitSchwester": 3,
+      "VariationskoeffizientSchwester": 0.4
     },
     {
       "Typ": "Mittel",
       "Wahrscheinlichkeit": 0.6,
-      "BehandlungszeitArzt": 7,
+      "BehandlungszeitArzt": 8,
       "VariationskoeffizientArzt": 0.4,
-      "BehandlungszeitSchwester": 5,
-      "VariationskoeffizientSchwester": 0.3,
-      "Behandlungskosten": 35.0
+      "BehandlungszeitSchwester": 6,
+      "VariationskoeffizientSchwester": 0.3
     },
     {
       "Typ": "Lang",
       "Wahrscheinlichkeit": 0.1,
       "BehandlungszeitArzt": 15,
       "VariationskoeffizientArzt": 0.3,
-      "BehandlungszeitSchwester": 10,
-      "VariationskoeffizientSchwester": 0.2,
-      "Behandlungskosten": 60.0
+      "BehandlungszeitSchwester": 12,
+      "VariationskoeffizientSchwester": 0.2
     }
   ],
   "Beschreibung": "Patienten in der Klinik"

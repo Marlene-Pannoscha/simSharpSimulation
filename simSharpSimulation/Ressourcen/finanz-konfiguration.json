@@ -1,7 +1,7 @@
 {
   "Personal": {
     "ArztLohnProPatient": 30.0,
-    "ArztLohnProStunde": 60.0,
+    "ArztLohnProStunde": 64.0,
     "SchwesterLohnProStunde": 35.0,
     "RezeptionLohnProStunde": 22.0,
     "ArbeitsstundenProTag": 8
@@ -45,24 +45,26 @@
         "KostenProQm": 6.32
       }
     ],
-    "AnzahlBehandlungsraeumeSchwester": 3,
+    "AnzahlBehandlungsraeumeSchwester": 1,
     "FlaecheBehandlungsraumSchwesterQuadratmeter": 12.0,
     "AnzahlBehandlungsraeumeArzt": 2,
     "FlaecheBehandlungsraumArztQuadratmeter": 18.0,
     "FlaecheWartezimmerQuadratmeter": 30.0,
-    "InfrastrukturProTag": 600.0,
-    "MedizinischesMaterialProTag": 500.0,
-    "GeraeteLeasingProTag": 300.0,
-    "SonstigeFixkostenProTag": 500.0
+    "InfrastrukturProTag": 300.0,
+    "ITUndVerwaltungProTag": 900.0,
+    "VersicherungenProTag": 443.0,
+    "EnergiekostenProQmProMonat": 3.0,
+    "ReinigungskostenProQmProMonat": 4.0,
+    "GeraeteLeasingProTag": 500.0,
+    "GeraeteWartungProTag": 395.0,
+    "SonstigeFixkostenProTag": 651.0
+  },
+  "VariableKosten": {
+    "MedizinischesMaterialProPatient": 15
   },
   "Versicherung": {
     "AnteilPrivatversichert": 0.30,
     "EinnahmePrivatpatient": 150.0,
     "EinnahmeGesetzlichPatient": 80.0
-  },
-  "Behandlungskosten": {
-    "Kurz": 18.0,
-    "Mittel": 30.0,
-    "Lang": 60.0
   }
 }

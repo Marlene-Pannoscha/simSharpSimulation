@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.Text;
 using System.IO;
@@ -117,7 +119,11 @@ internal static class FinanzVisualisierung
         double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
         double gesamtMietkostenMonat = mietkostenProQm * gesamtflaeche;
         double gesamtMietkostenProTag = (gesamtMietkostenMonat * 12) / 365.0;
-        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.InfrastrukturProTag + fixkosten.MedizinischesMaterialProTag + fixkosten.GeraeteLeasingProTag + fixkosten.SonstigeFixkostenProTag;
+        double energiekostenProTag = (fixkosten.EnergiekostenProQmProMonat * gesamtflaeche * 12) / 365.0;
+        double reinigungskostenProTag = (fixkosten.ReinigungskostenProQmProMonat * gesamtflaeche * 12) / 365.0;
+        double gesamtkostenFix = gesamtMietkostenProTag + energiekostenProTag + reinigungskostenProTag
+            + fixkosten.InfrastrukturProTag + fixkosten.ITUndVerwaltungProTag + fixkosten.VersicherungenProTag
+            + fixkosten.GeraeteLeasingProTag + fixkosten.GeraeteWartungProTag + fixkosten.SonstigeFixkostenProTag;
 
         List<Tagesergebnis> tagesergebnisse;
         if (aggregiereNachMonat)
@@ -139,8 +145,8 @@ internal static class FinanzVisualisierung
                 if (!indices.Any())
                 {
                     // empty month -> zeroed result
-                    Tageskosten zeroKosten = new(0, 0, 0, 0, 0, 0, 0, 0, 0);
-                    tagesergebnisse.Add(new Tagesergebnis(0, 0, zeroKosten, new Versicherungsverteilung(0, 0), new Umsatzverteilung(0, 0), new Behandlungsmix(0, 0, 0, 0, 0, 0), new Kostenstruktur(), new BreakEvenPoint()));
+                    Tageskosten zeroKosten = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    tagesergebnisse.Add(new Tagesergebnis(0, 0, zeroKosten, new Versicherungsverteilung(0, 0), new Umsatzverteilung(0, 0), new Behandlungsmix(0, 0, 0), new Kostenstruktur(), new BreakEvenPoint()));
                     continue;
                 }
 
@@ -150,17 +156,20 @@ internal static class FinanzVisualisierung
                 double sumSchwester = 0.0;
                 double sumRezeption = 0.0;
                 double sumMiete = 0.0;
+                double sumEnergie = 0.0;
+                double sumReinigung = 0.0;
                 double sumInfrastruktur = 0.0;
+                double sumITVerwaltung = 0.0;
+                double sumVersicherungen = 0.0;
                 double sumMaterial = 0.0;
                 double sumLeasing = 0.0;
+                double sumWartung = 0.0;
                 double sumSonstige = 0.0;
-                double sumBehandlungskosten = 0.0;
                 int sumPrivat = 0;
                 int sumGesetzlich = 0;
                 double sumUmsatzPrivat = 0.0;
                 double sumUmsatzGesetzlich = 0.0;
                 int sumKurz = 0; int sumMittel = 0; int sumLang = 0;
-                double sumKurzKosten = 0; double sumMittelKosten = 0; double sumLangKosten = 0;
 
                 foreach (int idx in indices)
                 {
@@ -171,11 +180,15 @@ internal static class FinanzVisualisierung
                     sumSchwester += dr.Kosten.Schwesterlohn;
                     sumRezeption += dr.Kosten.Rezeptionlohn;
                     sumMiete += dr.Kosten.Mietkosten;
+                    sumEnergie += dr.Kosten.Energiekosten;
+                    sumReinigung += dr.Kosten.Reinigungskosten;
                     sumInfrastruktur += dr.Kosten.Infrastrukturkosten;
+                    sumITVerwaltung += dr.Kosten.ITUndVerwaltungskosten;
+                    sumVersicherungen += dr.Kosten.Versicherungskosten;
                     sumMaterial += dr.Kosten.MedizinischesMaterialkosten;
                     sumLeasing += dr.Kosten.GeraeteLeasingKosten;
+                    sumWartung += dr.Kosten.GeraeteWartungskosten;
                     sumSonstige += dr.Kosten.SonstigeFixkosten;
-                    sumBehandlungskosten += dr.Kosten.Behandlungskosten;
                     sumPrivat += dr.Versicherungen.PrivatPatienten;
                     sumGesetzlich += dr.Versicherungen.GesetzlichPatienten;
                     sumUmsatzPrivat += dr.Umsatzverteilung.UmsatzPrivat;
@@ -183,9 +196,6 @@ internal static class FinanzVisualisierung
                     sumKurz += dr.Behandlungsmix.KurzPatienten;
                     sumMittel += dr.Behandlungsmix.MittelPatienten;
                     sumLang += dr.Behandlungsmix.LangPatienten;
-                    sumKurzKosten += dr.Behandlungsmix.KurzKosten;
-                    sumMittelKosten += dr.Behandlungsmix.MittelKosten;
-                    sumLangKosten += dr.Behandlungsmix.LangKosten;
                 }
 
                 Tageskosten gesamtKosten = new(
@@ -193,26 +203,34 @@ internal static class FinanzVisualisierung
                     sumSchwester,
                     sumRezeption,
                     sumMiete,
+                    sumEnergie,
+                    sumReinigung,
                     sumInfrastruktur,
+                    sumITVerwaltung,
+                    sumVersicherungen,
                     sumMaterial,
                     sumLeasing,
-                    sumSonstige,
-                    sumBehandlungskosten);
+                    sumWartung,
+                    sumSonstige);
 
                 Versicherungsverteilung vers = new(sumPrivat, sumGesetzlich);
                 Umsatzverteilung umv = new(sumUmsatzPrivat, sumUmsatzGesetzlich);
-                Behandlungsmix bm = new(sumKurz, sumMittel, sumLang, sumKurzKosten, sumMittelKosten, sumLangKosten);
+                Behandlungsmix bm = new(sumKurz, sumMittel, sumLang);
                 // Berechne Kostenstruktur-Anteile manuell (FinanzRechner.BerechneKostenstruktur ist nicht öffentlich)
                 double sumPersonalkosten = sumArzt + sumSchwester + sumRezeption;
                 Kostenstruktur ks = new()
                 {
                     PersonalkostenAnteil = sumUmsatz > 0 ? sumPersonalkosten / sumUmsatz : 0.0,
                     MietkostenAnteil = sumUmsatz > 0 ? sumMiete / sumUmsatz : 0.0,
+                    EnergiekostenAnteil = sumUmsatz > 0 ? sumEnergie / sumUmsatz : 0.0,
+                    ReinigungskostenAnteil = sumUmsatz > 0 ? sumReinigung / sumUmsatz : 0.0,
                     InfrastrukturkostenAnteil = sumUmsatz > 0 ? sumInfrastruktur / sumUmsatz : 0.0,
+                    ITUndVerwaltungskostenAnteil = sumUmsatz > 0 ? sumITVerwaltung / sumUmsatz : 0.0,
+                    VersicherungskostenAnteil = sumUmsatz > 0 ? sumVersicherungen / sumUmsatz : 0.0,
                     MaterialkostenAnteil = sumUmsatz > 0 ? sumMaterial / sumUmsatz : 0.0,
                     GeraeteLeasingAnteil = sumUmsatz > 0 ? sumLeasing / sumUmsatz : 0.0,
-                    SonstigeFixkostenAnteil = sumUmsatz > 0 ? sumSonstige / sumUmsatz : 0.0,
-                    BehandlungskostenAnteil = sumUmsatz > 0 ? sumBehandlungskosten / sumUmsatz : 0.0
+                    GeraeteWartungAnteil = sumUmsatz > 0 ? sumWartung / sumUmsatz : 0.0,
+                    SonstigeFixkostenAnteil = sumUmsatz > 0 ? sumSonstige / sumUmsatz : 0.0
                 };
 
                 tagesergebnisse.Add(new Tagesergebnis(sumUmsatz, sumGewinn, gesamtKosten, vers, umv, bm, ks, new BreakEvenPoint()));
@@ -315,12 +333,24 @@ internal static class FinanzVisualisierung
         sb.AppendLine("Kostenstruktur (Basis: Umsatz)");
         sb.AppendLine($"Personalkosten: {FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Energie: {FormatEuro(ergebnis.GesamtEnergiekosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtEnergiekosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Reinigung: {FormatEuro(ergebnis.GesamtReinigungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtReinigungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Infrastruktur: {FormatEuro(ergebnis.GesamtInfrastrukturkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
-        sb.AppendLine($"Medizinisches Material: {FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"IT und Verwaltung: {FormatEuro(ergebnis.GesamtITUndVerwaltungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtITUndVerwaltungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Versicherungen: {FormatEuro(ergebnis.GesamtVersicherungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtVersicherungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Medizinisches Material (patientenabhängig): {FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Geräte-Leasing: {FormatEuro(ergebnis.GesamtLeasingkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Geräte-Wartung: {FormatEuro(ergebnis.GesamtWartungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtWartungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Sonstige Fixkosten: {FormatEuro(ergebnis.GesamtSonstigeFixkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
-        sb.AppendLine($"Behandlungskosten: {FormatEuro(ergebnis.GesamtBehandlungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Gewinn: {FormatEuro(ergebnis.Gesamtgewinn)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine();
+        sb.AppendLine("Zielkorridore (Kostenanteile)");
+        sb.AppendLine($"Personalkosten: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel unter 50 %)");
+        sb.AppendLine($"IT, Verwaltung und Versicherungen: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtITVerwaltungVersicherung / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 8-15 %)");
+        sb.AppendLine($"Medizinisches Verbrauchsmaterial: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 15 %)");
+        sb.AppendLine($"Raeume, Energie und Reinigung: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtRaumkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 7-12 %)");
+        sb.AppendLine($"Geraete, Leasing und Wartung: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtGeraetekosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 5-10 %)");
+        sb.AppendLine($"Gewinnmarge: {(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2} (Ziel 7-10 %)");
         sb.AppendLine();
         sb.AppendLine("Saisonaler Gewinn (im gewählten Zeitraum)");
         foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
@@ -334,10 +364,9 @@ internal static class FinanzVisualisierung
         sb.AppendLine($"Gesetzlich: {ergebnis.VersicherungenGesamt.GesetzlichPatienten} Patienten / {FormatEuro(ergebnis.UmsatzverteilungGesamt.UmsatzGesetzlich)}");
         sb.AppendLine();
         sb.AppendLine("Behandlungsdauer");
-        sb.AppendLine($"Kurz: {ergebnis.BehandlungsmixGesamt.KurzPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.KurzKosten)}");
-        sb.AppendLine($"Mittel: {ergebnis.BehandlungsmixGesamt.MittelPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.MittelKosten)}");
-        sb.AppendLine($"Lang: {ergebnis.BehandlungsmixGesamt.LangPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.LangKosten)}");
-        sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FormatEuro(ergebnis.BehandlungsmixGesamt.Gesamtkosten)}");
+        sb.AppendLine($"Kurz: {ergebnis.BehandlungsmixGesamt.KurzPatienten} Patienten");
+        sb.AppendLine($"Mittel: {ergebnis.BehandlungsmixGesamt.MittelPatienten} Patienten");
+        sb.AppendLine($"Lang: {ergebnis.BehandlungsmixGesamt.LangPatienten} Patienten");
         sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");
@@ -422,11 +451,11 @@ internal static class FinanzVisualisierung
             _ => 1.0,
         };
 
-        double basisNachfrage = PatientenKonfiguration.ANZAHL_PATIENTEN_TAG;
+        double basisNachfrage = PatientenKonfiguration.BerechneErwarteteAnkuenfte(
+            SimulationKonfiguration.SIMULATIONSDAUER);
         double mean = basisNachfrage * saisonfaktor;
-        double std = Math.Max(3.0, mean * 0.15);
-        // Eine Normalverteilung erzeugt leichte Tagesschwankungen um den saisonalen Erwartungswert.
-        int nachfrage = (int)Math.Round(Normal.Sample(rnd, mean, std));
+        // Die exponentiellen Zwischenankunftszeiten erzeugen eine Poisson-verteilte Tagesanzahl.
+        int nachfrage = Poisson.Sample(rnd, mean);
         return Math.Max(0, nachfrage);
     }
 
@@ -562,11 +591,9 @@ internal static class FinanzVisualisierung
         plot.SaveFig(outputPfad);
     }
 
+#pragma warning disable CA1416 // Die Anwendung und dieses Renderingziel sind ausschliesslich Windows/WPF.
     private static void ErzeugeKostenstrukturDiagramm(FinanzErgebnis ergebnis, string outputPfad)
     {
-        // Etwas schmalere Grafik, damit sie besser in die WPF-Ansicht passt
-        Plot plot = new(820, 620);
-
         double umsatz = ergebnis.GesamtUmsatz;
         double gewinn = ergebnis.Gesamtgewinn;
         bool mitGewinn = gewinn >= 0.0;
@@ -577,23 +604,31 @@ internal static class FinanzVisualisierung
         {
             ergebnis.GesamtPersonalkosten,
             ergebnis.GesamtMietkosten,
+            ergebnis.GesamtEnergiekosten,
+            ergebnis.GesamtReinigungskosten,
             ergebnis.GesamtInfrastrukturkosten,
+            ergebnis.GesamtITUndVerwaltungskosten,
+            ergebnis.GesamtVersicherungskosten,
             ergebnis.GesamtMaterialkosten,
             ergebnis.GesamtLeasingkosten,
-            ergebnis.GesamtSonstigeFixkosten,
-            ergebnis.GesamtBehandlungskosten
+            ergebnis.GesamtWartungskosten,
+            ergebnis.GesamtSonstigeFixkosten
         };
 
-        List<string> labels = new() { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung" };
+        List<string> labels = new() { "Personal", "Miete", "Energie", "Reinigung", "Infrastruktur", "IT/Verwaltung", "Versicherung", "Material", "Leasing", "Wartung", "Sonstige" };
         List<Color> farben = new()
         {
             Color.FromArgb(52, 152, 219),
             Color.FromArgb(155, 89, 182),
+            Color.FromArgb(26, 188, 156),
+            Color.FromArgb(127, 140, 141),
             Color.FromArgb(46, 204, 113),
+            Color.FromArgb(52, 73, 94),
+            Color.FromArgb(41, 128, 185),
             Color.FromArgb(241, 196, 15),
             Color.FromArgb(231, 76, 60),
-            Color.FromArgb(149, 165, 166),
-            Color.FromArgb(52, 73, 94)
+            Color.FromArgb(192, 57, 43),
+            Color.FromArgb(149, 165, 166)
         };
 
         if (mitGewinn)
@@ -612,30 +647,192 @@ internal static class FinanzVisualisierung
             basis = 0.0;
         }
 
-        var pie = plot.AddPie(amounts.ToArray());
-        // Disable ScottPlot-internal slice percentages; the legend uses the same basis as the slices.
-        pie.SliceLabels = labels.ToArray();
-        pie.ShowPercentages = false;
-        pie.ShowLabels = false;
-        pie.ShowValues = false;
-        pie.SliceFillColors = farben.ToArray();
-
-        // Leicht auseinanderziehen, damit Beschriftungen besser lesbar sind
-        pie.Explode = true;
-
-        // Labels/Prozente auf den Slices sind deaktiviert, damit das Diagramm ruhig und lesbar bleibt.
-        pie.Size = 0.70;
-        pie.SliceLabelPosition = 0.92;
-        pie.SliceLabelColors = Enumerable.Repeat(Color.Black, amounts.Count).ToArray();
-
-        string[] legendLabels = labels.Select((lab, i) =>
-            $"{lab}: {FormatEuro(hatWerte ? amounts[i] : 0.0)} ({(basis > 0 ? amounts[i] / basis : 0.0):P2})").ToArray();
-        pie.LegendLabels = legendLabels;
-
         string verlustHinweis = mitGewinn ? string.Empty : $", Verlust: {FormatEuro(Math.Abs(gewinn))}";
-        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})", size: 18);
-        plot.Legend(location: Alignment.LowerRight);
-        plot.SaveFig(outputPfad);
+        string titel = $"Gewinn und Kostenstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})";
+
+        const int breite = 1400;
+        const int hoehe = 1600;
+        const float mittelpunktX = 700;
+        const float mittelpunktY = 780;
+        const float radius = 290;
+
+        using Bitmap bitmap = new(breite, hoehe);
+        using Graphics grafik = Graphics.FromImage(bitmap);
+        grafik.SmoothingMode = SmoothingMode.AntiAlias;
+        grafik.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        grafik.Clear(Color.White);
+
+        using Font titelFont = new("Segoe UI", 38, FontStyle.Bold, GraphicsUnit.Pixel);
+        using Font labelFont = new("Segoe UI", 24, FontStyle.Regular, GraphicsUnit.Pixel);
+        using Font hervorhebungFont = new("Segoe UI", 32, FontStyle.Bold, GraphicsUnit.Pixel);
+        using Font legendeFont = new("Segoe UI", 23, FontStyle.Regular, GraphicsUnit.Pixel);
+        using Font legendeFettFont = new("Segoe UI", 23, FontStyle.Bold, GraphicsUnit.Pixel);
+        using Pen segmentRand = new(Color.White, 3);
+        using Pen fuehrungsLinie = new(Color.FromArgb(45, 55, 65), 2.5f);
+        using Brush textPinsel = new SolidBrush(Color.FromArgb(25, 32, 40));
+
+        using StringFormat titelFormat = new() { Alignment = StringAlignment.Center };
+        grafik.DrawString(titel, titelFont, textPinsel, new RectangleF(30, 175, breite - 60, 65), titelFormat);
+
+        RectangleF kreis = new(mittelpunktX - radius, mittelpunktY - radius, radius * 2, radius * 2);
+        double summe = amounts.Sum();
+        float startWinkel = -90f;
+        List<KostenstrukturBeschriftung> beschriftungen = new();
+
+        for (int i = 0; i < amounts.Count; i++)
+        {
+            if (amounts[i] <= 0 || summe <= 0)
+                continue;
+
+            float sweep = (float)(amounts[i] / summe * 360.0);
+            using Brush segmentPinsel = new SolidBrush(farben[i]);
+            grafik.FillPie(segmentPinsel, kreis, startWinkel, sweep);
+            grafik.DrawPie(segmentRand, kreis, startWinkel, sweep);
+
+            double mitteGrad = startWinkel + sweep / 2.0;
+            double mitteRad = mitteGrad * Math.PI / 180.0;
+            bool rechts = Math.Cos(mitteRad) >= 0;
+            if (labels[i] == "Gewinn")
+            {
+                beschriftungen.Add(new KostenstrukturBeschriftung
+                {
+                    Index = i,
+                    WinkelRad = mitteRad,
+                    Rechts = rechts,
+                    ZielY = mittelpunktY + (float)Math.Sin(mitteRad) * (radius + 105)
+                });
+            }
+
+            startWinkel += sweep;
+        }
+
+        ZeichneKostenstrukturLegende(
+            grafik,
+            labels,
+            amounts,
+            farben,
+            basis,
+            hatWerte,
+            new RectangleF(100, 1130, breite - 200, 400),
+            legendeFont,
+            legendeFettFont);
+
+        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => !b.Rechts).ToList(), 455, 1100, 125);
+        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => b.Rechts).ToList(), 455, 1100, 125);
+
+        foreach (KostenstrukturBeschriftung beschriftung in beschriftungen)
+        {
+            float randX = mittelpunktX + (float)Math.Cos(beschriftung.WinkelRad) * radius;
+            float randY = mittelpunktY + (float)Math.Sin(beschriftung.WinkelRad) * radius;
+            float knickX = beschriftung.Rechts ? mittelpunktX + radius + 60 : mittelpunktX - radius - 60;
+            float linienEndeX = beschriftung.Rechts ? breite - 90 : 90;
+
+            grafik.DrawLine(fuehrungsLinie, randX, randY, knickX, beschriftung.ZielY);
+            grafik.DrawLine(fuehrungsLinie, knickX, beschriftung.ZielY, linienEndeX, beschriftung.ZielY);
+
+            string prozent = (basis > 0 ? amounts[beschriftung.Index] / basis : 0.0)
+                .ToString("P2", DeCulture);
+            string text = $"{labels[beschriftung.Index]}:\n" +
+                $"{FormatEuro(hatWerte ? amounts[beschriftung.Index] : 0.0)}\n" +
+                $"({prozent})";
+            Font verwendeterFont = labels[beschriftung.Index] == "Gewinn" ? hervorhebungFont : labelFont;
+            float textHoehe = labels[beschriftung.Index] == "Gewinn" ? 165 : 100;
+            RectangleF textBereich = beschriftung.Rechts
+                ? new RectangleF(knickX + 10, beschriftung.ZielY - textHoehe - 5, breite - knickX - 100, textHoehe)
+                : new RectangleF(90, beschriftung.ZielY - textHoehe - 5, knickX - 100, textHoehe);
+            using StringFormat textFormat = new()
+            {
+                Alignment = beschriftung.Rechts ? StringAlignment.Near : StringAlignment.Far,
+                LineAlignment = StringAlignment.Far,
+                Trimming = StringTrimming.EllipsisCharacter
+            };
+            grafik.DrawString(text, verwendeterFont, textPinsel, textBereich, textFormat);
+        }
+
+        bitmap.Save(outputPfad, ImageFormat.Png);
+    }
+
+    private static void ZeichneKostenstrukturLegende(
+        Graphics grafik,
+        IReadOnlyList<string> labels,
+        IReadOnlyList<double> amounts,
+        IReadOnlyList<Color> farben,
+        double basis,
+        bool hatWerte,
+        RectangleF bereich,
+        Font font,
+        Font fettFont)
+    {
+        List<int> indices = Enumerable.Range(0, labels.Count)
+            .Where(i => labels[i] != "Gewinn" && (amounts[i] > 0.0 || !hatWerte))
+            .ToList();
+
+        if (indices.Count == 0)
+            return;
+
+        int spalten = indices.Count > 6 ? 2 : 1;
+        int zeilen = (int)Math.Ceiling(indices.Count / (double)spalten);
+        float spaltenBreite = bereich.Width / spalten;
+        float zeilenHoehe = Math.Min(62, bereich.Height / Math.Max(1, zeilen));
+
+        using Pen rahmen = new(Color.FromArgb(224, 229, 234), 1.2f);
+        using Brush hintergrund = new SolidBrush(Color.FromArgb(248, 250, 252));
+        using Brush textPinsel = new SolidBrush(Color.FromArgb(25, 32, 40));
+        using Brush nebenTextPinsel = new SolidBrush(Color.FromArgb(85, 96, 108));
+        using StringFormat rechtsBuendig = new() { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center };
+
+        grafik.FillRectangle(hintergrund, bereich);
+        grafik.DrawRectangle(rahmen, bereich.Left, bereich.Top, bereich.Width, bereich.Height);
+
+        for (int indexInLegende = 0; indexInLegende < indices.Count; indexInLegende++)
+        {
+            int wertIndex = indices[indexInLegende];
+            int spalte = indexInLegende / zeilen;
+            int zeile = indexInLegende % zeilen;
+            float x = bereich.Left + spalte * spaltenBreite + 24;
+            float y = bereich.Top + 24 + zeile * zeilenHoehe;
+            double wert = hatWerte ? amounts[wertIndex] : 0.0;
+            string prozent = (basis > 0 ? wert / basis : 0.0).ToString("P2", DeCulture);
+
+            using Brush farbPinsel = new SolidBrush(farben[wertIndex]);
+            grafik.FillRectangle(farbPinsel, x, y + 13, 20, 20);
+            grafik.DrawRectangle(Pens.White, x, y + 13, 20, 20);
+            grafik.DrawString(labels[wertIndex], fettFont, textPinsel, x + 34, y + 4);
+
+            RectangleF wertBereich = new(x + spaltenBreite - 350, y, 300, zeilenHoehe);
+            grafik.DrawString($"{FormatEuro(wert)} ({prozent})", font, nebenTextPinsel, wertBereich, rechtsBuendig);
+        }
+    }
+#pragma warning restore CA1416
+
+    private static void VerteileKostenstrukturBeschriftungen(
+        List<KostenstrukturBeschriftung> beschriftungen,
+        float minimumY,
+        float maximumY,
+        float mindestAbstand)
+    {
+        beschriftungen.Sort((a, b) => a.ZielY.CompareTo(b.ZielY));
+        for (int i = 0; i < beschriftungen.Count; i++)
+        {
+            float minimum = i == 0 ? minimumY : beschriftungen[i - 1].ZielY + mindestAbstand;
+            beschriftungen[i].ZielY = Math.Max(beschriftungen[i].ZielY, minimum);
+        }
+
+        for (int i = beschriftungen.Count - 1; i >= 0; i--)
+        {
+            float maximum = i == beschriftungen.Count - 1
+                ? maximumY
+                : beschriftungen[i + 1].ZielY - mindestAbstand;
+            beschriftungen[i].ZielY = Math.Min(beschriftungen[i].ZielY, maximum);
+        }
+    }
+
+    private sealed class KostenstrukturBeschriftung
+    {
+        public int Index { get; init; }
+        public double WinkelRad { get; init; }
+        public bool Rechts { get; init; }
+        public float ZielY { get; set; }
     }
 
     private static string ErzeugeKostenImageOrdner()
@@ -692,9 +889,6 @@ internal static class FinanzVisualisierung
         public int KurzPatienten { get; private set; }
         public int MittelPatienten { get; private set; }
         public int LangPatienten { get; private set; }
-        public double KurzKosten { get; private set; }
-        public double MittelKosten { get; private set; }
-        public double LangKosten { get; private set; }
 
         public void Add(FinanzTagespunkt punkt)
         {
@@ -708,9 +902,6 @@ internal static class FinanzVisualisierung
             KurzPatienten += punkt.Behandlungsmix.KurzPatienten;
             MittelPatienten += punkt.Behandlungsmix.MittelPatienten;
             LangPatienten += punkt.Behandlungsmix.LangPatienten;
-            KurzKosten += punkt.Behandlungsmix.KurzKosten;
-            MittelKosten += punkt.Behandlungsmix.MittelKosten;
-            LangKosten += punkt.Behandlungsmix.LangKosten;
         }
 
         public FinanzTagespunkt ToTagespunkt(string label)
@@ -722,7 +913,7 @@ internal static class FinanzVisualisierung
                 Kosten,
                 Gewinn,
                 new Versicherungsverteilung(PrivatPatienten, GesetzlichPatienten),
-                new Behandlungsmix(KurzPatienten, MittelPatienten, LangPatienten, KurzKosten, MittelKosten, LangKosten));
+                new Behandlungsmix(KurzPatienten, MittelPatienten, LangPatienten));
         }
     }
 }
@@ -750,11 +941,18 @@ internal sealed record FinanzErgebnis(
     public double Gesamtkosten => Tagespunkte.Sum(p => p.Kosten);
     public double GesamtPersonalkosten => Tagesergebnisse.Sum(t => t.Kosten.Personalkosten);
     public double GesamtMietkosten => Tagesergebnisse.Sum(t => t.Kosten.Mietkosten);
+    public double GesamtEnergiekosten => Tagesergebnisse.Sum(t => t.Kosten.Energiekosten);
+    public double GesamtReinigungskosten => Tagesergebnisse.Sum(t => t.Kosten.Reinigungskosten);
     public double GesamtInfrastrukturkosten => Tagesergebnisse.Sum(t => t.Kosten.Infrastrukturkosten);
+    public double GesamtITUndVerwaltungskosten => Tagesergebnisse.Sum(t => t.Kosten.ITUndVerwaltungskosten);
+    public double GesamtVersicherungskosten => Tagesergebnisse.Sum(t => t.Kosten.Versicherungskosten);
     public double GesamtMaterialkosten => Tagesergebnisse.Sum(t => t.Kosten.MedizinischesMaterialkosten);
     public double GesamtLeasingkosten => Tagesergebnisse.Sum(t => t.Kosten.GeraeteLeasingKosten);
+    public double GesamtWartungskosten => Tagesergebnisse.Sum(t => t.Kosten.GeraeteWartungskosten);
     public double GesamtSonstigeFixkosten => Tagesergebnisse.Sum(t => t.Kosten.SonstigeFixkosten);
-    public double GesamtBehandlungskosten => Tagesergebnisse.Sum(t => t.Kosten.Behandlungskosten);
+    public double GesamtITVerwaltungVersicherung => GesamtITUndVerwaltungskosten + GesamtVersicherungskosten;
+    public double GesamtRaumkosten => GesamtMietkosten + GesamtEnergiekosten + GesamtReinigungskosten;
+    public double GesamtGeraetekosten => GesamtLeasingkosten + GesamtWartungskosten;
     public double DurchschnittlicherUmsatzProTag => SimulierteTage > 0 ? GesamtUmsatz / SimulierteTage : 0.0;
     public double DurchschnittlicheKostenProTag => SimulierteTage > 0 ? Gesamtkosten / SimulierteTage : 0.0;
     public Tageskosten DurchschnittlicheTageskosten => SimulierteTage > 0
@@ -763,12 +961,16 @@ internal sealed record FinanzErgebnis(
             Tagesergebnisse.Sum(t => t.Kosten.Schwesterlohn) / SimulierteTage,
             Tagesergebnisse.Sum(t => t.Kosten.Rezeptionlohn) / SimulierteTage,
             GesamtMietkosten / SimulierteTage,
+            GesamtEnergiekosten / SimulierteTage,
+            GesamtReinigungskosten / SimulierteTage,
             GesamtInfrastrukturkosten / SimulierteTage,
+            GesamtITUndVerwaltungskosten / SimulierteTage,
+            GesamtVersicherungskosten / SimulierteTage,
             GesamtMaterialkosten / SimulierteTage,
             GesamtLeasingkosten / SimulierteTage,
-            GesamtSonstigeFixkosten / SimulierteTage,
-            GesamtBehandlungskosten / SimulierteTage)
-        : new Tageskosten(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            GesamtWartungskosten / SimulierteTage,
+            GesamtSonstigeFixkosten / SimulierteTage)
+        : new Tageskosten(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     public BreakEvenPoint BreakEven => FinanzRechner.BerechneBreakEvenPoint(
         DurchschnittlicheTageskosten,
         DurchschnittBehandeltePatientenProTag,
@@ -785,10 +987,7 @@ internal sealed record FinanzErgebnis(
         new(
             Tagespunkte.Sum(p => p.Behandlungsmix.KurzPatienten),
             Tagespunkte.Sum(p => p.Behandlungsmix.MittelPatienten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.LangPatienten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.KurzKosten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.MittelKosten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.LangKosten));
+            Tagespunkte.Sum(p => p.Behandlungsmix.LangPatienten));
     public int GesamtNichtBehandelt => Math.Max(0, Gesamtnachfrage - GesamtBehandelt);
     public double DurchschnittBehandeltePatientenProTag => SimulierteTage > 0 ? GesamtBehandelt / (double)SimulierteTage : 0.0;
     public double Behandlungsquote => Gesamtnachfrage > 0 ? (GesamtBehandelt / (double)Gesamtnachfrage) * 100.0 : 0.0;

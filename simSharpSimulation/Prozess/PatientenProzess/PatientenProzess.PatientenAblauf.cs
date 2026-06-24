@@ -17,7 +17,14 @@ namespace simSharpSimulation
         - Terminpatienten warten im Schnitt kürzer über kürzere Wartezimmerdauer.
         - Patienten ohne Termin warten im Schnitt länger, laufen aber parallel weiter.
         */
-        private IEnumerable<Event> Patient(Simulation env, int patientId, Resource rezeption, BeweglicherSchwesterPool schwestern, BeweglicherArztPool aerzte)
+        private IEnumerable<Event> Patient(
+            Simulation env,
+            int patientId,
+            Resource rezeption,
+            BeweglicherSchwesterPool schwestern,
+            BeweglicherArztPool aerzte,
+            Resource arztzimmer,
+            Resource schwesterzimmer)
         {
             TimeSpan eingangZurRezeptionDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN);
             TimeSpan interneBewegungsdauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN);
@@ -298,11 +305,13 @@ namespace simSharpSimulation
 
             if (!ueberspringeSchwester)
             {
+                double ankunftszeitSchwesterWartebereich = (env.Now - env.StartDate).TotalMinutes;
                 if (!direktZurSchwester)
                 {
                     daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_schwester", patientId);
                     yield return env.Timeout(interneBewegungsdauer);
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer_schwester", patientId);
+                    ankunftszeitSchwesterWartebereich = (env.Now - env.StartDate).TotalMinutes;
+                    daten.LogEvent(ankunftszeitSchwesterWartebereich, "betritt_wartezimmer_schwester", patientId);
                     yield return env.Timeout(TimeSpan.FromMinutes(schwesterWartezimmerdauer));
                 }
 
@@ -342,11 +351,12 @@ namespace simSharpSimulation
                     patientId,
                     schwestern,
                     patientenTyp,
-                    ankunftszeit,
+                    ankunftszeitSchwesterWartebereich,
                     hatTermin,
                     direktZurSchwester,
                     interneBewegungsdauer,
                     schwesterBehandlungsdauer,
+                    schwesterzimmer,
                     daten,
                     schwesterErgebnis,
                     schwesterStatus))
@@ -410,7 +420,8 @@ namespace simSharpSimulation
 
             // Der Weg ins Arzt-Wartezimmer ist ebenfalls eine interne Bewegung.
             yield return env.Timeout(interneBewegungsdauer);
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "betritt_wartezimmer_fuer_arzt", patientId);
+            double ankunftszeitArztWartebereich = (env.Now - env.StartDate).TotalMinutes;
+            daten.LogEvent(ankunftszeitArztWartebereich, "betritt_wartezimmer_fuer_arzt", patientId);
 
             yield return env.Timeout(TimeSpan.FromMinutes(arztWartezimmerdauer));
 
@@ -446,7 +457,19 @@ namespace simSharpSimulation
             // Schritt P4.12: Arzt-Phase durchlaufen.
             // --- ARZT (DOCTOR) PHASE ---
             var arztErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in ArztPhase.DurchlaufeArzt(env, patientId, aerzte, patientenTyp, ankunftszeit, hatTermin, interneBewegungsdauer, arztBehandlungsdauer, daten, arztErgebnis, arztStatus))
+            foreach (var ev in ArztPhase.DurchlaufeArzt(
+                env,
+                patientId,
+                aerzte,
+                patientenTyp,
+                ankunftszeitArztWartebereich,
+                hatTermin,
+                interneBewegungsdauer,
+                arztBehandlungsdauer,
+                arztzimmer,
+                daten,
+                arztErgebnis,
+                arztStatus))
                 yield return ev;
 
             if (arztErgebnis.PatientHatKlinikVerlassen)

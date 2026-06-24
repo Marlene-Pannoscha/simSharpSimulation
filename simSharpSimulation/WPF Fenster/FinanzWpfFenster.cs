@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -25,7 +26,13 @@ internal sealed partial class FinanzWpfFenster : Window
     private TextBox behandlungsflaecheArztTextBox = new TextBox();
     private TextBox wartezimmerflaecheTextBox = new TextBox();
     private TextBox infrastrukturProTagTextBox = new TextBox();
+    private TextBox itUndVerwaltungProTagTextBox = new TextBox();
+    private TextBox versicherungenProTagTextBox = new TextBox();
+    private TextBox energiekostenProQmProMonatTextBox = new TextBox();
+    private TextBox reinigungskostenProQmProMonatTextBox = new TextBox();
+    private TextBox materialProPatientTextBox = new TextBox();
     private TextBox geraeteLeasingProTagTextBox = new TextBox();
+    private TextBox geraeteWartungProTagTextBox = new TextBox();
     private ComboBox zeitraumComboBox = new ComboBox();
 
     private Button? exportButton;
@@ -285,10 +292,34 @@ internal sealed partial class FinanzWpfFenster : Window
             kostenGrid,
             "Infrastruktur pro Tag",
             KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag.ToString(CultureInfo.InvariantCulture));
+        itUndVerwaltungProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "IT und Verwaltung pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.ITUndVerwaltungProTag.ToString(CultureInfo.InvariantCulture));
+        versicherungenProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Versicherungen pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.VersicherungenProTag.ToString(CultureInfo.InvariantCulture));
+        energiekostenProQmProMonatTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Energie pro m2/Monat",
+            KonfigurationJsonExport.Finanzen.Fixkosten.EnergiekostenProQmProMonat.ToString(CultureInfo.InvariantCulture));
+        reinigungskostenProQmProMonatTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Reinigung pro m2/Monat",
+            KonfigurationJsonExport.Finanzen.Fixkosten.ReinigungskostenProQmProMonat.ToString(CultureInfo.InvariantCulture));
+        materialProPatientTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Medizinisches Material pro Patient",
+            KonfigurationJsonExport.Finanzen.VariableKosten.MedizinischesMaterialProPatient.ToString(CultureInfo.InvariantCulture));
         geraeteLeasingProTagTextBox = FuegeParameterZeile(
             kostenGrid,
             "Geraete-Leasing pro Tag",
             KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag.ToString(CultureInfo.InvariantCulture));
+        geraeteWartungProTagTextBox = FuegeParameterZeile(
+            kostenGrid,
+            "Geraete-Wartung pro Tag",
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteWartungProTag.ToString(CultureInfo.InvariantCulture));
 
         mietkostenProQmTextBox = ErzeugeKennzahlTextBox();
         FuegeParameterZeile(kostenGrid, "Mietkosten pro m2/Monat", mietkostenProQmTextBox);
@@ -321,7 +352,13 @@ internal sealed partial class FinanzWpfFenster : Window
         behandlungsflaecheArztTextBox.TextChanged += handler;
         wartezimmerflaecheTextBox.TextChanged += handler;
         infrastrukturProTagTextBox.TextChanged += handler;
+        itUndVerwaltungProTagTextBox.TextChanged += handler;
+        versicherungenProTagTextBox.TextChanged += handler;
+        energiekostenProQmProMonatTextBox.TextChanged += handler;
+        reinigungskostenProQmProMonatTextBox.TextChanged += handler;
+        materialProPatientTextBox.TextChanged += handler;
         geraeteLeasingProTagTextBox.TextChanged += handler;
+        geraeteWartungProTagTextBox.TextChanged += handler;
     }
 
     private void AktualisiereRaeumeKurzinfo()
@@ -332,7 +369,13 @@ internal sealed partial class FinanzWpfFenster : Window
             !TryParseKurzinfoDouble(behandlungsflaecheArztTextBox.Text, out double flaecheArzt) ||
             !TryParseKurzinfoDouble(wartezimmerflaecheTextBox.Text, out double flaecheWartezimmer) ||
             !TryParseKurzinfoDouble(infrastrukturProTagTextBox.Text, out double infrastrukturProTag) ||
-            !TryParseKurzinfoDouble(geraeteLeasingProTagTextBox.Text, out double leasingProTag))
+            !TryParseKurzinfoDouble(itUndVerwaltungProTagTextBox.Text, out double itVerwaltungProTag) ||
+            !TryParseKurzinfoDouble(versicherungenProTagTextBox.Text, out double versicherungenProTag) ||
+            !TryParseKurzinfoDouble(energiekostenProQmProMonatTextBox.Text, out double energieProQmProMonat) ||
+            !TryParseKurzinfoDouble(reinigungskostenProQmProMonatTextBox.Text, out double reinigungProQmProMonat) ||
+            !TryParseKurzinfoDouble(materialProPatientTextBox.Text, out double materialProPatient) ||
+            !TryParseKurzinfoDouble(geraeteLeasingProTagTextBox.Text, out double leasingProTag) ||
+            !TryParseKurzinfoDouble(geraeteWartungProTagTextBox.Text, out double wartungProTag))
         {
             raeumeKurzinfoTextBlock.Text = "Konfiguration unvollstaendig.\nDetails im Tab Konfiguration pruefen.";
             return;
@@ -343,6 +386,8 @@ internal sealed partial class FinanzWpfFenster : Window
             + flaecheWartezimmer;
         double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtFlaeche);
         double gesamtMietkostenProTag = (mietkostenProQm * gesamtFlaeche * 12) / 365.0;
+        double energieProTag = (energieProQmProMonat * gesamtFlaeche * 12) / 365.0;
+        double reinigungProTag = (reinigungProQmProMonat * gesamtFlaeche * 12) / 365.0;
 
         if (gesamtFlaecheTextBox is not null)
             gesamtFlaecheTextBox.Text = gesamtFlaeche.ToString("N2", DeCulture) + " m2";
@@ -355,7 +400,10 @@ internal sealed partial class FinanzWpfFenster : Window
             $"Raeume: {schwesterZimmer.ToString("N0", DeCulture)} Schwesterzimmer, {arztZimmer.ToString("N0", DeCulture)} Arztzimmer\n" +
             $"Flaeche: {gesamtFlaeche.ToString("N2", DeCulture)} m2\n" +
             $"Miete/Tag: {FinanzVisualisierung.FormatEuro(gesamtMietkostenProTag)}\n" +
-            $"Infrastruktur + Leasing/Tag: {FinanzVisualisierung.FormatEuro(infrastrukturProTag + leasingProTag)}\n" +
+            $"Energie + Reinigung/Tag: {FinanzVisualisierung.FormatEuro(energieProTag + reinigungProTag)}\n" +
+            $"Infrastruktur + IT + Versicherung/Tag: {FinanzVisualisierung.FormatEuro(infrastrukturProTag + itVerwaltungProTag + versicherungenProTag)}\n" +
+            $"Leasing + Wartung/Tag: {FinanzVisualisierung.FormatEuro(leasingProTag + wartungProTag)}\n" +
+            $"Material/Patient: {FinanzVisualisierung.FormatEuro(materialProPatient)}\n" +
             "Details im Tab Konfiguration anpassen.";
     }
 
@@ -439,8 +487,26 @@ internal sealed partial class FinanzWpfFenster : Window
             if (!TryParseDouble(infrastrukturProTagTextBox.Text, 0.0, 100000.0, out double infrastrukturProTag, out string infrastrukturFehler))
                 throw new InvalidOperationException(infrastrukturFehler);
 
+            if (!TryParseDouble(itUndVerwaltungProTagTextBox.Text, 0.0, 100000.0, out double itUndVerwaltungProTag, out string itVerwaltungFehler))
+                throw new InvalidOperationException(itVerwaltungFehler);
+
+            if (!TryParseDouble(versicherungenProTagTextBox.Text, 0.0, 100000.0, out double versicherungenProTag, out string versicherungenFehler))
+                throw new InvalidOperationException(versicherungenFehler);
+
+            if (!TryParseDouble(energiekostenProQmProMonatTextBox.Text, 0.0, 10000.0, out double energieProQmProMonat, out string energieFehler))
+                throw new InvalidOperationException(energieFehler);
+
+            if (!TryParseDouble(reinigungskostenProQmProMonatTextBox.Text, 0.0, 10000.0, out double reinigungProQmProMonat, out string reinigungFehler))
+                throw new InvalidOperationException(reinigungFehler);
+
+            if (!TryParseDouble(materialProPatientTextBox.Text, 0.0, 100000.0, out double materialProPatient, out string materialFehler))
+                throw new InvalidOperationException(materialFehler);
+
             if (!TryParseDouble(geraeteLeasingProTagTextBox.Text, 0.0, 100000.0, out double geraeteLeasingProTag, out string leasingFehler))
                 throw new InvalidOperationException(leasingFehler);
+
+            if (!TryParseDouble(geraeteWartungProTagTextBox.Text, 0.0, 100000.0, out double geraeteWartungProTag, out string wartungFehler))
+                throw new InvalidOperationException(wartungFehler);
 
             if (anzahlSchwesterZimmer + anzahlArztZimmer <= 0)
                 throw new InvalidOperationException("Bitte mindestens ein Behandlungszimmer insgesamt angeben.");
@@ -455,7 +521,13 @@ internal sealed partial class FinanzWpfFenster : Window
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter = flaecheArzt;
             KonfigurationJsonExport.Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter = flaecheWartezimmer;
             KonfigurationJsonExport.Finanzen.Fixkosten.InfrastrukturProTag = infrastrukturProTag;
+            KonfigurationJsonExport.Finanzen.Fixkosten.ITUndVerwaltungProTag = itUndVerwaltungProTag;
+            KonfigurationJsonExport.Finanzen.Fixkosten.VersicherungenProTag = versicherungenProTag;
+            KonfigurationJsonExport.Finanzen.Fixkosten.EnergiekostenProQmProMonat = energieProQmProMonat;
+            KonfigurationJsonExport.Finanzen.Fixkosten.ReinigungskostenProQmProMonat = reinigungProQmProMonat;
+            KonfigurationJsonExport.Finanzen.VariableKosten.MedizinischesMaterialProPatient = materialProPatient;
             KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteLeasingProTag = geraeteLeasingProTag;
+            KonfigurationJsonExport.Finanzen.Fixkosten.GeraeteWartungProTag = geraeteWartungProTag;
 
             string zeitraum = zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
 
@@ -470,7 +542,11 @@ internal sealed partial class FinanzWpfFenster : Window
 
             SimulationsDaten simulationsDaten = new();
             PatientenProzess patientenProzess = new(SimulationKonfiguration.RANDOM_SEED, simulationsDaten);
+            Stopwatch simulationsStoppuhr = Stopwatch.StartNew();
             patientenProzess.FuehreAus();
+            simulationsStoppuhr.Stop();
+            string simulationszeit = Program.FormatiereDauer(simulationsStoppuhr.Elapsed);
+            Console.WriteLine($"Reine Simulationszeit (ohne Diagramm- und Dateierzeugung): {simulationszeit}");
             simulationsDaten.SchreibePrognoseReport("prognose_report.txt");
             simulationsDaten.SchreibePrognoseDatenJson("prognose_daten.json");
 
@@ -517,7 +593,7 @@ internal sealed partial class FinanzWpfFenster : Window
             AktualisiereSimulationsUebersicht(simulationsDaten);
             AktualisierePrognoseTab();
             
-            statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
+            statusTextBlock.Text = $"Simulation erfolgreich abgeschlossen. Reine Simulationszeit: {simulationszeit}";
         }
         catch (Exception ex)
         {

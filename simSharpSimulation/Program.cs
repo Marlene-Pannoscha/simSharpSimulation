@@ -15,16 +15,18 @@ namespace simSharpSimulation
         - SimulationsDaten.cs sammelt alle Wartezeiten und Ereignisse.
         - Am Ende werden Diagramme und eine Trace-Datei erzeugt.
         */
-        internal const int SimulierteArbeitstage = 10;
+        internal const int SimulierteArbeitstage = 30;
 
         // --- 5. HAUPTPROGRAMM (Setup & Start) ---
         [STAThread]
         static void Main(string[] args)
         {
-            if (args.Any(a => string.Equals(a, "--help", StringComparison.OrdinalIgnoreCase) ||
-                              string.Equals(a, "-h", StringComparison.OrdinalIgnoreCase)))
+            bool vollstaendigerLauf = args.Any(a => string.Equals(a, "--mit-images", StringComparison.OrdinalIgnoreCase));
+
+            if (args.Any(a => string.Equals(a, "--nur-simulationszeit", StringComparison.OrdinalIgnoreCase)))
             {
-                SchreibeHilfe();
+                KonfigurationJsonExport.LadeAlle();
+                MesseUndSchreibeReineSimulationszeit();
                 return;
             }
 
@@ -35,58 +37,38 @@ namespace simSharpSimulation
                 return;
             }
 
-            bool nurSimulation = args.Any(a => string.Equals(a, "--simulation-only", StringComparison.OrdinalIgnoreCase) ||
-                                                string.Equals(a, "--no-images", StringComparison.OrdinalIgnoreCase));
-            bool mitBildern = args.Any(a => string.Equals(a, "--with-images", StringComparison.OrdinalIgnoreCase) ||
-                                             string.Equals(a, "--images", StringComparison.OrdinalIgnoreCase));
-
-            if (nurSimulation && mitBildern)
-            {
-                Console.WriteLine("Bitte entweder '--simulation-only' oder '--with-images' verwenden, nicht beide gleichzeitig.");
-                SchreibeHilfe();
-                return;
-            }
-
-            // Ohne Flag bleibt der Konsolenlauf bewusst schlank: Simulation + Text/JSON, aber keine PNG-Erzeugung.
-            bool bilderErzeugen = mitBildern && !nurSimulation;
-
-            Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
-            Console.WriteLine(bilderErzeugen
-                ? "--- Modus: Simulation mit Diagrammen/Bildern ---"
-                : "--- Modus: Nur Simulation ohne Diagramm-/Bilderzeugung ---");
+            Console.WriteLine(vollstaendigerLauf
+                ? "--- Start der vollstaendigen SimSharp-Klinik-Simulation mit Diagrammen und Reports ---"
+                : "--- Start der SimSharp-Klinik-Simulation ---");
             KonfigurationJsonExport.LadeAlle();
 
-            var daten = new SimulationsDaten();
-            var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
-            simulation.FuehreAus();
+            var (daten, simulationszeit) = FuehreSimulationMitZeitmessungAus();
 
             Console.WriteLine("--- Ende der SimSharp-Simulation. ---");
+            SchreibeReineSimulationszeit(simulationszeit);
 
             // --- 6. VISUALISIERUNG (Diagramme) ---
-            if (bilderErzeugen)
-            {
-                GenerateDiagramme.GeneriereDiagramme(
-                    daten.EchteAnkunftszeiten,
-                    daten.Wartezeiten,
-                    daten.WartezeitenMitTermin,
-                    daten.WartezeitenOhneTermin,
-                    daten.SchwesternWartezeiten,
-                    daten.Gesamtprozesszeiten,
-                    daten.HitMissProTag,
-                    daten.TraceData,
-                    daten.ArztBehandlungszeitenNachTyp,
-                    daten.SchwesternBehandlungszeitenNachTyp,
-                    daten.RezeptionsBehandlungszeiten,
-                    SimulationKonfiguration.SIMULATIONSDAUER,
-                    PatientenKonfiguration.ERWARTUNGSWERT,
-                    PatientenKonfiguration.STANDARDABWEICHUNG,
-                    ArztKonfiguration.ANZAHL_AERZTE,
-                    SchwesterKonfiguration.ANZAHL_SCHWESTERN);
-            }
-            else
-            {
-                Console.WriteLine("--- Diagramm-/Bilderzeugung uebersprungen. Fuer Bilder: dotnet run -- --with-images ---");
-            }
+            GenerateDiagramme.GeneriereDiagramme(
+                daten.EchteAnkunftszeiten,
+                daten.Wartezeiten,
+                daten.WartezeitenMitTermin,
+                daten.WartezeitenOhneTermin,
+                daten.SchwesternWartezeiten,
+                daten.SchwesternWartezeitenMitTermin,
+                daten.SchwesternWartezeitenOhneTermin,
+                daten.RezeptionsWartezeiten,
+                daten.Gesamtprozesszeiten,
+                daten.HitMissProTag,
+                daten.TraceData,
+                daten.ArztBehandlungszeitenNachTyp,
+                daten.SchwesternBehandlungszeitenNachTyp,
+                daten.RezeptionsBehandlungszeiten,
+                SimulationKonfiguration.SIMULATIONSDAUER,
+                PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN,
+                PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN,
+                PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN,
+                ArztKonfiguration.ANZAHL_AERZTE,
+                SchwesterKonfiguration.ANZAHL_SCHWESTERN);
 
 
             // --- 7. EXPORT IN TEXTDATEI ---
@@ -104,8 +86,6 @@ namespace simSharpSimulation
             string prognoseJsonPfad = "prognose_daten.json";
             daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
             Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
-            if (bilderErzeugen)
-                FuehreAufnahmeprognoseMatplotlibAus(prognoseJsonPfad);
 
             Console.WriteLine();
             Console.WriteLine(daten.ErzeugePrognoseReportText());
@@ -128,6 +108,13 @@ namespace simSharpSimulation
             double avgArztBehOhneTermin = daten.DurchschnittlicheBehandlungszeitArztOhneTermin;
             double avgGesamtprozesszeitMitTermin = daten.DurchschnittlicheGesamtprozesszeitMitTermin;
             double avgGesamtprozesszeitOhneTermin = daten.DurchschnittlicheGesamtprozesszeitOhneTermin;
+            var traceGesamtprozess = SimulationsTraceAuswertung.BerechneGesamtprozesszeitenNachTermin(daten.TraceData);
+            double avgTraceGesamtprozesszeitMitTermin = traceGesamtprozess.MitTermin.Count > 0
+                ? traceGesamtprozess.MitTermin.Average()
+                : 0.0;
+            double avgTraceGesamtprozesszeitOhneTermin = traceGesamtprozess.OhneTermin.Count > 0
+                ? traceGesamtprozess.OhneTermin.Average()
+                : 0.0;
 
             int anzahlMitTermin = daten.GesamtprozesszeitenMitTermin.Count;
             int anzahlOhneTermin = daten.GesamtprozesszeitenOhneTermin.Count;
@@ -143,8 +130,8 @@ namespace simSharpSimulation
 
             Console.WriteLine();
             Console.WriteLine("--- Vergleich mit Termin vs. ohne Termin (Wartezeiten, Behandlungszeiten & Gesamtprozess) ---");
-            Console.WriteLine($"{"Gruppe",-12} | {"Anz",5} | {"Rezept.W",8} | {"Rezept.B",8} | {"Schwest.W",8} | {"Schwest.B",8} | {"Arzt.W",8} | {"Arzt.B",8} | {"GesamtΣ",8}");
-            Console.WriteLine(new string('-', 116));
+            Console.WriteLine($"{"Gruppe",-12} | {"Anz",5} | {"Rezept.W",8} | {"Rezept.B",8} | {"Schwest.W",8} | {"Schwest.B",8} | {"Arzt.W",8} | {"Arzt.B",8} | {"GesamtΣ",8} | {"TraceGes",8}");
+            Console.WriteLine(new string('-', 127));
 
             double gesamtSumMitTermin = avgRezeptionMitTermin + avgRezeptionBehMitTermin
                 + avgSchwesterMitTermin + avgSchwesterBehMitTermin
@@ -153,8 +140,9 @@ namespace simSharpSimulation
                 + avgSchwesterOhneTermin + avgSchwesterBehOhneTermin
                 + avgWartezeitOhneTermin + avgArztBehOhneTermin;
 
-            Console.WriteLine($"{"Mit Termin",-12} | {anzahlMitTermin,5} | {avgRezeptionMitTermin,8:F2} | {avgRezeptionBehMitTermin,8:F2} | {avgSchwesterMitTermin,8:F2} | {avgSchwesterBehMitTermin,8:F2} | {avgWartezeitMitTermin,8:F2} | {avgArztBehMitTermin,8:F2} | {gesamtSumMitTermin,8:F2}");
-            Console.WriteLine($"{"Ohne Termin",-12} | {anzahlOhneTermin,5} | {avgRezeptionOhneTermin,8:F2} | {avgRezeptionBehOhneTermin,8:F2} | {avgSchwesterOhneTermin,8:F2} | {avgSchwesterBehOhneTermin,8:F2} | {avgWartezeitOhneTermin,8:F2} | {avgArztBehOhneTermin,8:F2} | {gesamtSumOhneTermin,8:F2}");
+            Console.WriteLine($"{"Mit Termin",-12} | {anzahlMitTermin,5} | {avgRezeptionMitTermin,8:F2} | {avgRezeptionBehMitTermin,8:F2} | {avgSchwesterMitTermin,8:F2} | {avgSchwesterBehMitTermin,8:F2} | {avgWartezeitMitTermin,8:F2} | {avgArztBehMitTermin,8:F2} | {gesamtSumMitTermin,8:F2} | {avgTraceGesamtprozesszeitMitTermin,8:F2}");
+            Console.WriteLine($"{"Ohne Termin",-12} | {anzahlOhneTermin,5} | {avgRezeptionOhneTermin,8:F2} | {avgRezeptionBehOhneTermin,8:F2} | {avgSchwesterOhneTermin,8:F2} | {avgSchwesterBehOhneTermin,8:F2} | {avgWartezeitOhneTermin,8:F2} | {avgArztBehOhneTermin,8:F2} | {gesamtSumOhneTermin,8:F2} | {avgTraceGesamtprozesszeitOhneTermin,8:F2}");
+            Console.WriteLine("Hinweis: GesamtΣ ist die Summe der Einzelmittelwerte; TraceGes ist die echte End-to-End-Zeit aus dem Trace (betritt_klinik bis verlaesst_klinik).");
 
             Console.WriteLine();
             Console.WriteLine("--- Patienten-Typen: Verteilung + Wartezeiten ---");
@@ -216,61 +204,38 @@ namespace simSharpSimulation
             Console.WriteLine($"Schwesterlohn: {finanzen.Kosten.Schwesterlohn:F2} €");
             Console.WriteLine($"Rezeptionlohn: {finanzen.Kosten.Rezeptionlohn:F2} €");
             Console.WriteLine($"Fixkosten: {finanzen.Kosten.Fixkosten:F2} €");
-            Console.WriteLine($"Behandlungskosten: {finanzen.Kosten.Behandlungskosten:F2} €");
+            Console.WriteLine($"Medizinisches Material: {finanzen.Kosten.MedizinischesMaterialkosten:F2} €");
             Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
             Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
         }
 
-        private static void FuehreAufnahmeprognoseMatplotlibAus(string prognoseJsonPfad)
+        internal static string FormatiereDauer(TimeSpan dauer)
         {
-            try
-            {
-                string projektOrdner = ErmittleProjektOrdner();
-                string skriptPfad = Path.Combine(projektOrdner, "Diagramm", "aufnahmeprognose_matplotlib.py");
-                string outputOrdner = Path.Combine(projektOrdner, "images");
-                Directory.CreateDirectory(outputOrdner);
-                string outputPfad = Path.Combine(outputOrdner, "aufnahmeprognose_matplotlib.png");
+            return dauer.TotalSeconds >= 1.0
+                ? $"{dauer.TotalSeconds:N2} Sekunden"
+                : $"{dauer.TotalMilliseconds:N0} ms";
+        }
 
-                if (!File.Exists(skriptPfad))
-                {
-                    Console.WriteLine($"--- Matplotlib-Skript nicht gefunden: {skriptPfad} ---");
-                    return;
-                }
+        private static void MesseUndSchreibeReineSimulationszeit()
+        {
+            Console.WriteLine("--- Starte reine Simulationszeitmessung ---");
+            var (_, simulationszeit) = FuehreSimulationMitZeitmessungAus();
+            SchreibeReineSimulationszeit(simulationszeit);
+        }
 
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "python",
-                    UseShellExecute = false,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                };
-                startInfo.ArgumentList.Add(skriptPfad);
-                startInfo.ArgumentList.Add(Path.GetFullPath(prognoseJsonPfad));
-                startInfo.ArgumentList.Add(outputPfad);
+        private static (SimulationsDaten Daten, TimeSpan Simulationszeit) FuehreSimulationMitZeitmessungAus()
+        {
+            var daten = new SimulationsDaten();
+            var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
+            Stopwatch simulationsStoppuhr = Stopwatch.StartNew();
+            simulation.FuehreAus();
+            simulationsStoppuhr.Stop();
+            return (daten, simulationsStoppuhr.Elapsed);
+        }
 
-                using Process process = Process.Start(startInfo)
-                    ?? throw new InvalidOperationException("Python-Prozess konnte nicht gestartet werden.");
-                string standardOutput = process.StandardOutput.ReadToEnd();
-                string standardError = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-
-                if (process.ExitCode == 0)
-                {
-                    Console.WriteLine($"--- Matplotlib-Aufnahmeprognose gespeichert: {outputPfad} ---");
-                    return;
-                }
-
-                Console.WriteLine($"--- Matplotlib-Aufnahmeprognose konnte nicht erzeugt werden (ExitCode {process.ExitCode}). ---");
-                if (!string.IsNullOrWhiteSpace(standardOutput))
-                    Console.WriteLine(standardOutput.Trim());
-                if (!string.IsNullOrWhiteSpace(standardError))
-                    Console.WriteLine(standardError.Trim());
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"--- Matplotlib-Aufnahmeprognose uebersprungen: {ex.Message} ---");
-            }
+        private static void SchreibeReineSimulationszeit(TimeSpan simulationszeit)
+        {
+            Console.WriteLine($"Reine Simulationszeit (ohne Diagramm- und Dateierzeugung): {FormatiereDauer(simulationszeit)}");
         }
 
         private static string ErmittleProjektOrdner()

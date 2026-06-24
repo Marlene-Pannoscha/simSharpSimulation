@@ -59,6 +59,12 @@ namespace simSharpSimulation
                 var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
                 var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
+                var arztzimmer = new Resource(
+                    env,
+                    capacity: KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt);
+                var schwesterzimmer = new Resource(
+                    env,
+                    capacity: KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester);
                 rezeptionStatus = new PrognoseRessourcenStatus(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
                 schwesterStatus = new PrognoseRessourcenStatus(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 arztStatus = new PrognoseRessourcenStatus(ArztKonfiguration.ANZAHL_AERZTE);
@@ -69,7 +75,23 @@ namespace simSharpSimulation
                 // diesen Patient()-Ablauf als eigenen Simulationsprozess.
                 // Eindeutige Patienten-IDs pro Tag, damit Trace-Auswertungen (z.B. Zeitachse eines Patienten) sauber sind.
                 int patientIdStart = (tag * 10_000) + 1;
-                env.Process(PatientenGenerator.Generiere(env, rezeption, aerzte, schwestern, rnd, daten, patientIdStart, Patient));
+                env.Process(PatientenGenerator.Generiere(
+                    env,
+                    rezeption,
+                    aerzte,
+                    schwestern,
+                    rnd,
+                    daten,
+                    patientIdStart,
+                    (simulation, patientId, rezeptionsRessource, schwesternPool, aerztePool) =>
+                        Patient(
+                            simulation,
+                            patientId,
+                            rezeptionsRessource,
+                            schwesternPool,
+                            aerztePool,
+                            arztzimmer,
+                            schwesterzimmer)));
 
                 // Schritt P2.2: Tages-Simulation ausführen.
                 // Die Ankünfte enden nach SIMULATIONSDAUER, aber einzelne Prozesse können
