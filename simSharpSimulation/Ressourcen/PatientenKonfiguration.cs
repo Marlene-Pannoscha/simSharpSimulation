@@ -25,11 +25,11 @@ namespace simSharpSimulation
         public static double MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT { get; internal set; } = 0.40;
         public static double OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT { get; internal set; } = 3.0;
 
-        public static (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double VariationskoeffizientArzt, double BehandlungszeitSchwester, double VariationskoeffizientSchwester, double Behandlungskosten)[] TYPEN_VERTEILUNG { get; internal set; } = new[]
+        public static (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double VariationskoeffizientArzt, double BehandlungszeitSchwester, double VariationskoeffizientSchwester)[] TYPEN_VERTEILUNG { get; internal set; } = new[]
         {
-            (PatientenTyp.Kurz, 0.3, 3.0, 0.5, 2.0, 0.4, 18.0),
-            (PatientenTyp.Mittel, 0.6, 7.0, 0.4, 5.0, 0.3, 35.0),
-            (PatientenTyp.Lang, 0.1, 15.0, 0.3, 10.0, 0.2, 60.0)
+            (PatientenTyp.Kurz, 0.3, 3.0, 0.5, 2.0, 0.4),
+            (PatientenTyp.Mittel, 0.6, 7.0, 0.4, 5.0, 0.3),
+            (PatientenTyp.Lang, 0.1, 15.0, 0.3, 10.0, 0.2)
         };
 
         public static PatientenTyp WaehlePatientenTyp(Random rnd)
@@ -47,7 +47,7 @@ namespace simSharpSimulation
             return PatientenTyp.Mittel;
         }
 
-        public static (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double VariationskoeffizientArzt, double BehandlungszeitSchwester, double VariationskoeffizientSchwester, double Behandlungskosten) HoleTypInfo(PatientenTyp typ)
+        public static (PatientenTyp Typ, double Wahrscheinlichkeit, double BehandlungszeitArzt, double VariationskoeffizientArzt, double BehandlungszeitSchwester, double VariationskoeffizientSchwester) HoleTypInfo(PatientenTyp typ)
         {
             return TYPEN_VERTEILUNG.First(t => t.Typ == typ);
         }

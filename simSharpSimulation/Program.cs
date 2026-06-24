@@ -180,7 +180,7 @@ namespace simSharpSimulation
             Console.WriteLine($"Schwesterlohn: {finanzen.Kosten.Schwesterlohn:F2} €");
             Console.WriteLine($"Rezeptionlohn: {finanzen.Kosten.Rezeptionlohn:F2} €");
             Console.WriteLine($"Fixkosten: {finanzen.Kosten.Fixkosten:F2} €");
-            Console.WriteLine($"Behandlungskosten: {finanzen.Kosten.Behandlungskosten:F2} €");
+            Console.WriteLine($"Medizinisches Material: {finanzen.Kosten.MedizinischesMaterialkosten:F2} €");
             Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
             Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
         }

@@ -118,7 +118,7 @@ namespace simSharpSimulation
                 new KostenKomponenten(
                     tageswerte.Count > 0 ? tageswerte.Average(t => t.Personalkosten) : 0.0,
                     tageswerte.Count > 0 ? tageswerte.Average(t => t.Fixkosten) : 0.0,
-                    tageswerte.Count > 0 ? tageswerte.Average(t => t.Behandlungskosten) : 0.0),
+                    tageswerte.Count > 0 ? tageswerte.Average(t => t.Materialkosten) : 0.0),
                 tageswerte.Select(t => t.DurchschnittlicheWarteschlangenlaenge).ToList());
         }
 
@@ -165,7 +165,7 @@ namespace simSharpSimulation
                     Math.Round(finanzen.Kosten.Gesamtkosten, 2),
                     Math.Round(finanzen.Kosten.Personalkosten, 2),
                     Math.Round(finanzen.Kosten.Fixkosten, 2),
-                    Math.Round(finanzen.Kosten.Behandlungskosten, 2),
+                    Math.Round(finanzen.Kosten.MedizinischesMaterialkosten, 2),
                     Math.Round(statistik.DurchschnittlicheWarteschlangenlaenge, 2)));
             }
 
@@ -535,7 +535,7 @@ namespace simSharpSimulation
             {
                 (kosten.Personal, Color.FromArgb(70, 130, 180)),
                 (kosten.Fix, Color.FromArgb(241, 196, 15)),
-                (kosten.Behandlung, Color.FromArgb(231, 120, 70))
+                (kosten.Material, Color.FromArgb(231, 120, 70))
             };
 
             foreach ((double wert, Color farbe) in teile)
@@ -559,7 +559,7 @@ namespace simSharpSimulation
             {
                 ("Personal", Color.FromArgb(70, 130, 180)),
                 ("Fixkosten", Color.FromArgb(241, 196, 15)),
-                ("Behandlung", Color.FromArgb(231, 120, 70))
+                ("Material", Color.FromArgb(231, 120, 70))
             };
 
             float x = panel.Right - 166;
@@ -836,9 +836,9 @@ namespace simSharpSimulation
             KostenKomponenten Kosten,
             IReadOnlyList<double> Warteschlangenlaengen);
 
-        private sealed record KostenKomponenten(double Personal, double Fix, double Behandlung)
+        private sealed record KostenKomponenten(double Personal, double Fix, double Material)
         {
-            public double Gesamt => Personal + Fix + Behandlung;
+            public double Gesamt => Personal + Fix + Material;
         }
 
         private sealed record BoxplotGruppe(
@@ -863,7 +863,7 @@ namespace simSharpSimulation
             double Gesamtkosten,
             double Personalkosten,
             double Fixkosten,
-            double Behandlungskosten,
+            double Materialkosten,
             double DurchschnittlicheWarteschlangenlaenge);
     }
 }

@@ -57,7 +57,7 @@ namespace simSharpSimulation
             PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.MitTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.OhneTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.TYPEN_VERTEILUNG = patienten.TypenVerteilung
-                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.VariationskoeffizientArzt, t.BehandlungszeitSchwester, t.VariationskoeffizientSchwester, t.Behandlungskosten))
+                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.VariationskoeffizientArzt, t.BehandlungszeitSchwester, t.VariationskoeffizientSchwester))
                 .ToArray();
 
             var simulation = LeseJson<SimulationKonfigurationJson>(Path.Combine(zielOrdner, "simulation-konfiguration.json"));
@@ -171,7 +171,6 @@ namespace simSharpSimulation
         public double VariationskoeffizientArzt { get; set; }
         public double BehandlungszeitSchwester { get; set; }
         public double VariationskoeffizientSchwester { get; set; }
-        public double Behandlungskosten { get; set; }
     }
 
     internal sealed class SimulationKonfigurationJson
@@ -188,8 +187,8 @@ namespace simSharpSimulation
     {
         public PersonalKostenJson Personal { get; set; } = new();
         public FixkostenJson Fixkosten { get; set; } = new();
+        public VariableKostenJson VariableKosten { get; set; } = new();
         public VersicherungsKostenJson Versicherung { get; set; } = new();
-        public BehandlungskostenJson Behandlungskosten { get; set; } = new();
         public SaisonfaktorenJson Saisonfaktoren { get; set; } = new();
     }
 
@@ -211,9 +210,13 @@ namespace simSharpSimulation
         public double FlaecheBehandlungsraumArztQuadratmeter { get; set; }
         public double FlaecheWartezimmerQuadratmeter { get; set; }
         public double InfrastrukturProTag { get; set; }
-        public double MedizinischesMaterialProTag { get; set; }
+        public double ITUndVerwaltungProTag { get; set; }
+        public double VersicherungenProTag { get; set; }
+        public double EnergiekostenProQmProMonat { get; set; }
+        public double ReinigungskostenProQmProMonat { get; set; }
         // JSON uses 'GeraeteLeasingProTag' (no hyphen/umlaut) — map to this property name.
         public double GeraeteLeasingProTag { get; set; }
+        public double GeraeteWartungProTag { get; set; }
         public double SonstigeFixkostenProTag { get; set; }
 
         public double BerechneMietkostenProTag()
@@ -229,6 +232,11 @@ namespace simSharpSimulation
         }
     }
 
+    internal sealed class VariableKostenJson
+    {
+        public double MedizinischesMaterialProPatient { get; set; } = 13.85;
+    }
+
     internal sealed class MietkostenMietAufteilung
     {
         public double MinFlaeche { get; set; }
@@ -241,13 +249,6 @@ namespace simSharpSimulation
         public double AnteilPrivatversichert { get; set; } = 0.2;
         public double EinnahmePrivatpatient { get; set; } = 150.0;
         public double EinnahmeGesetzlichPatient { get; set; } = 90.0;
-    }
-
-    internal sealed class BehandlungskostenJson
-    {
-        public double Kurz { get; set; } = 18.0;
-        public double Mittel { get; set; } = 35.0;
-        public double Lang { get; set; } = 60.0;
     }
 
     internal sealed class SaisonfaktorenJson

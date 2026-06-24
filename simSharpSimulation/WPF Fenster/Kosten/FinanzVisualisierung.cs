@@ -117,7 +117,11 @@ internal static class FinanzVisualisierung
         double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
         double gesamtMietkostenMonat = mietkostenProQm * gesamtflaeche;
         double gesamtMietkostenProTag = (gesamtMietkostenMonat * 12) / 365.0;
-        double gesamtkostenFix = gesamtMietkostenProTag + fixkosten.InfrastrukturProTag + fixkosten.MedizinischesMaterialProTag + fixkosten.GeraeteLeasingProTag + fixkosten.SonstigeFixkostenProTag;
+        double energiekostenProTag = (fixkosten.EnergiekostenProQmProMonat * gesamtflaeche * 12) / 365.0;
+        double reinigungskostenProTag = (fixkosten.ReinigungskostenProQmProMonat * gesamtflaeche * 12) / 365.0;
+        double gesamtkostenFix = gesamtMietkostenProTag + energiekostenProTag + reinigungskostenProTag
+            + fixkosten.InfrastrukturProTag + fixkosten.ITUndVerwaltungProTag + fixkosten.VersicherungenProTag
+            + fixkosten.GeraeteLeasingProTag + fixkosten.GeraeteWartungProTag + fixkosten.SonstigeFixkostenProTag;
 
         List<Tagesergebnis> tagesergebnisse;
         if (aggregiereNachMonat)
@@ -139,8 +143,8 @@ internal static class FinanzVisualisierung
                 if (!indices.Any())
                 {
                     // empty month -> zeroed result
-                    Tageskosten zeroKosten = new(0, 0, 0, 0, 0, 0, 0, 0, 0);
-                    tagesergebnisse.Add(new Tagesergebnis(0, 0, zeroKosten, new Versicherungsverteilung(0, 0), new Umsatzverteilung(0, 0), new Behandlungsmix(0, 0, 0, 0, 0, 0), new Kostenstruktur(), new BreakEvenPoint()));
+                    Tageskosten zeroKosten = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    tagesergebnisse.Add(new Tagesergebnis(0, 0, zeroKosten, new Versicherungsverteilung(0, 0), new Umsatzverteilung(0, 0), new Behandlungsmix(0, 0, 0), new Kostenstruktur(), new BreakEvenPoint()));
                     continue;
                 }
 
@@ -150,17 +154,20 @@ internal static class FinanzVisualisierung
                 double sumSchwester = 0.0;
                 double sumRezeption = 0.0;
                 double sumMiete = 0.0;
+                double sumEnergie = 0.0;
+                double sumReinigung = 0.0;
                 double sumInfrastruktur = 0.0;
+                double sumITVerwaltung = 0.0;
+                double sumVersicherungen = 0.0;
                 double sumMaterial = 0.0;
                 double sumLeasing = 0.0;
+                double sumWartung = 0.0;
                 double sumSonstige = 0.0;
-                double sumBehandlungskosten = 0.0;
                 int sumPrivat = 0;
                 int sumGesetzlich = 0;
                 double sumUmsatzPrivat = 0.0;
                 double sumUmsatzGesetzlich = 0.0;
                 int sumKurz = 0; int sumMittel = 0; int sumLang = 0;
-                double sumKurzKosten = 0; double sumMittelKosten = 0; double sumLangKosten = 0;
 
                 foreach (int idx in indices)
                 {
@@ -171,11 +178,15 @@ internal static class FinanzVisualisierung
                     sumSchwester += dr.Kosten.Schwesterlohn;
                     sumRezeption += dr.Kosten.Rezeptionlohn;
                     sumMiete += dr.Kosten.Mietkosten;
+                    sumEnergie += dr.Kosten.Energiekosten;
+                    sumReinigung += dr.Kosten.Reinigungskosten;
                     sumInfrastruktur += dr.Kosten.Infrastrukturkosten;
+                    sumITVerwaltung += dr.Kosten.ITUndVerwaltungskosten;
+                    sumVersicherungen += dr.Kosten.Versicherungskosten;
                     sumMaterial += dr.Kosten.MedizinischesMaterialkosten;
                     sumLeasing += dr.Kosten.GeraeteLeasingKosten;
+                    sumWartung += dr.Kosten.GeraeteWartungskosten;
                     sumSonstige += dr.Kosten.SonstigeFixkosten;
-                    sumBehandlungskosten += dr.Kosten.Behandlungskosten;
                     sumPrivat += dr.Versicherungen.PrivatPatienten;
                     sumGesetzlich += dr.Versicherungen.GesetzlichPatienten;
                     sumUmsatzPrivat += dr.Umsatzverteilung.UmsatzPrivat;
@@ -183,9 +194,6 @@ internal static class FinanzVisualisierung
                     sumKurz += dr.Behandlungsmix.KurzPatienten;
                     sumMittel += dr.Behandlungsmix.MittelPatienten;
                     sumLang += dr.Behandlungsmix.LangPatienten;
-                    sumKurzKosten += dr.Behandlungsmix.KurzKosten;
-                    sumMittelKosten += dr.Behandlungsmix.MittelKosten;
-                    sumLangKosten += dr.Behandlungsmix.LangKosten;
                 }
 
                 Tageskosten gesamtKosten = new(
@@ -193,26 +201,34 @@ internal static class FinanzVisualisierung
                     sumSchwester,
                     sumRezeption,
                     sumMiete,
+                    sumEnergie,
+                    sumReinigung,
                     sumInfrastruktur,
+                    sumITVerwaltung,
+                    sumVersicherungen,
                     sumMaterial,
                     sumLeasing,
-                    sumSonstige,
-                    sumBehandlungskosten);
+                    sumWartung,
+                    sumSonstige);
 
                 Versicherungsverteilung vers = new(sumPrivat, sumGesetzlich);
                 Umsatzverteilung umv = new(sumUmsatzPrivat, sumUmsatzGesetzlich);
-                Behandlungsmix bm = new(sumKurz, sumMittel, sumLang, sumKurzKosten, sumMittelKosten, sumLangKosten);
+                Behandlungsmix bm = new(sumKurz, sumMittel, sumLang);
                 // Berechne Kostenstruktur-Anteile manuell (FinanzRechner.BerechneKostenstruktur ist nicht öffentlich)
                 double sumPersonalkosten = sumArzt + sumSchwester + sumRezeption;
                 Kostenstruktur ks = new()
                 {
                     PersonalkostenAnteil = sumUmsatz > 0 ? sumPersonalkosten / sumUmsatz : 0.0,
                     MietkostenAnteil = sumUmsatz > 0 ? sumMiete / sumUmsatz : 0.0,
+                    EnergiekostenAnteil = sumUmsatz > 0 ? sumEnergie / sumUmsatz : 0.0,
+                    ReinigungskostenAnteil = sumUmsatz > 0 ? sumReinigung / sumUmsatz : 0.0,
                     InfrastrukturkostenAnteil = sumUmsatz > 0 ? sumInfrastruktur / sumUmsatz : 0.0,
+                    ITUndVerwaltungskostenAnteil = sumUmsatz > 0 ? sumITVerwaltung / sumUmsatz : 0.0,
+                    VersicherungskostenAnteil = sumUmsatz > 0 ? sumVersicherungen / sumUmsatz : 0.0,
                     MaterialkostenAnteil = sumUmsatz > 0 ? sumMaterial / sumUmsatz : 0.0,
                     GeraeteLeasingAnteil = sumUmsatz > 0 ? sumLeasing / sumUmsatz : 0.0,
-                    SonstigeFixkostenAnteil = sumUmsatz > 0 ? sumSonstige / sumUmsatz : 0.0,
-                    BehandlungskostenAnteil = sumUmsatz > 0 ? sumBehandlungskosten / sumUmsatz : 0.0
+                    GeraeteWartungAnteil = sumUmsatz > 0 ? sumWartung / sumUmsatz : 0.0,
+                    SonstigeFixkostenAnteil = sumUmsatz > 0 ? sumSonstige / sumUmsatz : 0.0
                 };
 
                 tagesergebnisse.Add(new Tagesergebnis(sumUmsatz, sumGewinn, gesamtKosten, vers, umv, bm, ks, new BreakEvenPoint()));
@@ -315,12 +331,24 @@ internal static class FinanzVisualisierung
         sb.AppendLine("Kostenstruktur (Basis: Umsatz)");
         sb.AppendLine($"Personalkosten: {FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Energie: {FormatEuro(ergebnis.GesamtEnergiekosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtEnergiekosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Reinigung: {FormatEuro(ergebnis.GesamtReinigungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtReinigungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Infrastruktur: {FormatEuro(ergebnis.GesamtInfrastrukturkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtInfrastrukturkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
-        sb.AppendLine($"Medizinisches Material: {FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"IT und Verwaltung: {FormatEuro(ergebnis.GesamtITUndVerwaltungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtITUndVerwaltungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Versicherungen: {FormatEuro(ergebnis.GesamtVersicherungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtVersicherungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Medizinisches Material (patientenabhängig): {FormatEuro(ergebnis.GesamtMaterialkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Geräte-Leasing: {FormatEuro(ergebnis.GesamtLeasingkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtLeasingkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine($"Geräte-Wartung: {FormatEuro(ergebnis.GesamtWartungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtWartungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Sonstige Fixkosten: {FormatEuro(ergebnis.GesamtSonstigeFixkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtSonstigeFixkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
-        sb.AppendLine($"Behandlungskosten: {FormatEuro(ergebnis.GesamtBehandlungskosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtBehandlungskosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Gewinn: {FormatEuro(ergebnis.Gesamtgewinn)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2})");
+        sb.AppendLine();
+        sb.AppendLine("Zielkorridore (Kostenanteile)");
+        sb.AppendLine($"Personalkosten: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel unter 50 %)");
+        sb.AppendLine($"IT, Verwaltung und Versicherungen: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtITVerwaltungVersicherung / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 8-15 %)");
+        sb.AppendLine($"Medizinisches Verbrauchsmaterial: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtMaterialkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 15 %)");
+        sb.AppendLine($"Raeume, Energie und Reinigung: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtRaumkosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 7-12 %)");
+        sb.AppendLine($"Geraete, Leasing und Wartung: {(ergebnis.Gesamtkosten > 0 ? ergebnis.GesamtGeraetekosten / ergebnis.Gesamtkosten : 0.0):P2} (Ziel 5-10 %)");
+        sb.AppendLine($"Gewinnmarge: {(ergebnis.GesamtUmsatz > 0 ? ergebnis.Gesamtgewinn / ergebnis.GesamtUmsatz : 0.0):P2} (Ziel 7-10 %)");
         sb.AppendLine();
         sb.AppendLine("Saisonaler Gewinn (im gewählten Zeitraum)");
         foreach (string saison in new[] { "Winter", "Fruehling", "Sommer", "Herbst" })
@@ -334,10 +362,9 @@ internal static class FinanzVisualisierung
         sb.AppendLine($"Gesetzlich: {ergebnis.VersicherungenGesamt.GesetzlichPatienten} Patienten / {FormatEuro(ergebnis.UmsatzverteilungGesamt.UmsatzGesetzlich)}");
         sb.AppendLine();
         sb.AppendLine("Behandlungsdauer");
-        sb.AppendLine($"Kurz: {ergebnis.BehandlungsmixGesamt.KurzPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.KurzKosten)}");
-        sb.AppendLine($"Mittel: {ergebnis.BehandlungsmixGesamt.MittelPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.MittelKosten)}");
-        sb.AppendLine($"Lang: {ergebnis.BehandlungsmixGesamt.LangPatienten} Patienten / {FormatEuro(ergebnis.BehandlungsmixGesamt.LangKosten)}");
-        sb.AppendLine($"Zusatzkosten Behandlungsdauer: {FormatEuro(ergebnis.BehandlungsmixGesamt.Gesamtkosten)}");
+        sb.AppendLine($"Kurz: {ergebnis.BehandlungsmixGesamt.KurzPatienten} Patienten");
+        sb.AppendLine($"Mittel: {ergebnis.BehandlungsmixGesamt.MittelPatienten} Patienten");
+        sb.AppendLine($"Lang: {ergebnis.BehandlungsmixGesamt.LangPatienten} Patienten");
         sb.AppendLine();
         sb.AppendLine("Dateien");
         sb.AppendLine($"- Finanzen: {finanzenPfad}");
@@ -577,23 +604,31 @@ internal static class FinanzVisualisierung
         {
             ergebnis.GesamtPersonalkosten,
             ergebnis.GesamtMietkosten,
+            ergebnis.GesamtEnergiekosten,
+            ergebnis.GesamtReinigungskosten,
             ergebnis.GesamtInfrastrukturkosten,
+            ergebnis.GesamtITUndVerwaltungskosten,
+            ergebnis.GesamtVersicherungskosten,
             ergebnis.GesamtMaterialkosten,
             ergebnis.GesamtLeasingkosten,
-            ergebnis.GesamtSonstigeFixkosten,
-            ergebnis.GesamtBehandlungskosten
+            ergebnis.GesamtWartungskosten,
+            ergebnis.GesamtSonstigeFixkosten
         };
 
-        List<string> labels = new() { "Personal", "Miete", "Infrastruktur", "Material", "Leasing", "Sonstige", "Behandlung" };
+        List<string> labels = new() { "Personal", "Miete", "Energie", "Reinigung", "Infrastruktur", "IT/Verwaltung", "Versicherung", "Material", "Leasing", "Wartung", "Sonstige" };
         List<Color> farben = new()
         {
             Color.FromArgb(52, 152, 219),
             Color.FromArgb(155, 89, 182),
+            Color.FromArgb(26, 188, 156),
+            Color.FromArgb(127, 140, 141),
             Color.FromArgb(46, 204, 113),
+            Color.FromArgb(52, 73, 94),
+            Color.FromArgb(41, 128, 185),
             Color.FromArgb(241, 196, 15),
             Color.FromArgb(231, 76, 60),
-            Color.FromArgb(149, 165, 166),
-            Color.FromArgb(52, 73, 94)
+            Color.FromArgb(192, 57, 43),
+            Color.FromArgb(149, 165, 166)
         };
 
         if (mitGewinn)
@@ -692,9 +727,6 @@ internal static class FinanzVisualisierung
         public int KurzPatienten { get; private set; }
         public int MittelPatienten { get; private set; }
         public int LangPatienten { get; private set; }
-        public double KurzKosten { get; private set; }
-        public double MittelKosten { get; private set; }
-        public double LangKosten { get; private set; }
 
         public void Add(FinanzTagespunkt punkt)
         {
@@ -708,9 +740,6 @@ internal static class FinanzVisualisierung
             KurzPatienten += punkt.Behandlungsmix.KurzPatienten;
             MittelPatienten += punkt.Behandlungsmix.MittelPatienten;
             LangPatienten += punkt.Behandlungsmix.LangPatienten;
-            KurzKosten += punkt.Behandlungsmix.KurzKosten;
-            MittelKosten += punkt.Behandlungsmix.MittelKosten;
-            LangKosten += punkt.Behandlungsmix.LangKosten;
         }
 
         public FinanzTagespunkt ToTagespunkt(string label)
@@ -722,7 +751,7 @@ internal static class FinanzVisualisierung
                 Kosten,
                 Gewinn,
                 new Versicherungsverteilung(PrivatPatienten, GesetzlichPatienten),
-                new Behandlungsmix(KurzPatienten, MittelPatienten, LangPatienten, KurzKosten, MittelKosten, LangKosten));
+                new Behandlungsmix(KurzPatienten, MittelPatienten, LangPatienten));
         }
     }
 }
@@ -750,11 +779,18 @@ internal sealed record FinanzErgebnis(
     public double Gesamtkosten => Tagespunkte.Sum(p => p.Kosten);
     public double GesamtPersonalkosten => Tagesergebnisse.Sum(t => t.Kosten.Personalkosten);
     public double GesamtMietkosten => Tagesergebnisse.Sum(t => t.Kosten.Mietkosten);
+    public double GesamtEnergiekosten => Tagesergebnisse.Sum(t => t.Kosten.Energiekosten);
+    public double GesamtReinigungskosten => Tagesergebnisse.Sum(t => t.Kosten.Reinigungskosten);
     public double GesamtInfrastrukturkosten => Tagesergebnisse.Sum(t => t.Kosten.Infrastrukturkosten);
+    public double GesamtITUndVerwaltungskosten => Tagesergebnisse.Sum(t => t.Kosten.ITUndVerwaltungskosten);
+    public double GesamtVersicherungskosten => Tagesergebnisse.Sum(t => t.Kosten.Versicherungskosten);
     public double GesamtMaterialkosten => Tagesergebnisse.Sum(t => t.Kosten.MedizinischesMaterialkosten);
     public double GesamtLeasingkosten => Tagesergebnisse.Sum(t => t.Kosten.GeraeteLeasingKosten);
+    public double GesamtWartungskosten => Tagesergebnisse.Sum(t => t.Kosten.GeraeteWartungskosten);
     public double GesamtSonstigeFixkosten => Tagesergebnisse.Sum(t => t.Kosten.SonstigeFixkosten);
-    public double GesamtBehandlungskosten => Tagesergebnisse.Sum(t => t.Kosten.Behandlungskosten);
+    public double GesamtITVerwaltungVersicherung => GesamtITUndVerwaltungskosten + GesamtVersicherungskosten;
+    public double GesamtRaumkosten => GesamtMietkosten + GesamtEnergiekosten + GesamtReinigungskosten;
+    public double GesamtGeraetekosten => GesamtLeasingkosten + GesamtWartungskosten;
     public double DurchschnittlicherUmsatzProTag => SimulierteTage > 0 ? GesamtUmsatz / SimulierteTage : 0.0;
     public double DurchschnittlicheKostenProTag => SimulierteTage > 0 ? Gesamtkosten / SimulierteTage : 0.0;
     public Tageskosten DurchschnittlicheTageskosten => SimulierteTage > 0
@@ -763,12 +799,16 @@ internal sealed record FinanzErgebnis(
             Tagesergebnisse.Sum(t => t.Kosten.Schwesterlohn) / SimulierteTage,
             Tagesergebnisse.Sum(t => t.Kosten.Rezeptionlohn) / SimulierteTage,
             GesamtMietkosten / SimulierteTage,
+            GesamtEnergiekosten / SimulierteTage,
+            GesamtReinigungskosten / SimulierteTage,
             GesamtInfrastrukturkosten / SimulierteTage,
+            GesamtITUndVerwaltungskosten / SimulierteTage,
+            GesamtVersicherungskosten / SimulierteTage,
             GesamtMaterialkosten / SimulierteTage,
             GesamtLeasingkosten / SimulierteTage,
-            GesamtSonstigeFixkosten / SimulierteTage,
-            GesamtBehandlungskosten / SimulierteTage)
-        : new Tageskosten(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            GesamtWartungskosten / SimulierteTage,
+            GesamtSonstigeFixkosten / SimulierteTage)
+        : new Tageskosten(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     public BreakEvenPoint BreakEven => FinanzRechner.BerechneBreakEvenPoint(
         DurchschnittlicheTageskosten,
         DurchschnittBehandeltePatientenProTag,
@@ -785,10 +825,7 @@ internal sealed record FinanzErgebnis(
         new(
             Tagespunkte.Sum(p => p.Behandlungsmix.KurzPatienten),
             Tagespunkte.Sum(p => p.Behandlungsmix.MittelPatienten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.LangPatienten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.KurzKosten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.MittelKosten),
-            Tagespunkte.Sum(p => p.Behandlungsmix.LangKosten));
+            Tagespunkte.Sum(p => p.Behandlungsmix.LangPatienten));
     public int GesamtNichtBehandelt => Math.Max(0, Gesamtnachfrage - GesamtBehandelt);
     public double DurchschnittBehandeltePatientenProTag => SimulierteTage > 0 ? GesamtBehandelt / (double)SimulierteTage : 0.0;
     public double Behandlungsquote => Gesamtnachfrage > 0 ? (GesamtBehandelt / (double)Gesamtnachfrage) * 100.0 : 0.0;

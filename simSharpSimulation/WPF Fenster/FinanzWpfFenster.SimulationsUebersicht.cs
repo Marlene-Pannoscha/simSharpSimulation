@@ -133,7 +133,7 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Schwesterlohn: {FinanzVisualisierung.FormatEuro(finanzenProTag.Kosten.Schwesterlohn)}");
         sb.AppendLine($"Rezeptionlohn: {FinanzVisualisierung.FormatEuro(finanzenProTag.Kosten.Rezeptionlohn)}");
         sb.AppendLine($"Fixkosten: {FinanzVisualisierung.FormatEuro(finanzenProTag.Kosten.Fixkosten)}");
-        sb.AppendLine($"Behandlungskosten: {FinanzVisualisierung.FormatEuro(finanzenProTag.Kosten.Behandlungskosten)}");
+        sb.AppendLine($"Medizinisches Material: {FinanzVisualisierung.FormatEuro(finanzenProTag.Kosten.MedizinischesMaterialkosten)}");
         sb.AppendLine($"Gesamtkosten: {FinanzVisualisierung.FormatEuro(finanzenProTag.Kosten.Gesamtkosten)}");
         sb.AppendLine($"Gewinn: {FinanzVisualisierung.FormatEuro(finanzenProTag.Gewinn)}");
 

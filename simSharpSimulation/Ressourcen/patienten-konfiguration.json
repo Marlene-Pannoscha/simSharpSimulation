@@ -18,8 +18,7 @@
       "BehandlungszeitArzt": 4,
       "VariationskoeffizientArzt": 0.5,
       "BehandlungszeitSchwester": 3,
-      "VariationskoeffizientSchwester": 0.4,
-      "Behandlungskosten": 18.0
+      "VariationskoeffizientSchwester": 0.4
     },
     {
       "Typ": "Mittel",
@@ -27,8 +26,7 @@
       "BehandlungszeitArzt": 8,
       "VariationskoeffizientArzt": 0.4,
       "BehandlungszeitSchwester": 6,
-      "VariationskoeffizientSchwester": 0.3,
-      "Behandlungskosten": 35.0
+      "VariationskoeffizientSchwester": 0.3
     },
     {
       "Typ": "Lang",
@@ -36,8 +34,7 @@
       "BehandlungszeitArzt": 15,
       "VariationskoeffizientArzt": 0.3,
       "BehandlungszeitSchwester": 12,
-      "VariationskoeffizientSchwester": 0.2,
-      "Behandlungskosten": 60.0
+      "VariationskoeffizientSchwester": 0.2
     }
   ],
   "Beschreibung": "Patienten in der Klinik"
