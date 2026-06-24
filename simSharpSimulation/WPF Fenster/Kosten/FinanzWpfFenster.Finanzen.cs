@@ -60,7 +60,7 @@ internal sealed partial class FinanzWpfFenster
         Grid.SetRow(gewinnBorder, 2);
         bilderGrid.Children.Add(gewinnBorder);
 
-        Border kostenstrukturBorder = ErzeugeBildContainer("Kosten und Gewinnstruktur", out kostenstrukturImage);
+        Border kostenstrukturBorder = ErzeugeBildContainer("Gewinn und Kostenstruktur", out kostenstrukturImage);
         Grid.SetRow(kostenstrukturBorder, 4);
         bilderGrid.Children.Add(kostenstrukturBorder);
 
@@ -127,7 +127,7 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine($"Gesamtmietkosten pro Monat: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat)}");
         sb.AppendLine($"Gesamtmietkosten pro Jahr: {FinanzVisualisierung.FormatEuro(gesamtMietkostenMonat * 12)}");
         sb.AppendLine();
-        sb.AppendLine("Kosten-und Gewinn-struktur (von Umsatz)");
+        sb.AppendLine("Gewinn und Kostenstruktur (Basis: Umsatz)");
         sb.AppendLine($"Personalkosten: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtPersonalkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtPersonalkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Mietkosten (im Zeitraum, gesamt): {FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtMietkosten / ergebnis.GesamtUmsatz : 0.0):P2})");
         sb.AppendLine($"Energie: {FinanzVisualisierung.FormatEuro(ergebnis.GesamtEnergiekosten)} ({(ergebnis.GesamtUmsatz > 0 ? ergebnis.GesamtEnergiekosten / ergebnis.GesamtUmsatz : 0.0):P2})");

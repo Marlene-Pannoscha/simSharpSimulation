@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.Text;
 using System.IO;
@@ -589,11 +591,9 @@ internal static class FinanzVisualisierung
         plot.SaveFig(outputPfad);
     }
 
+#pragma warning disable CA1416 // Die Anwendung und dieses Renderingziel sind ausschliesslich Windows/WPF.
     private static void ErzeugeKostenstrukturDiagramm(FinanzErgebnis ergebnis, string outputPfad)
     {
-        // Etwas schmalere Grafik, damit sie besser in die WPF-Ansicht passt
-        Plot plot = new(820, 620);
-
         double umsatz = ergebnis.GesamtUmsatz;
         double gewinn = ergebnis.Gesamtgewinn;
         bool mitGewinn = gewinn >= 0.0;
@@ -647,30 +647,125 @@ internal static class FinanzVisualisierung
             basis = 0.0;
         }
 
-        var pie = plot.AddPie(amounts.ToArray());
-        // Disable ScottPlot-internal slice percentages; the legend uses the same basis as the slices.
-        pie.SliceLabels = labels.ToArray();
-        pie.ShowPercentages = false;
-        pie.ShowLabels = false;
-        pie.ShowValues = false;
-        pie.SliceFillColors = farben.ToArray();
-
-        // Leicht auseinanderziehen, damit Beschriftungen besser lesbar sind
-        pie.Explode = true;
-
-        // Labels/Prozente auf den Slices sind deaktiviert, damit das Diagramm ruhig und lesbar bleibt.
-        pie.Size = 0.70;
-        pie.SliceLabelPosition = 0.92;
-        pie.SliceLabelColors = Enumerable.Repeat(Color.Black, amounts.Count).ToArray();
-
-        string[] legendLabels = labels.Select((lab, i) =>
-            $"{lab}: {FormatEuro(hatWerte ? amounts[i] : 0.0)} ({(basis > 0 ? amounts[i] / basis : 0.0):P2})").ToArray();
-        pie.LegendLabels = legendLabels;
-
         string verlustHinweis = mitGewinn ? string.Empty : $", Verlust: {FormatEuro(Math.Abs(gewinn))}";
-        plot.Title($"Kosten- und Gewinnstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})", size: 18);
-        plot.Legend(location: Alignment.LowerRight);
-        plot.SaveFig(outputPfad);
+        string titel = $"Gewinn und Kostenstruktur ({ergebnis.Zeitraum}, Basis: {basisLabel}{verlustHinweis})";
+
+        const int breite = 1400;
+        const int hoehe = 1600;
+        const float mittelpunktX = 700;
+        const float mittelpunktY = 780;
+        const float radius = 290;
+
+        using Bitmap bitmap = new(breite, hoehe);
+        using Graphics grafik = Graphics.FromImage(bitmap);
+        grafik.SmoothingMode = SmoothingMode.AntiAlias;
+        grafik.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        grafik.Clear(Color.White);
+
+        using Font titelFont = new("Segoe UI", 38, FontStyle.Bold, GraphicsUnit.Pixel);
+        using Font labelFont = new("Segoe UI", 24, FontStyle.Regular, GraphicsUnit.Pixel);
+        using Font hervorhebungFont = new("Segoe UI", 32, FontStyle.Bold, GraphicsUnit.Pixel);
+        using Pen segmentRand = new(Color.White, 3);
+        using Pen fuehrungsLinie = new(Color.FromArgb(45, 55, 65), 2.5f);
+        using Brush textPinsel = new SolidBrush(Color.FromArgb(25, 32, 40));
+
+        using StringFormat titelFormat = new() { Alignment = StringAlignment.Center };
+        grafik.DrawString(titel, titelFont, textPinsel, new RectangleF(30, 175, breite - 60, 65), titelFormat);
+
+        RectangleF kreis = new(mittelpunktX - radius, mittelpunktY - radius, radius * 2, radius * 2);
+        double summe = amounts.Sum();
+        float startWinkel = -90f;
+        List<KostenstrukturBeschriftung> beschriftungen = new();
+
+        for (int i = 0; i < amounts.Count; i++)
+        {
+            if (amounts[i] <= 0 || summe <= 0)
+                continue;
+
+            float sweep = (float)(amounts[i] / summe * 360.0);
+            using Brush segmentPinsel = new SolidBrush(farben[i]);
+            grafik.FillPie(segmentPinsel, kreis, startWinkel, sweep);
+            grafik.DrawPie(segmentRand, kreis, startWinkel, sweep);
+
+            double mitteGrad = startWinkel + sweep / 2.0;
+            double mitteRad = mitteGrad * Math.PI / 180.0;
+            bool rechts = Math.Cos(mitteRad) >= 0;
+            beschriftungen.Add(new KostenstrukturBeschriftung
+            {
+                Index = i,
+                WinkelRad = mitteRad,
+                Rechts = rechts,
+                ZielY = mittelpunktY + (float)Math.Sin(mitteRad) * (radius + 105)
+            });
+
+            startWinkel += sweep;
+        }
+
+        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => !b.Rechts).ToList(), 285, hoehe - 80, 125);
+        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => b.Rechts).ToList(), 285, hoehe - 80, 125);
+
+        foreach (KostenstrukturBeschriftung beschriftung in beschriftungen)
+        {
+            float randX = mittelpunktX + (float)Math.Cos(beschriftung.WinkelRad) * radius;
+            float randY = mittelpunktY + (float)Math.Sin(beschriftung.WinkelRad) * radius;
+            float knickX = beschriftung.Rechts ? mittelpunktX + radius + 60 : mittelpunktX - radius - 60;
+            float linienEndeX = beschriftung.Rechts ? breite - 90 : 90;
+
+            grafik.DrawLine(fuehrungsLinie, randX, randY, knickX, beschriftung.ZielY);
+            grafik.DrawLine(fuehrungsLinie, knickX, beschriftung.ZielY, linienEndeX, beschriftung.ZielY);
+
+            string prozent = (basis > 0 ? amounts[beschriftung.Index] / basis : 0.0)
+                .ToString("P2", DeCulture);
+            string text = $"{labels[beschriftung.Index]}:\n" +
+                $"{FormatEuro(hatWerte ? amounts[beschriftung.Index] : 0.0)}\n" +
+                $"({prozent})";
+            bool hervorgehoben = labels[beschriftung.Index] is "Personal" or "Gewinn";
+            Font verwendeterFont = hervorgehoben ? hervorhebungFont : labelFont;
+            float textHoehe = hervorgehoben ? 165 : 100;
+            RectangleF textBereich = beschriftung.Rechts
+                ? new RectangleF(knickX + 10, beschriftung.ZielY - textHoehe - 5, breite - knickX - 100, textHoehe)
+                : new RectangleF(90, beschriftung.ZielY - textHoehe - 5, knickX - 100, textHoehe);
+            using StringFormat textFormat = new()
+            {
+                Alignment = beschriftung.Rechts ? StringAlignment.Near : StringAlignment.Far,
+                LineAlignment = StringAlignment.Far,
+                Trimming = StringTrimming.EllipsisCharacter
+            };
+            grafik.DrawString(text, verwendeterFont, textPinsel, textBereich, textFormat);
+        }
+
+        bitmap.Save(outputPfad, ImageFormat.Png);
+    }
+#pragma warning restore CA1416
+
+    private static void VerteileKostenstrukturBeschriftungen(
+        List<KostenstrukturBeschriftung> beschriftungen,
+        float minimumY,
+        float maximumY,
+        float mindestAbstand)
+    {
+        beschriftungen.Sort((a, b) => a.ZielY.CompareTo(b.ZielY));
+        for (int i = 0; i < beschriftungen.Count; i++)
+        {
+            float minimum = i == 0 ? minimumY : beschriftungen[i - 1].ZielY + mindestAbstand;
+            beschriftungen[i].ZielY = Math.Max(beschriftungen[i].ZielY, minimum);
+        }
+
+        for (int i = beschriftungen.Count - 1; i >= 0; i--)
+        {
+            float maximum = i == beschriftungen.Count - 1
+                ? maximumY
+                : beschriftungen[i + 1].ZielY - mindestAbstand;
+            beschriftungen[i].ZielY = Math.Min(beschriftungen[i].ZielY, maximum);
+        }
+    }
+
+    private sealed class KostenstrukturBeschriftung
+    {
+        public int Index { get; init; }
+        public double WinkelRad { get; init; }
+        public bool Rechts { get; init; }
+        public float ZielY { get; set; }
     }
 
     private static string ErzeugeKostenImageOrdner()
