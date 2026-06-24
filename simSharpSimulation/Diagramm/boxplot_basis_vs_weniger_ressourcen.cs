@@ -12,6 +12,9 @@ namespace simSharpSimulation
     internal static partial class GenerateDiagramme
     {
         private const double BoxplotTagesNachlaufPufferMinuten = 180.0;
+        private const double BoxplotSkalenbruchStart = 50.0;
+        private const double BoxplotSkalenbruchEnde = 200.0;
+        private const double BoxplotSkalenbruchAngezeigteSpanne = 24.0;
         private static readonly CultureInfo BoxplotCulture = CultureInfo.GetCultureInfo("de-DE");
 
         private static void ErzeugeBoxplotBasisVsWenigerRessourcen(
@@ -441,6 +444,7 @@ namespace simSharpSimulation
             BoxplotStatistik zweites = BerechneBoxplotStatistik(gruppe.ZweitesSzenario);
             double maxY = Math.Max(1.0, Math.Max(erstes.Max, zweites.Max));
             double yMax = maxY * 1.12;
+            BoxplotSkala skala = ErzeugeBoxplotSkala(yMax);
 
             using Pen gridPen = new(Color.FromArgb(224, 229, 234), 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
             using Pen panelPen = new(Color.FromArgb(224, 228, 232), 1);
@@ -448,10 +452,9 @@ namespace simSharpSimulation
             ZeichneTitelUeberPanel(g, gruppe.Name, titelFont, textBrush, panel);
             g.DrawRectangle(panelPen, panel.Left, panel.Top, panel.Width, panel.Height);
 
-            for (int i = 0; i <= 4; i++)
+            foreach (double wert in ErzeugeBoxplotAchsenwerte(yMax, skala))
             {
-                double wert = yMax * i / 4.0;
-                float y = SkaliereY(wert, 0.0, yMax, plotArea);
+                float y = SkaliereY(wert, 0.0, yMax, plotArea, skala);
                 g.DrawLine(gridPen, plotArea.Left, y, plotArea.Right, y);
                 string label = wert.ToString("N1", BoxplotCulture);
                 SizeF labelSize = g.MeasureString(label, achsenFont);
@@ -460,11 +463,13 @@ namespace simSharpSimulation
 
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom);
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Top, plotArea.Left, plotArea.Bottom);
+            if (skala.IstKomprimiert)
+                ZeichneBoxplotSkalenbruch(g, plotArea, yMax, skala, achsenPen, kleinFont);
 
             float erstesX = plotArea.Left + plotArea.Width * 0.33f;
             float zweitesX = plotArea.Left + plotArea.Width * 0.67f;
-            ZeichneBoxplot(g, plotArea, erstes, gruppe.ErstesSzenario.Count, erstesX, 0.0, yMax, erstesFarbe, kleinFont, true);
-            ZeichneBoxplot(g, plotArea, zweites, gruppe.ZweitesSzenario.Count, zweitesX, 0.0, yMax, zweitesFarbe, kleinFont, false);
+            ZeichneBoxplot(g, plotArea, erstes, gruppe.ErstesSzenario.Count, erstesX, 0.0, yMax, skala, erstesFarbe, kleinFont, true);
+            ZeichneBoxplot(g, plotArea, zweites, gruppe.ZweitesSzenario.Count, zweitesX, 0.0, yMax, skala, zweitesFarbe, kleinFont, false);
 
             ZeichneZentriertenText(g, FormatiereSzenarioAchsenLabel(erstesLabel), szenarioFont, Brushes.Black, erstesX, plotArea.Bottom + 18);
             ZeichneZentriertenText(g, FormatiereSzenarioAchsenLabel(zweitesLabel), szenarioFont, Brushes.Black, zweitesX, plotArea.Bottom + 18);
@@ -580,17 +585,18 @@ namespace simSharpSimulation
             float x,
             double minY,
             double maxY,
+            BoxplotSkala skala,
             Color farbe,
             Font kleinFont,
             bool beschriftungLinks,
             bool infoAnzeigen = true)
         {
             float boxHalbeBreite = 58;
-            float min = SkaliereY(statistik.Min, minY, maxY, plotArea);
-            float q1 = SkaliereY(statistik.Q1, minY, maxY, plotArea);
-            float median = SkaliereY(statistik.Median, minY, maxY, plotArea);
-            float q3 = SkaliereY(statistik.Q3, minY, maxY, plotArea);
-            float max = SkaliereY(statistik.Max, minY, maxY, plotArea);
+            float min = SkaliereY(statistik.Min, minY, maxY, plotArea, skala);
+            float q1 = SkaliereY(statistik.Q1, minY, maxY, plotArea, skala);
+            float median = SkaliereY(statistik.Median, minY, maxY, plotArea, skala);
+            float q3 = SkaliereY(statistik.Q3, minY, maxY, plotArea, skala);
+            float max = SkaliereY(statistik.Max, minY, maxY, plotArea, skala);
 
             using Brush boxBrush = new SolidBrush(Color.FromArgb(105, farbe));
             using Pen farbPen = new(farbe, 3.0f);
@@ -622,6 +628,32 @@ namespace simSharpSimulation
                 beschriftungLinks);
         }
 
+        private static void ZeichneBoxplot(
+            Graphics g,
+            RectangleF plotArea,
+            BoxplotStatistik statistik,
+            int anzahl,
+            float x,
+            double minY,
+            double maxY,
+            Color farbe,
+            Font kleinFont,
+            bool beschriftungLinks)
+        {
+            ZeichneBoxplot(
+                g,
+                plotArea,
+                statistik,
+                anzahl,
+                x,
+                minY,
+                maxY,
+                new BoxplotSkala(false, 0.0, 0.0, 0.0),
+                farbe,
+                kleinFont,
+                beschriftungLinks);
+        }
+
         private static void ZeichneTitelUeberPanel(Graphics g, string titel, Font font, Brush brush, RectangleF panel)
         {
             g.DrawString(titel, font, brush, panel.Left + 8, panel.Top - 28);
@@ -631,6 +663,92 @@ namespace simSharpSimulation
         {
             double anteil = maxY > minY ? (wert - minY) / (maxY - minY) : 0.0;
             return (float)(plotArea.Bottom - Math.Clamp(anteil, 0.0, 1.0) * plotArea.Height);
+        }
+
+        private static float SkaliereY(double wert, double minY, double maxY, RectangleF plotArea, BoxplotSkala skala)
+        {
+            if (!skala.IstKomprimiert)
+                return SkaliereY(wert, minY, maxY, plotArea);
+
+            double skaliert = SkaliereBoxplotWert(wert, skala);
+            double minSkaliert = SkaliereBoxplotWert(minY, skala);
+            double maxSkaliert = SkaliereBoxplotWert(maxY, skala);
+            double anteil = maxSkaliert > minSkaliert ? (skaliert - minSkaliert) / (maxSkaliert - minSkaliert) : 0.0;
+            return (float)(plotArea.Bottom - Math.Clamp(anteil, 0.0, 1.0) * plotArea.Height);
+        }
+
+        private static BoxplotSkala ErzeugeBoxplotSkala(double maxY)
+        {
+            return maxY > BoxplotSkalenbruchEnde
+                ? new BoxplotSkala(true, BoxplotSkalenbruchStart, BoxplotSkalenbruchEnde, BoxplotSkalenbruchAngezeigteSpanne)
+                : new BoxplotSkala(false, 0.0, 0.0, 0.0);
+        }
+
+        private static double SkaliereBoxplotWert(double wert, BoxplotSkala skala)
+        {
+            if (!skala.IstKomprimiert || wert <= skala.Start)
+                return wert;
+
+            double echteSpanne = skala.Ende - skala.Start;
+            if (wert <= skala.Ende)
+                return skala.Start + (wert - skala.Start) / echteSpanne * skala.AngezeigteSpanne;
+
+            return wert - echteSpanne + skala.AngezeigteSpanne;
+        }
+
+        private static IEnumerable<double> ErzeugeBoxplotAchsenwerte(double yMax, BoxplotSkala skala)
+        {
+            if (!skala.IstKomprimiert)
+            {
+                for (int i = 0; i <= 4; i++)
+                    yield return yMax * i / 4.0;
+
+                yield break;
+            }
+
+            double[] werte =
+            {
+                0.0,
+                skala.Start / 2.0,
+                skala.Start,
+                skala.Ende,
+                skala.Ende + Math.Max(0.0, yMax - skala.Ende) / 2.0,
+                yMax
+            };
+
+            foreach (double wert in werte.Distinct().OrderBy(wert => wert))
+                yield return wert;
+        }
+
+        private static void ZeichneBoxplotSkalenbruch(
+            Graphics g,
+            RectangleF plotArea,
+            double maxY,
+            BoxplotSkala skala,
+            Pen achsenPen,
+            Font font)
+        {
+            float yStart = SkaliereY(skala.Start, 0.0, maxY, plotArea, skala);
+            float yEnde = SkaliereY(skala.Ende, 0.0, maxY, plotArea, skala);
+            float yMitte = (yStart + yEnde) / 2.0f;
+
+            using Pen bruchPen = new(Color.FromArgb(45, 50, 55), 1.4f);
+            ZeichneAchsenZacken(g, plotArea.Left, yMitte - 5, bruchPen);
+            ZeichneAchsenZacken(g, plotArea.Left, yMitte + 5, bruchPen);
+
+            string label = "50-200 komprimiert";
+            SizeF labelSize = g.MeasureString(label, font);
+            g.DrawString(label, font, Brushes.DimGray, plotArea.Left + 10, yMitte - labelSize.Height / 2);
+
+            using Pen bandPen = new(Color.FromArgb(214, 219, 224), 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash };
+            g.DrawLine(bandPen, plotArea.Left, yStart, plotArea.Right, yStart);
+            g.DrawLine(bandPen, plotArea.Left, yEnde, plotArea.Right, yEnde);
+        }
+
+        private static void ZeichneAchsenZacken(Graphics g, float x, float y, Pen pen)
+        {
+            g.DrawLine(pen, x - 6, y + 4, x, y - 4);
+            g.DrawLine(pen, x, y - 4, x + 6, y + 4);
         }
 
         private static void ZeichneZentriertenText(Graphics g, string text, Font font, Brush brush, float centerX, float y)
@@ -729,6 +847,8 @@ namespace simSharpSimulation
             IReadOnlyList<double> ZweitesSzenario);
 
         private sealed record BoxplotStatistik(double Min, double Q1, double Median, double Q3, double Max);
+
+        private sealed record BoxplotSkala(bool IstKomprimiert, double Start, double Ende, double AngezeigteSpanne);
 
         private sealed record BoxplotTraceEvent(int Index, int TagIndex, double Zeit, string EventTyp, int PatientId);
 

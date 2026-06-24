@@ -71,6 +71,7 @@ namespace simSharpSimulation
                 .DefaultIfEmpty(1.0)
                 .Max();
             maxY = Math.Max(1.0, maxY * 1.12);
+            BoxplotSkala skala = ErzeugeBoxplotSkala(maxY);
 
             RectangleF arztBereich = new(plotArea.Left, plotArea.Top, plotArea.Width / 2, plotArea.Height);
             RectangleF schwesterBereich = new(plotArea.Left + plotArea.Width / 2, plotArea.Top, plotArea.Width / 2, plotArea.Height);
@@ -79,10 +80,9 @@ namespace simSharpSimulation
             g.DrawRectangle(rahmenPen, plotArea.Left, plotArea.Top, plotArea.Width, plotArea.Height);
             g.DrawLine(trennPen, plotArea.Left + plotArea.Width / 2, plotArea.Top, plotArea.Left + plotArea.Width / 2, plotArea.Bottom);
 
-            for (int i = 0; i <= 5; i++)
+            foreach (double wert in ErzeugeBoxplotAchsenwerte(maxY, skala))
             {
-                double wert = maxY * i / 5.0;
-                float y = SkaliereY(wert, 0.0, maxY, plotArea);
+                float y = SkaliereY(wert, 0.0, maxY, plotArea, skala);
                 g.DrawLine(gridPen, plotArea.Left, y, plotArea.Right, y);
                 string label = wert.ToString("N1", BoxplotCulture);
                 SizeF labelSize = g.MeasureString(label, achsenFont);
@@ -91,7 +91,7 @@ namespace simSharpSimulation
 
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom);
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Top, plotArea.Left, plotArea.Bottom);
-            ZeichneGedrehtenText(g, "Wartezeit in Minuten", achsenFont, textBrush, 18, plotArea.Top + plotArea.Height / 2 + 70);
+            ZeichneGedrehtenText(g, "Wartezeit in Minuten", achsenFont, textBrush, 28, plotArea.Top + plotArea.Height / 2 + 62);
 
             ZeichneLegende(g, "mit Termin", "ohne Termin", mitTerminFarbe, ohneTerminFarbe, new PointF(breite - 310, 34));
 
@@ -107,6 +107,7 @@ namespace simSharpSimulation
                     x,
                     0.0,
                     maxY,
+                    skala,
                     gruppen[i].Farbe,
                     kleinFont,
                     i % 2 == 0,
