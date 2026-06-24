@@ -10,6 +10,10 @@ namespace simSharpSimulation
     // Gemeinsamer Boxplot-Vergleich der stationsbezogenen Wartezeiten nach Terminstatus.
     internal static partial class GenerateDiagramme
     {
+        private const double TerminstatusBoxplotSkalenbruchStart = 50.0;
+        private const double TerminstatusBoxplotSkalenbruchEnde = 250.0;
+        private const double TerminstatusBoxplotSkalenbruchAngezeigteSpanne = 24.0;
+
         private static void ErzeugeGemeinsamesWartezeitenVergleichsDiagramm(
             IReadOnlyList<double> arztMitTermin,
             IReadOnlyList<double> arztOhneTermin,
@@ -71,7 +75,11 @@ namespace simSharpSimulation
                 .DefaultIfEmpty(1.0)
                 .Max();
             maxY = Math.Max(1.0, maxY * 1.12);
-            BoxplotSkala skala = ErzeugeBoxplotSkala(maxY);
+            BoxplotSkala skala = ErzeugeBoxplotSkala(
+                maxY,
+                TerminstatusBoxplotSkalenbruchStart,
+                TerminstatusBoxplotSkalenbruchEnde,
+                TerminstatusBoxplotSkalenbruchAngezeigteSpanne);
 
             RectangleF arztBereich = new(plotArea.Left, plotArea.Top, plotArea.Width / 2, plotArea.Height);
             RectangleF schwesterBereich = new(plotArea.Left + plotArea.Width / 2, plotArea.Top, plotArea.Width / 2, plotArea.Height);
@@ -91,6 +99,9 @@ namespace simSharpSimulation
 
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom);
             g.DrawLine(achsenPen, plotArea.Left, plotArea.Top, plotArea.Left, plotArea.Bottom);
+            if (skala.IstKomprimiert)
+                ZeichneBoxplotSkalenbruch(g, plotArea, maxY, skala, achsenPen, kleinFont);
+
             ZeichneGedrehtenText(g, "Wartezeit in Minuten", achsenFont, textBrush, 28, plotArea.Top + plotArea.Height / 2 + 62);
 
             ZeichneLegende(g, "mit Termin", "ohne Termin", mitTerminFarbe, ohneTerminFarbe, new PointF(breite - 310, 34));

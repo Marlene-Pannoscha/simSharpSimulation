@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -20,6 +21,15 @@ namespace simSharpSimulation
         [STAThread]
         static void Main(string[] args)
         {
+            bool vollstaendigerLauf = args.Any(a => string.Equals(a, "--mit-images", StringComparison.OrdinalIgnoreCase));
+
+            if (args.Any(a => string.Equals(a, "--nur-simulationszeit", StringComparison.OrdinalIgnoreCase)))
+            {
+                KonfigurationJsonExport.LadeAlle();
+                MesseUndSchreibeReineSimulationszeit();
+                return;
+            }
+
             if (args.Any(a => string.Equals(a, "--finanz-wpf", StringComparison.OrdinalIgnoreCase)))
             {
                 KonfigurationJsonExport.LadeAlle();
@@ -27,14 +37,15 @@ namespace simSharpSimulation
                 return;
             }
 
-            Console.WriteLine("--- Start der SimSharp-Klinik-Simulation ---");
+            Console.WriteLine(vollstaendigerLauf
+                ? "--- Start der vollstaendigen SimSharp-Klinik-Simulation mit Diagrammen und Reports ---"
+                : "--- Start der SimSharp-Klinik-Simulation ---");
             KonfigurationJsonExport.LadeAlle();
 
-            var daten = new SimulationsDaten();
-            var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
-            simulation.FuehreAus();
+            var (daten, simulationszeit) = FuehreSimulationMitZeitmessungAus();
 
             Console.WriteLine("--- Ende der SimSharp-Simulation. ---");
+            SchreibeReineSimulationszeit(simulationszeit);
 
             // --- 6. VISUALISIERUNG (Diagramme) ---
             GenerateDiagramme.GeneriereDiagramme(
@@ -183,6 +194,35 @@ namespace simSharpSimulation
             Console.WriteLine($"Medizinisches Material: {finanzen.Kosten.MedizinischesMaterialkosten:F2} €");
             Console.WriteLine($"Gesamtkosten: {finanzen.Kosten.Gesamtkosten:F2} €");
             Console.WriteLine($"Gewinn: {finanzen.Gewinn:F2} €");
+        }
+
+        internal static string FormatiereDauer(TimeSpan dauer)
+        {
+            return dauer.TotalSeconds >= 1.0
+                ? $"{dauer.TotalSeconds:N2} Sekunden"
+                : $"{dauer.TotalMilliseconds:N0} ms";
+        }
+
+        private static void MesseUndSchreibeReineSimulationszeit()
+        {
+            Console.WriteLine("--- Starte reine Simulationszeitmessung ---");
+            var (_, simulationszeit) = FuehreSimulationMitZeitmessungAus();
+            SchreibeReineSimulationszeit(simulationszeit);
+        }
+
+        private static (SimulationsDaten Daten, TimeSpan Simulationszeit) FuehreSimulationMitZeitmessungAus()
+        {
+            var daten = new SimulationsDaten();
+            var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
+            Stopwatch simulationsStoppuhr = Stopwatch.StartNew();
+            simulation.FuehreAus();
+            simulationsStoppuhr.Stop();
+            return (daten, simulationsStoppuhr.Elapsed);
+        }
+
+        private static void SchreibeReineSimulationszeit(TimeSpan simulationszeit)
+        {
+            Console.WriteLine($"Reine Simulationszeit (ohne Diagramm- und Dateierzeugung): {FormatiereDauer(simulationszeit)}");
         }
 
         private static string ErmittleProjektOrdner()

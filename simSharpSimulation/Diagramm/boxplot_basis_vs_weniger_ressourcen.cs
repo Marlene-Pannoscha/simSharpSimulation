@@ -679,8 +679,21 @@ namespace simSharpSimulation
 
         private static BoxplotSkala ErzeugeBoxplotSkala(double maxY)
         {
-            return maxY > BoxplotSkalenbruchEnde
-                ? new BoxplotSkala(true, BoxplotSkalenbruchStart, BoxplotSkalenbruchEnde, BoxplotSkalenbruchAngezeigteSpanne)
+            return ErzeugeBoxplotSkala(
+                maxY,
+                BoxplotSkalenbruchStart,
+                BoxplotSkalenbruchEnde,
+                BoxplotSkalenbruchAngezeigteSpanne);
+        }
+
+        private static BoxplotSkala ErzeugeBoxplotSkala(
+            double maxY,
+            double skalenbruchStart,
+            double skalenbruchEnde,
+            double angezeigteSpanne)
+        {
+            return maxY > skalenbruchEnde
+                ? new BoxplotSkala(true, skalenbruchStart, skalenbruchEnde, angezeigteSpanne)
                 : new BoxplotSkala(false, 0.0, 0.0, 0.0);
         }
 
@@ -745,7 +758,7 @@ namespace simSharpSimulation
             for (float y = bandOben + 6; y < bandUnten; y += 8)
                 g.DrawLine(komprimierungsPen, plotArea.Left + 1, y, plotArea.Right, y);
 
-            string label = "50-200 komprimiert";
+            string label = $"{skala.Start.ToString("N0", BoxplotCulture)}-{skala.Ende.ToString("N0", BoxplotCulture)} komprimiert";
             SizeF labelSize = g.MeasureString(label, font);
             g.DrawString(label, font, Brushes.DimGray, plotArea.Left + 10, yMitte - labelSize.Height / 2);
 

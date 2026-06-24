@@ -665,6 +665,8 @@ internal static class FinanzVisualisierung
         using Font titelFont = new("Segoe UI", 38, FontStyle.Bold, GraphicsUnit.Pixel);
         using Font labelFont = new("Segoe UI", 24, FontStyle.Regular, GraphicsUnit.Pixel);
         using Font hervorhebungFont = new("Segoe UI", 32, FontStyle.Bold, GraphicsUnit.Pixel);
+        using Font legendeFont = new("Segoe UI", 23, FontStyle.Regular, GraphicsUnit.Pixel);
+        using Font legendeFettFont = new("Segoe UI", 23, FontStyle.Bold, GraphicsUnit.Pixel);
         using Pen segmentRand = new(Color.White, 3);
         using Pen fuehrungsLinie = new(Color.FromArgb(45, 55, 65), 2.5f);
         using Brush textPinsel = new SolidBrush(Color.FromArgb(25, 32, 40));
@@ -690,19 +692,33 @@ internal static class FinanzVisualisierung
             double mitteGrad = startWinkel + sweep / 2.0;
             double mitteRad = mitteGrad * Math.PI / 180.0;
             bool rechts = Math.Cos(mitteRad) >= 0;
-            beschriftungen.Add(new KostenstrukturBeschriftung
+            if (labels[i] == "Gewinn")
             {
-                Index = i,
-                WinkelRad = mitteRad,
-                Rechts = rechts,
-                ZielY = mittelpunktY + (float)Math.Sin(mitteRad) * (radius + 105)
-            });
+                beschriftungen.Add(new KostenstrukturBeschriftung
+                {
+                    Index = i,
+                    WinkelRad = mitteRad,
+                    Rechts = rechts,
+                    ZielY = mittelpunktY + (float)Math.Sin(mitteRad) * (radius + 105)
+                });
+            }
 
             startWinkel += sweep;
         }
 
-        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => !b.Rechts).ToList(), 285, hoehe - 80, 125);
-        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => b.Rechts).ToList(), 285, hoehe - 80, 125);
+        ZeichneKostenstrukturLegende(
+            grafik,
+            labels,
+            amounts,
+            farben,
+            basis,
+            hatWerte,
+            new RectangleF(100, 1130, breite - 200, 400),
+            legendeFont,
+            legendeFettFont);
+
+        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => !b.Rechts).ToList(), 455, 1100, 125);
+        VerteileKostenstrukturBeschriftungen(beschriftungen.Where(b => b.Rechts).ToList(), 455, 1100, 125);
 
         foreach (KostenstrukturBeschriftung beschriftung in beschriftungen)
         {
@@ -719,9 +735,8 @@ internal static class FinanzVisualisierung
             string text = $"{labels[beschriftung.Index]}:\n" +
                 $"{FormatEuro(hatWerte ? amounts[beschriftung.Index] : 0.0)}\n" +
                 $"({prozent})";
-            bool hervorgehoben = labels[beschriftung.Index] is "Personal" or "Gewinn";
-            Font verwendeterFont = hervorgehoben ? hervorhebungFont : labelFont;
-            float textHoehe = hervorgehoben ? 165 : 100;
+            Font verwendeterFont = labels[beschriftung.Index] == "Gewinn" ? hervorhebungFont : labelFont;
+            float textHoehe = labels[beschriftung.Index] == "Gewinn" ? 165 : 100;
             RectangleF textBereich = beschriftung.Rechts
                 ? new RectangleF(knickX + 10, beschriftung.ZielY - textHoehe - 5, breite - knickX - 100, textHoehe)
                 : new RectangleF(90, beschriftung.ZielY - textHoehe - 5, knickX - 100, textHoehe);
@@ -735,6 +750,58 @@ internal static class FinanzVisualisierung
         }
 
         bitmap.Save(outputPfad, ImageFormat.Png);
+    }
+
+    private static void ZeichneKostenstrukturLegende(
+        Graphics grafik,
+        IReadOnlyList<string> labels,
+        IReadOnlyList<double> amounts,
+        IReadOnlyList<Color> farben,
+        double basis,
+        bool hatWerte,
+        RectangleF bereich,
+        Font font,
+        Font fettFont)
+    {
+        List<int> indices = Enumerable.Range(0, labels.Count)
+            .Where(i => labels[i] != "Gewinn" && (amounts[i] > 0.0 || !hatWerte))
+            .ToList();
+
+        if (indices.Count == 0)
+            return;
+
+        int spalten = indices.Count > 6 ? 2 : 1;
+        int zeilen = (int)Math.Ceiling(indices.Count / (double)spalten);
+        float spaltenBreite = bereich.Width / spalten;
+        float zeilenHoehe = Math.Min(62, bereich.Height / Math.Max(1, zeilen));
+
+        using Pen rahmen = new(Color.FromArgb(224, 229, 234), 1.2f);
+        using Brush hintergrund = new SolidBrush(Color.FromArgb(248, 250, 252));
+        using Brush textPinsel = new SolidBrush(Color.FromArgb(25, 32, 40));
+        using Brush nebenTextPinsel = new SolidBrush(Color.FromArgb(85, 96, 108));
+        using StringFormat rechtsBuendig = new() { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center };
+
+        grafik.FillRectangle(hintergrund, bereich);
+        grafik.DrawRectangle(rahmen, bereich.Left, bereich.Top, bereich.Width, bereich.Height);
+
+        for (int indexInLegende = 0; indexInLegende < indices.Count; indexInLegende++)
+        {
+            int wertIndex = indices[indexInLegende];
+            int spalte = indexInLegende / zeilen;
+            int zeile = indexInLegende % zeilen;
+            float x = bereich.Left + spalte * spaltenBreite + 24;
+            float y = bereich.Top + 24 + zeile * zeilenHoehe;
+            double wert = hatWerte ? amounts[wertIndex] : 0.0;
+            string prozent = (basis > 0 ? wert / basis : 0.0).ToString("P2", DeCulture);
+
+            using Brush farbPinsel = new SolidBrush(farben[wertIndex]);
+            grafik.FillRectangle(farbPinsel, x, y + 13, 20, 20);
+            grafik.DrawRectangle(Pens.White, x, y + 13, 20, 20);
+            grafik.DrawString(labels[wertIndex], fettFont, textPinsel, x + 34, y + 4);
+
+            RectangleF wertBereich = new(x + spaltenBreite - 350, y, 300, zeilenHoehe);
+            grafik.DrawString($"{FormatEuro(wert)} ({prozent})", font, nebenTextPinsel, wertBereich, rechtsBuendig);
+        }
     }
 #pragma warning restore CA1416
 

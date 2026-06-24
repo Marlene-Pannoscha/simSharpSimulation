@@ -52,6 +52,22 @@ dotnet build
 dotnet run
 ```
 
+### Vollstaendige Simulation mit Diagrammen und Reports
+
+```powershell
+dotnet run -- --mit-images
+```
+
+Dieser Modus fuehrt die Simulation aus und erzeugt anschliessend Diagramme, Reports und Bilddateien. Das entspricht dem vollstaendigen Standardlauf, ist aber als eigener Befehl benannt.
+
+### Nur reine Simulationszeit messen
+
+```powershell
+dotnet run -- --nur-simulationszeit
+```
+
+Dieser Modus fuehrt nur die Simulation aus und erzeugt keine Diagramme, Reports oder Bilddateien.
+
 ### Finanz- und Auswertungsfenster starten
 
 ```powershell

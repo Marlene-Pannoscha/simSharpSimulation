@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -541,7 +542,11 @@ internal sealed partial class FinanzWpfFenster : Window
 
             SimulationsDaten simulationsDaten = new();
             PatientenProzess patientenProzess = new(SimulationKonfiguration.RANDOM_SEED, simulationsDaten);
+            Stopwatch simulationsStoppuhr = Stopwatch.StartNew();
             patientenProzess.FuehreAus();
+            simulationsStoppuhr.Stop();
+            string simulationszeit = Program.FormatiereDauer(simulationsStoppuhr.Elapsed);
+            Console.WriteLine($"Reine Simulationszeit (ohne Diagramm- und Dateierzeugung): {simulationszeit}");
             simulationsDaten.SchreibePrognoseReport("prognose_report.txt");
             simulationsDaten.SchreibePrognoseDatenJson("prognose_daten.json");
 
@@ -588,7 +593,7 @@ internal sealed partial class FinanzWpfFenster : Window
             AktualisiereSimulationsUebersicht(simulationsDaten);
             AktualisierePrognoseTab();
             
-            statusTextBlock.Text = "Simulation erfolgreich abgeschlossen.";
+            statusTextBlock.Text = $"Simulation erfolgreich abgeschlossen. Reine Simulationszeit: {simulationszeit}";
         }
         catch (Exception ex)
         {
