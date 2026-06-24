@@ -170,7 +170,12 @@ namespace simSharpSimulation
 
             // Erzeuge ein vollständiges Finanz-Ergebnis wie in der WPF-Ansicht und gib den identischen Bericht aus.
             FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN, "Jahr");
-            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = bilderErzeugen
+                ? FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN)
+                : (
+                    "nicht erzeugt (--simulation-only)",
+                    "nicht erzeugt (--simulation-only)",
+                    "nicht erzeugt (--simulation-only)");
             string reportText = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
             Console.WriteLine(reportText);
 
@@ -182,6 +187,14 @@ namespace simSharpSimulation
             SchreibeFinanzwerte(finanzenProTag);
             Console.WriteLine();
             Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
+        }
+
+        private static void SchreibeHilfe()
+        {
+            Console.WriteLine("Verwendung:");
+            Console.WriteLine("  dotnet run -- --simulation-only   Simulation ohne PNG-Diagramme/Bilder");
+            Console.WriteLine("  dotnet run -- --with-images       Simulation mit allen Diagrammen/Bildern");
+            Console.WriteLine("  dotnet run -- --finanz-wpf        Finanz- und Auswertungsfenster starten");
         }
 
         private static void SchreibeFinanzwerte(Tagesergebnis finanzen)

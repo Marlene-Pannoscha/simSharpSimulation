@@ -46,10 +46,10 @@ dotnet build
 
 ## Programm ausfuehren
 
-### Standard-Simulation in der Konsole
+### Nur Simulation in der Konsole
 
 ```powershell
-dotnet run
+dotnet run -- --simulation-only
 ```
 
 ### Vollstaendige Simulation mit Diagrammen und Reports
@@ -77,6 +77,8 @@ dotnet run -- --finanz-wpf
 ### Alternativ von ausserhalb des Projektordners
 
 ```powershell
+dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --simulation-only
+dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --with-images
 dotnet run --project c:\uni\simSharpSimulation\simSharpSimulation\simSharpSimulation.csproj -- --finanz-wpf
 ```
 
