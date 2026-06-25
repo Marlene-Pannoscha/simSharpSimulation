@@ -170,7 +170,7 @@ namespace simSharpSimulation
 
             // Erzeuge ein vollständiges Finanz-Ergebnis wie in der WPF-Ansicht und gib den identischen Bericht aus.
             FinanzErgebnis ergebnis = FinanzVisualisierung.Simuliere(anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN, "Jahr");
-            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = bilderErzeugen
+            var (finanzenPfad, gewinnPfad, kostenstrukturPfad) = vollstaendigerLauf
                 ? FinanzVisualisierung.ErzeugeDiagramme(ergebnis, anzahlAerzte, SchwesterKonfiguration.ANZAHL_SCHWESTERN)
                 : (
                     "nicht erzeugt (--simulation-only)",
