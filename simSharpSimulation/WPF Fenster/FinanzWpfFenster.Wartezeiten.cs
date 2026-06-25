@@ -52,7 +52,7 @@ internal sealed partial class FinanzWpfFenster
         return inhaltGrid;
     }
 
-    private void AktualisiereWartezeitenTab(SimulationsDaten? daten)
+    private void AktualisiereWartezeitenTab(SimulationsDaten? daten, string? zeitraum = null)
     {
         if (daten is null)
         {
@@ -65,7 +65,8 @@ internal sealed partial class FinanzWpfFenster
             return;
         }
 
-        WartezeitenAuswertung auswertung = WartezeitenAuswertung.Erzeuge(daten);
+        string ausgewaehlterZeitraum = zeitraum ?? zeitraumComboBox.SelectedItem?.ToString() ?? "Jahr";
+        WartezeitenAuswertung auswertung = WartezeitenAuswertung.Erzeuge(daten, ausgewaehlterZeitraum);
         warteschlangenDataGrid.ItemsSource = auswertung.Warteschlangen;
         auslastungDataGrid.ItemsSource = auswertung.Auslastungen;
         bereicheDataGrid.ItemsSource = auswertung.Bereiche;
@@ -139,6 +140,7 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine(new string('=', 50));
         sb.AppendLine($"Auswertungsdauer: {auswertung.AuswertungsdauerMinuten.ToString("N2", DeCulture)} Minuten");
         sb.AppendLine($"Trace-Ereignisse: {auswertung.TraceEreignisse.ToString("N0", DeCulture)}");
+        sb.AppendLine($"Zeitraum/Saisonfaktor: {auswertung.Zeitraum} x {auswertung.Saisonfaktor.ToString("N2", DeCulture)}");
         sb.AppendLine();
         sb.AppendLine("Auslastung");
         foreach (AuslastungZeile zeile in auswertung.Auslastungen)
@@ -161,6 +163,7 @@ internal sealed partial class FinanzWpfFenster
         sb.AppendLine("Hinweis");
         sb.AppendLine("Zeitbasierte Auslastung: belegte Minuten / verfuegbare Kapazitaetsminuten.");
         sb.AppendLine("Patientenbasierte Auslastung: behandelte Patienten / erwartbare Patienten-Kapazitaet.");
+        sb.AppendLine("Der Saisonfaktor skaliert Mengen, Belegung und Auslastung; gemessene Wartezeit-Dauern bleiben aus der 30-Tage-Simulation.");
         sb.AppendLine("Min/Avg/Max der Patientenanzahl werden zeitgewichtet aus dem Trace rekonstruiert.");
         sb.AppendLine("Die Warteschlangen zaehlen Patienten ab Eintritt in den jeweiligen Wartebereich bis zum Betreten des Behandlungsbereichs oder Abbruch.");
         sb.AppendLine("Rezeption-Wartezeiten von mehr als 15 Minuten werden als Ausreisser gezaehlt und nicht in Min/Avg/Max der Wartezeit eingerechnet.");
@@ -172,6 +175,8 @@ internal sealed partial class FinanzWpfFenster
     private sealed record WartezeitenAuswertung(
         double AuswertungsdauerMinuten,
         int TraceEreignisse,
+        string Zeitraum,
+        double Saisonfaktor,
         List<AnzahlZeile> Warteschlangen,
         List<AuslastungZeile> Auslastungen,
         List<AnzahlZeile> Bereiche,
@@ -182,8 +187,10 @@ internal sealed partial class FinanzWpfFenster
         private const double RezeptionsAusreisserGrenzeMinuten = 15.0;
         private static double TagesAbstandMinuten => SimulationKonfiguration.SIMULATIONSDAUER + TagesNachlaufPufferMinuten;
 
-        public static WartezeitenAuswertung Erzeuge(SimulationsDaten daten)
+        public static WartezeitenAuswertung Erzeuge(SimulationsDaten daten, string zeitraum)
         {
+            string normalisierterZeitraum = NormalisiereZeitraum(zeitraum);
+            double saisonfaktor = ErmittleSaisonfaktor(normalisierterZeitraum);
             List<TraceEvent> events = daten.TraceData
                 .Select(ParseTraceEvent)
                 .Where(e => e is not null)
@@ -241,17 +248,17 @@ internal sealed partial class FinanzWpfFenster
 
             List<AnzahlZeile> warteschlangen = new()
             {
-                ErzeugeAnzahlZeile("Rezeption", statistiken["Warteschlange Rezeption"]),
-                ErzeugeAnzahlZeile("Schwester", statistiken["Warteschlange Schwester"]),
-                ErzeugeAnzahlZeile("Arzt", statistiken["Warteschlange Arzt"])
+                ErzeugeAnzahlZeile("Rezeption", statistiken["Warteschlange Rezeption"], saisonfaktor),
+                ErzeugeAnzahlZeile("Schwester", statistiken["Warteschlange Schwester"], saisonfaktor),
+                ErzeugeAnzahlZeile("Arzt", statistiken["Warteschlange Arzt"], saisonfaktor)
             };
 
             List<AnzahlZeile> bereiche = new()
             {
-                ErzeugeAnzahlZeile("Klinik gesamt", statistiken["Klinik gesamt"]),
-                ErzeugeAnzahlZeile("Rezeption", statistiken["Rezeption"]),
-                ErzeugeAnzahlZeile("Schwesterzimmer", statistiken["Schwesterzimmer"]),
-                ErzeugeAnzahlZeile("Arztzimmer", statistiken["Arztzimmer"])
+                ErzeugeAnzahlZeile("Klinik gesamt", statistiken["Klinik gesamt"], saisonfaktor),
+                ErzeugeAnzahlZeile("Rezeption", statistiken["Rezeption"], saisonfaktor),
+                ErzeugeAnzahlZeile("Schwesterzimmer", statistiken["Schwesterzimmer"], saisonfaktor),
+                ErzeugeAnzahlZeile("Arztzimmer", statistiken["Arztzimmer"], saisonfaktor)
             };
 
             List<AuslastungZeile> auslastungen = new()
@@ -261,32 +268,36 @@ internal sealed partial class FinanzWpfFenster
                     statistiken["Arzt belegt"],
                     ArztKonfiguration.ANZAHL_AERZTE,
                     daten.ArztBehandlungszeitenMitTermin.Count + daten.ArztBehandlungszeitenOhneTermin.Count,
-                    BerechneErwartbarePatientenKapazitaet(ArztKonfiguration.ANZAHL_AERZTE, BerechneMittlereArztBehandlungszeit())),
+                    BerechneErwartbarePatientenKapazitaet(ArztKonfiguration.ANZAHL_AERZTE, BerechneMittlereArztBehandlungszeit()),
+                    saisonfaktor),
                 ErzeugeAuslastungZeile(
                     "Schwestern",
                     statistiken["Schwester belegt"],
                     SchwesterKonfiguration.ANZAHL_SCHWESTERN,
                     daten.SchwesternBehandlungszeitenMitTermin.Count + daten.SchwesternBehandlungszeitenOhneTermin.Count,
-                    BerechneErwartbarePatientenKapazitaet(SchwesterKonfiguration.ANZAHL_SCHWESTERN, BerechneMittlereSchwesterBehandlungszeit())),
+                    BerechneErwartbarePatientenKapazitaet(SchwesterKonfiguration.ANZAHL_SCHWESTERN, BerechneMittlereSchwesterBehandlungszeit()),
+                    saisonfaktor),
                 ErzeugeAuslastungZeile(
                     "Arztzimmer",
                     statistiken["Arztzimmer"],
                     KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt,
                     daten.ArztBehandlungszeitenMitTermin.Count + daten.ArztBehandlungszeitenOhneTermin.Count,
-                    BerechneErwartbarePatientenKapazitaet(KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt, BerechneMittlereArztBehandlungszeit())),
+                    BerechneErwartbarePatientenKapazitaet(KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt, BerechneMittlereArztBehandlungszeit()),
+                    saisonfaktor),
                 ErzeugeAuslastungZeile(
                     "Schwesterzimmer",
                     statistiken["Schwesterzimmer"],
                     KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester,
                     daten.SchwesternBehandlungszeitenMitTermin.Count + daten.SchwesternBehandlungszeitenOhneTermin.Count,
-                    BerechneErwartbarePatientenKapazitaet(KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester, BerechneMittlereSchwesterBehandlungszeit()))
+                    BerechneErwartbarePatientenKapazitaet(KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester, BerechneMittlereSchwesterBehandlungszeit()),
+                    saisonfaktor)
             };
 
             List<WartezeitZeile> wartezeiten = new()
             {
-                ErzeugeWartezeitZeile("Rezeption", warteDauern["Rezeption"], RezeptionsAusreisserGrenzeMinuten),
-                ErzeugeWartezeitZeile("Schwester", warteDauern["Schwester"]),
-                ErzeugeWartezeitZeile("Arzt", warteDauern["Arzt"])
+                ErzeugeWartezeitZeile("Rezeption", warteDauern["Rezeption"], saisonfaktor, RezeptionsAusreisserGrenzeMinuten),
+                ErzeugeWartezeitZeile("Schwester", warteDauern["Schwester"], saisonfaktor),
+                ErzeugeWartezeitZeile("Arzt", warteDauern["Arzt"], saisonfaktor)
             };
 
             List<BehandlungszeitVergleichZeile> behandlungszeiten = new()
@@ -294,19 +305,22 @@ internal sealed partial class FinanzWpfFenster
                 ErzeugeBehandlungszeitVergleichZeile(
                     "Rezeption",
                     daten.RezeptionsBehandlungszeitenMitTermin.Concat(daten.RezeptionsBehandlungszeitenOhneTermin).ToList(),
-                    RezeptionKonfiguration.MITTELREZEPTIONSZEIT),
+                    RezeptionKonfiguration.MITTELREZEPTIONSZEIT,
+                    saisonfaktor),
                 ErzeugeBehandlungszeitVergleichZeile(
                     "Schwester",
                     daten.SchwesternBehandlungszeitenMitTermin.Concat(daten.SchwesternBehandlungszeitenOhneTermin).ToList(),
-                    BerechneMittlereSchwesterBehandlungszeit()),
+                    BerechneMittlereSchwesterBehandlungszeit(),
+                    saisonfaktor),
                 ErzeugeBehandlungszeitVergleichZeile(
                     "Arzt",
                     daten.ArztBehandlungszeitenMitTermin.Concat(daten.ArztBehandlungszeitenOhneTermin).ToList(),
-                    BerechneMittlereArztBehandlungszeit())
+                    BerechneMittlereArztBehandlungszeit(),
+                    saisonfaktor)
             };
 
             double auswertungsdauer = statistiken.Values.FirstOrDefault()?.Gesamtdauer ?? 0.0;
-            return new WartezeitenAuswertung(auswertungsdauer, events.Count, warteschlangen, auslastungen, bereiche, wartezeiten, behandlungszeiten);
+            return new WartezeitenAuswertung(auswertungsdauer, events.Count, normalisierterZeitraum, saisonfaktor, warteschlangen, auslastungen, bereiche, wartezeiten, behandlungszeiten);
         }
 
         private static void VerarbeiteEvent(
@@ -444,18 +458,19 @@ internal sealed partial class FinanzWpfFenster
                 patienten.Remove(patientId);
         }
 
-        private static AnzahlZeile ErzeugeAnzahlZeile(string name, AnzahlStatistik statistik)
+        private static AnzahlZeile ErzeugeAnzahlZeile(string name, AnzahlStatistik statistik, double saisonfaktor)
         {
             return new AnzahlZeile(
                 name,
-                statistik.Minimum,
-                Math.Round(statistik.Durchschnitt, 2),
-                statistik.Maximum);
+                Math.Round(statistik.Minimum * saisonfaktor, 2),
+                Math.Round(statistik.Durchschnitt * saisonfaktor, 2),
+                Math.Round(statistik.Maximum * saisonfaktor, 2));
         }
 
         private static WartezeitZeile ErzeugeWartezeitZeile(
             string name,
             IReadOnlyList<double> werte,
+            double saisonfaktor,
             double? ausreisserGrenzeMinuten = null)
         {
             List<double> ausgewerteteWerte = ausreisserGrenzeMinuten.HasValue
@@ -465,10 +480,10 @@ internal sealed partial class FinanzWpfFenster
 
             return new WartezeitZeile(
                 name,
-                werte.Count,
+                SkaliereAnzahl(werte.Count, saisonfaktor),
                 "Minuten",
-                ausgewerteteWerte.Count,
-                ausreisserAnzahl,
+                SkaliereAnzahl(ausgewerteteWerte.Count, saisonfaktor),
+                SkaliereAnzahl(ausreisserAnzahl, saisonfaktor),
                 ausreisserGrenzeMinuten.HasValue ? $"> {ausreisserGrenzeMinuten.Value.ToString("N0", DeCulture)} min" : "-",
                 Math.Round(ausgewerteteWerte.Count > 0 ? ausgewerteteWerte.Min() : 0.0, 2),
                 Math.Round(ausgewerteteWerte.Count > 0 ? ausgewerteteWerte.Average() : 0.0, 2),
@@ -478,7 +493,8 @@ internal sealed partial class FinanzWpfFenster
         private static BehandlungszeitVergleichZeile ErzeugeBehandlungszeitVergleichZeile(
             string name,
             IReadOnlyList<double> tatsaechlicheWerte,
-            double erwarteteDauer)
+            double erwarteteDauer,
+            double saisonfaktor)
         {
             double durchschnitt = tatsaechlicheWerte.Count > 0 ? tatsaechlicheWerte.Average() : 0.0;
             double differenz = durchschnitt - erwarteteDauer;
@@ -486,7 +502,7 @@ internal sealed partial class FinanzWpfFenster
 
             return new BehandlungszeitVergleichZeile(
                 name,
-                tatsaechlicheWerte.Count,
+                SkaliereAnzahl(tatsaechlicheWerte.Count, saisonfaktor),
                 "Minuten",
                 Math.Round(durchschnitt, 2),
                 Math.Round(erwarteteDauer, 2),
@@ -499,24 +515,66 @@ internal sealed partial class FinanzWpfFenster
             AnzahlStatistik statistik,
             int kapazitaet,
             int behandeltePatienten,
-            double erwartbarePatientenKapazitaet)
+            double erwartbarePatientenKapazitaet,
+            double saisonfaktor)
         {
             double verfuegbareKapazitaetsminuten = kapazitaet * Program.SimulierteArbeitstage * SimulationKonfiguration.SIMULATIONSDAUER;
+            double belegteMinuten = statistik.BelegteMinuten * saisonfaktor;
+            int skalierteBehandeltePatienten = SkaliereAnzahl(behandeltePatienten, saisonfaktor);
             double zeitbasierteAuslastung = verfuegbareKapazitaetsminuten > 0.0
-                ? (statistik.BelegteMinuten / verfuegbareKapazitaetsminuten) * 100.0
+                ? (belegteMinuten / verfuegbareKapazitaetsminuten) * 100.0
                 : 0.0;
             double patientenbasierteAuslastung = erwartbarePatientenKapazitaet > 0.0
-                ? (behandeltePatienten / erwartbarePatientenKapazitaet) * 100.0
+                ? (skalierteBehandeltePatienten / erwartbarePatientenKapazitaet) * 100.0
                 : 0.0;
 
             return new AuslastungZeile(
                 name,
                 kapazitaet,
-                Math.Round(statistik.BelegteMinuten, 2),
+                Math.Round(belegteMinuten, 2),
                 Math.Round(zeitbasierteAuslastung, 2),
-                behandeltePatienten,
+                skalierteBehandeltePatienten,
                 Math.Round(erwartbarePatientenKapazitaet, 2),
                 Math.Round(patientenbasierteAuslastung, 2));
+        }
+
+        private static int SkaliereAnzahl(int anzahl, double saisonfaktor)
+        {
+            return (int)Math.Round(anzahl * saisonfaktor, MidpointRounding.AwayFromZero);
+        }
+
+        private static string NormalisiereZeitraum(string? zeitraum)
+        {
+            if (string.IsNullOrWhiteSpace(zeitraum))
+                return "Jahr";
+
+            return FinanzVisualisierung.ZeitraumOptionen
+                .FirstOrDefault(option => string.Equals(option, zeitraum.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? "Jahr";
+        }
+
+        private static double ErmittleSaisonfaktor(string zeitraum)
+        {
+            List<int> tage = FinanzVisualisierung.GetDayNumbersForPeriod(zeitraum);
+            if (tage.Count == 0)
+                return 1.0;
+
+            return tage
+                .Select(tag => ErmittleSaisonfaktorFuerSaison(FinanzVisualisierung.GetSeasonFromDay(tag)))
+                .Average();
+        }
+
+        private static double ErmittleSaisonfaktorFuerSaison(string saison)
+        {
+            var faktoren = KonfigurationJsonExport.Finanzen.Saisonfaktoren;
+            return saison switch
+            {
+                "Winter" => faktoren.Winter,
+                "Fruehling" => faktoren.Fruehling,
+                "Sommer" => faktoren.Sommer,
+                "Herbst" => faktoren.Herbst,
+                _ => 1.0
+            };
         }
 
         private static double BerechneErwartbarePatientenKapazitaet(int kapazitaet, double mittlereDauerMinuten)
@@ -585,7 +643,7 @@ internal sealed partial class FinanzWpfFenster
 
     private sealed record TraceEvent(int Index, double GlobalZeit, string EventTyp, int PatientId);
 
-    private sealed record AnzahlZeile(string Name, int Minimum, double Durchschnitt, int Maximum);
+    private sealed record AnzahlZeile(string Name, double Minimum, double Durchschnitt, double Maximum);
 
     private sealed record AuslastungZeile(
         string Name,

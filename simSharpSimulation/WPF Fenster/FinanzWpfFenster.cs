@@ -589,7 +589,7 @@ internal sealed partial class FinanzWpfFenster : Window
             hitMissErgebnisTextBox.Text = ErzeugeHitMissErgebnisText(anzahlHit, anzahlMiss, hitMissPfad);
             hitMissImage.Source = LadeBild(hitMissPfad);
 
-            AktualisiereWartezeitenTab(simulationsDaten);
+            AktualisiereWartezeitenTab(simulationsDaten, zeitraum);
             AktualisiereSimulationsUebersicht(simulationsDaten);
             AktualisierePrognoseTab();
             
