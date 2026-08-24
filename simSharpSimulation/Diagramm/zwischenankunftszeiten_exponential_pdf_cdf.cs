@@ -25,7 +25,7 @@ namespace simSharpSimulation
             double maxZeit = Math.Max(10.0, phasen.Max(p => p.Mittelwert) * 4.0);
             double[] x = Linspace(0.0, maxZeit, 600);
 
-            var plot = new ScottPlot.Plot(1100, 650);
+            var plot = new ScottPlot.Plot(1400, 800);
             var axisRight = plot.AddAxis(ScottPlot.Renderable.Edge.Right);
 
             const int histogrammBins = 40;
@@ -51,9 +51,8 @@ namespace simSharpSimulation
 
                 var bars = plot.AddBar(dichte, verschobeneCenters);
                 bars.BarWidth = balkenBreite * 0.9;
-                bars.FillColor = Color.FromArgb(90, phase.Farbe);
+                bars.FillColor = Color.FromArgb(55, phase.Farbe);
                 bars.BorderColor = phase.Farbe;
-                bars.Label = $"Histogramm {phase.Name} (n={phase.Abstaende.Count})";
             }
 
             foreach (var phase in phasen)
@@ -66,28 +65,43 @@ namespace simSharpSimulation
                     x,
                     pdf,
                     color: phase.Farbe,
-                    lineWidth: 3,
-                    label: $"PDF {phase.Name} (Mittel {phase.Mittelwert:0.0} min)");
+                    lineWidth: 4,
+                    markerSize: 0,
+                    label: $"{phase.Name} (n={phase.Abstaende.Count}, Mittel {phase.Mittelwert:0.0} min)");
 
                 var cdfLine = plot.AddScatter(
                     x,
                     cdf,
                     color: phase.Farbe,
                     lineStyle: ScottPlot.LineStyle.Dash,
-                    lineWidth: 2,
-                    label: $"CDF {phase.Name}");
+                    lineWidth: 3,
+                    markerSize: 0);
                 cdfLine.YAxisIndex = axisRight.AxisIndex;
             }
 
-            plot.Title("Exponentielle Zwischenankunftszeiten je Tagesphase\nPDF und kumulierte Verteilung (CDF)");
-            plot.XLabel("Zwischenankunftszeit bis zum naechsten Patienten (Minuten)");
+            plot.Title(
+                "Exponentielle Zwischenankunftszeiten je Tagesphase\n" +
+                "Histogramm und PDF (durchgezogen), CDF (gestrichelt)",
+                size: 22);
+            plot.XLabel("Zwischenankunftszeit bis zum nächsten Patienten (Minuten)");
             plot.YLabel("Wahrscheinlichkeitsdichte (PDF)");
             axisRight.Label("Kumulierte Wahrscheinlichkeit (CDF)");
             axisRight.SetBoundary(0.0, 1.05);
-            plot.Legend(location: ScottPlot.Alignment.UpperRight);
-            plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Dot);
+            plot.SetAxisLimits(xMin: 0.0, xMax: maxZeit, yMin: 0.0);
 
-            string outputPath = ErzeugeOutputPfad("zwischenankunftszeiten_exponential_pdf_cdf.png");
+            plot.XAxis.LabelStyle(fontSize: 17);
+            plot.YAxis.LabelStyle(fontSize: 17);
+            axisRight.LabelStyle(fontSize: 17);
+            plot.XAxis.TickLabelStyle(fontSize: 13);
+            plot.YAxis.TickLabelStyle(fontSize: 13);
+            axisRight.TickLabelStyle(fontSize: 13);
+
+            var legend = plot.Legend(location: ScottPlot.Alignment.UpperRight);
+            legend.FontSize = 14;
+            legend.FillColor = Color.FromArgb(235, Color.White);
+            plot.Grid(enable: true, lineStyle: ScottPlot.LineStyle.Solid, color: Color.Gainsboro);
+
+            string outputPath = ErzeugeOutputPfad("zwischenankunftszeiten_exponential_pdf_cdf_lesbarer.png");
             plot.SaveFig(outputPath);
             Console.WriteLine($"--- Diagramm Zwischenankunftszeiten gespeichert: {outputPath} ---");
         }

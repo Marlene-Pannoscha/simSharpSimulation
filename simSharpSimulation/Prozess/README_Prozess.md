@@ -1,335 +1,340 @@
-# README Prozess
+# Prozesslogik der Klinik-Simulation
 
-Diese Datei dokumentiert die Ablauf- und Prognoselogik im Ordner `simSharpSimulation/Prozess`.
+Diese Datei dokumentiert den aktuellen Stand der Ablauf-, Ressourcen-, Zufalls- und Prognoselogik im Ordner `simSharpSimulation/Prozess`.
 
-## Überblick
+## 1. Überblick
 
-Der Prozessbereich ist in zwei Ebenen aufgeteilt:
+Der Prozessbereich besteht aus folgenden Bausteinen:
 
-- `PatientenGenerator.cs` erzeugt die Patientenankünfte eines Tages.
-- der Unterordner `PatientenProzess/` enthält die aufgeteilte `partial class PatientenProzess`.
-- `RezeptionPhase.cs`, `SchwesterPhase.cs` und `ArztPhase.cs` kapseln die stationsspezifische Wartelogik, Behandlung und Feierabend-Abbrüche.
-- `BehandlungsPhaseErgebnis.cs` dient als einfacher Rückkanal, damit eine Phase dem Hauptprozess melden kann, dass der Patient die Klinik bereits verlassen hat.
+- `PatientenGenerator.cs` erzeugt die Patientenankünfte und startet für jede zugelassene Ankunft einen eigenen SimSharp-Prozess.
+- `PatientenProzess/PatientenProzess.cs` richtet für jeden Arbeitstag die Simulationsumgebung und alle Ressourcen ein.
+- `PatientenProzess/PatientenProzess.PatientenAblauf.cs` beschreibt den vollständigen Weg eines Patienten durch die Klinik.
+- `PatientenProzess/PatientenProzess.Prognose.cs` berechnet Restzeitprognosen, verwaltet die Aufnahmeprognose und führt prognosebedingte Abbrüche aus.
+- `PatientenProzess/PatientenProzess.Helfer.cs` erzeugt die zufälligen Behandlungs- und Wartezimmerdauern.
+- `RezeptionPhase.cs`, `SchwesterPhase.cs` und `ArztPhase.cs` kapseln Ressourcenzuteilung, Warteschlangen, Behandlung und Feierabendabbrüche der jeweiligen Station.
+- `BeweglicherArztPool.cs` und `BeweglicherSchwesterPool.cs` verbinden eine priorisierte Personalressource mit konkreten Mitarbeiter-IDs.
+- `PrognoseRessourcenStatus.cs` bildet Warteschlangen und aktive Bearbeitungen für die Restzeitprognose nach.
+- `BehandlungsPhaseErgebnis.cs` meldet dem Hauptprozess, dass ein Patient die Klinik bereits innerhalb einer Stationsphase verlassen hat.
 
-Die Prognoselogik sitzt aktuell zentral im Unterordner `PatientenProzess/`, fachlich aber weiterhin in derselben Klasse `PatientenProzess`. Die Stationsklassen berechnen selbst keine Prognosen, sondern schließen nur offene Prognoseprüfungen, wenn ein Patient wegen Feierabend die Klinik verlassen muss.
+## 2. Tagessteuerung und Ressourcen
 
-## Dateien und Verantwortung
+`PatientenProzess.FuehreAus()` simuliert `Program.SimulierteArbeitstage`. Der erste simulierte Tag ist Montag, der 3. Januar 2000. Für jeden Tag werden eine neue `Simulation` und neue Ressourcen erzeugt:
 
-### `PatientenGenerator.cs`
+- Rezeption als `Resource` mit `RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN`
+- Ärzte als `BeweglicherArztPool` auf Basis einer `PriorityResource`
+- Schwestern als `BeweglicherSchwesterPool` auf Basis einer `PriorityResource`
+- Arztzimmer als eigene `Resource`
+- Schwesterzimmer als eigene `Resource`
+- je ein `PrognoseRessourcenStatus` für Rezeption, Schwestern und Ärzte
 
-Verantwortung:
+Die Anzahl der Arzt- und Schwesterzimmer stammt aus der Finanz- beziehungsweise Raumkonfiguration. Vor einer Arzt- oder Schwesterbehandlung müssen sowohl ein Mitarbeiter als auch ein passender Raum verfügbar sein. In der aktuellen Implementierung wird der Raum-Request nach der Verfügbarkeitsprüfung wieder freigegeben; die Personalressource bleibt bis zum Ende der Behandlung belegt.
 
-- erzeugt pro Tag bis zu `PatientenKonfiguration.ANZAHL_PATIENTEN_TAG` Ankunftszeitpunkte
-- verwendet eine Normalverteilung mit `ERWARTUNGSWERT` und `STANDARDABWEICHUNG`
-- verwirft Ankünfte nach `SimulationKonfiguration.SIMULATIONSDAUER`
-- sortiert alle Ankünfte chronologisch
-- behandelt Patienten vor Öffnung explizit als FIFO-Warteschlange
-- startet für jede Ankunft einen separaten Patientenprozess mit `env.Process(...)`
+Die Patienten-IDs beginnen pro Tag bei `(TagIndex * 10.000) + 1`. Dadurch bleiben sie über mehrere simulierte Tage eindeutig.
 
-Wichtig:
+Neue Ankünfte werden nur innerhalb der konfigurierten `SIMULATIONSDAUER` erzeugt. Bereits gestartete Patientenprozesse dürfen nachlaufen. Die SimSharp-Umgebung endet spätestens nach:
 
-- Der Generator entscheidet nur, wann Patienten eintreffen.
-- Die gesamte fachliche Logik ab Klinik-Eintritt liegt im Unterordner `PatientenProzess/`.
+```text
+SIMULATIONSDAUER + 180 Minuten Nachlaufpuffer
+```
 
-### `PatientenProzess/PatientenProzess.cs`
+## 3. Ankunftsprozess
 
-Verantwortung:
+### 3.1 Verwendete Verteilung
 
-- Konstruktor der Klasse `PatientenProzess`
-- Tages-Orchestrierung in `FuehreAus()`
-- Erzeugung von SimSharp-Ressourcen pro Tag
-- Start des `PatientenGenerator`
-- Steuerung von Tagesstart, Tagesende und Nachlaufpuffer
+Die Ankünfte folgen einem phasenweise homogenen Poisson-Prozess. Die Zwischenankunftszeiten sind innerhalb jeder Tagesphase unabhängig exponentialverteilt:
 
-### `PatientenProzess/PatientenProzess.PatientenAblauf.cs`
+```text
+T_j ~ Exp(lambda_j)
+lambda_j = 1 / m_j
+```
 
-Verantwortung:
+Dabei bezeichnet `m_j` die konfigurierte mittlere Zwischenankunftszeit der Phase. Entsprechend ist die Zahl der Ankünfte in einem Zeitintervall der Länge `t` poissonverteilt:
 
-- kompletter End-to-End-Ablauf eines einzelnen Patienten
-- Entscheidung über Terminpfad, Schwesterpfad, Arztpfad und Rückweg zur Rezeption
-- Einbettung aller Prognose-Checkpoints in den fachlichen Ablauf
-- Abschluss des Patienten mit `verlaesst_klinik` und Gesamtprozesszeit
+```text
+N_j(t) ~ Poisson(lambda_j * t)
+```
 
-### `PatientenProzess/PatientenProzess.Prognose.cs`
+Die aktuelle Aufteilung lautet:
 
-Verantwortung:
+1. Minute 0 bis 120: `ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN`
+2. Minute 120 bis 300: `ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN`
+3. Minute 300 bis zum Simulationsende: `ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN`
 
-- Prognose-Checkpoints
-- Prognose-Abbruchlogik
-- Berechnung der erwarteten Restzeiten
-- Hilfsformeln für Schwester-, Arzt- und Ausgangspfad
+Für jede Phase beginnt die Generierung am Phasenanfang. Wiederholt wird eine exponentialverteilte Zwischenankunftszeit addiert, bis der nächste Zeitpunkt außerhalb der Phase liegt. Eine feste Patientenzahl pro Tag und eine Normalverteilung der Ankunftszeit werden nicht verwendet.
 
-### `PatientenProzess/PatientenProzess.Helfer.cs`
+### 3.2 Aufnahmestopp vor Schließung
 
-Verantwortung:
+Der Generator berechnet den Aufnahmestopp als:
 
-- Auswahl freier oder zufälliger Ressourcen
-- Wahl des `PatientenTyp`
-- technische Hilfsmethoden zur Belegungsprüfung
+```text
+SIMULATIONSDAUER - PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN
+```
 
-### `BehandlungsPhaseErgebnis.cs`
+Mit der Standardkonfiguration liegt dieser Zeitpunkt 60 Minuten vor Schließung. Generierte Ankünfte ab diesem Zeitpunkt starten keinen Patientenprozess. Sie werden mit `abgewiesen_vor_klinik_wegen_aufnahmeprognose` protokolliert und als durch die Aufnahmeprognose abgewiesen erfasst.
 
-Verantwortung:
+Der Generator dokumentiert außerdem eine theoretische Arztkapazität. Sie ergibt sich aus Simulationsdauer, Anzahl der Ärzte und mittlerer Arztbehandlungsdauer. Die eigentliche Auswahl bereits aktiver Patienten am Prüfzeitpunkt erfolgt jedoch in `PatientenProzess.Prognose.cs`.
 
-- transportiert nur ein Flag: `PatientHatKlinikVerlassen`
-- wird von Stationsphasen gesetzt, wenn dort ein endgültiger Abbruch passiert
-- verhindert, dass `PatientenProzess` nach einer bereits beendeten Phase versehentlich weiterläuft
+## 4. Zufallsentscheidungen und Verteilungen eines Patienten
 
-## Hauptfluss in `PatientenProzess/`
+Beim Eintritt werden die wesentlichen Zufallswerte eines Patienten einmalig gezogen. Prognose und späterer Prozess verwenden dadurch dieselben konkreten Werte.
 
-### Tagessteuerung
+### 4.1 Patiententyp
 
-`PatientenProzess/PatientenProzess.cs` enthält `FuehreAus()` und erzeugt für jeden simulierten Arbeitstag:
+Der Patiententyp wird aus `PatientenKonfiguration.TYPEN_VERTEILUNG` ausgewählt:
 
-- eine neue `Simulation`
-- die Arzt-Ressourcen als `PriorityResource`
-- die Schwester-Ressourcen als `PriorityResource`
-- die Rezeption als `Resource`
+- `Kurz`
+- `Mittel`
+- `Lang`
 
-Danach startet der Generator den Tagesfluss. Jeder Tag läuft bis `SIMULATIONSDAUER + 180 Minuten Nachlaufpuffer`.
+Jeder Typ besitzt eine Wahrscheinlichkeit sowie eigene Mittelwerte und Variationskoeffizienten für Arzt- und Schwesterbehandlungen.
 
-### Patientenfluss
+### 4.2 Termin und Vorbereitung
 
-`PatientenProzess/PatientenProzess.PatientenAblauf.cs` enthält den normalen Pfad eines Patienten:
+Der Terminstatus folgt einer Bernoulli-Entscheidung mit `TERMIN_WAHRSCHEINLICHKEIT`. Ob eine Schwester-Vorbereitung erforderlich ist, wird anschließend mit einer terminabhängigen Wahrscheinlichkeit bestimmt:
 
-1. `betritt_klinik`
-2. Bewegung zur Rezeption
-3. Rezeption
-4. optional Schwester-Vorbereitung
-5. Wartezimmer für Arzt
-6. Arzt
-7. optional Rückweg zur Rezeption
-8. Ausgang
-9. `verlaesst_klinik`
+- mit Termin: `TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT`
+- ohne Termin: `OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT`
 
-Zusätzlich werden früh festgelegt:
+Terminpatienten erhalten keine eigene Ressourcenpriorität. Der Terminstatus verändert in der aktuellen Logik vor allem die Wahrscheinlichkeit der Schwester-Vorbereitung und die Wartezimmerdauer.
 
-- `PatientenTyp` über `PatientenKonfiguration.TYPEN_VERTEILUNG`
-- `hatTermin`
+### 4.3 Behandlungsdauern
 
-Diese beiden Werte beeinflussen:
+Folgende Dauern sind lognormalverteilt:
 
-- Priorität bei Schwester und Arzt
-- mittlere Behandlungsdauer
-- Wartezimmerdauern
-- Prognose der Restlaufzeit
+- erste Rezeptionsbehandlung
+- optionale zweite Rezeptionsbehandlung
+- Schwesterbehandlung, abhängig vom Patiententyp
+- Arztbehandlung, abhängig vom Patiententyp
 
-## Prognosemodell
+Aus Mittelwert `m` und Variationskoeffizient `v` werden die Parameter der Lognormalverteilung berechnet:
 
-### Grundidee
+```text
+Varianz = (v * m)^2
+mu      = ln(m) - 0,5 * ln(1 + Varianz / m^2)
+sigma   = sqrt(ln(1 + Varianz / m^2))
+```
 
-Das Prognosemodell schätzt an mehreren Punkten die verbleibende Restzeit bis zum Verlassen der Klinik.
+### 4.4 Wartezimmerdauern
 
-Jede Prüfung speichert:
+Die vorgeschalteten Wartezimmerdauern für Schwester und Arzt sind exponentialverteilt. Ihr Erwartungswert ist jeweils:
 
-- Patient-ID
-- Phase
-- Prüfzeitpunkt
-- prognostizierte Restminuten
-- Boolean `PrognoseFertigBisSchichtende`
+```text
+mittlere Wartezimmerdauer * Terminfaktor
+```
 
-Die Speicherung erfolgt über `SimulationsDaten.ErfassePrognosePruefung(...)`.
+Für Patienten mit und ohne Termin gelten unterschiedliche Faktoren. Diese zufällige Wartezimmerdauer ist von der anschließenden ressourcenbedingten Queue-Wartezeit zu unterscheiden: Nach Ablauf der Wartezimmerdauer kann weiterhin auf Personal oder Raum gewartet werden.
 
-Die spätere Auswertung erfolgt über `SimulationsDaten.SchliessePrognosen(...)`, sobald der Patient die Klinik tatsächlich verlassen hat.
+### 4.5 Rückweg zur Rezeption
 
-### Aktuelle Checkpoints
+Nach der Arztbehandlung gehen 60 Prozent der Patienten noch einmal zur Rezeption. Diese Entscheidung wird ebenfalls bereits beim Eintritt gezogen. Die zweite Rezeption bildet beispielsweise Folgetermin- oder Rezeptvorgänge ab.
 
-Die Prognose wird in `PatientenProzess/PatientenProzess.PatientenAblauf.cs` an diesen Phasen ausgelöst:
+## 5. Vollständiger Patientenfluss
+
+Der normale End-to-End-Ablauf lautet:
+
+1. Eintritt in die Klinik und Erfassung der Ankunftszeit
+2. Zuweisung von Patiententyp, Terminstatus, Behandlungspfad und sämtlichen Zufallsdauern
+3. Checkpoint `Ankunft`
+4. Bewegung zur Rezeption
+5. erste Rezeptionsphase
+6. Entscheidung über eine Schwester-Vorbereitung
+7. Checkpoint `NachRezeption`
+8. optional Wartezimmer und Checkpoint `VorSchwester`
+9. optional Schwesterphase und Checkpoint `NachSchwester`
+10. Arztwartezimmer und Checkpoint `VorArzt`
+11. Arztphase und Checkpoint `NachArzt`
+12. optional zweite Rezeptionsphase
+13. Bewegung zum Ausgang
+14. Verlassen der Klinik und Abschluss aller Prognosen
+
+Wenn keine Schwester-Vorbereitung benötigt wird, wird `ueberspringt_schwester` protokolliert. Benötigt der Patient eine Vorbereitung und ist sofort eine Schwester verfügbar, kann er ohne vorgeschalteten Wartezimmerpfad direkt die Schwesterphase anfordern.
+
+Die Gesamtprozesszeit wird nur beim regulären Abschluss als Zeit zwischen `betritt_klinik` und `verlaesst_klinik` erfasst.
+
+## 6. Rezeption
+
+`RezeptionPhase.DurchlaufeRezeption()` führt folgende Schritte aus:
+
+1. Eintritt in die Rezeptionswarteschlange
+2. Registrierung im Prognose-Ressourcenstatus
+3. Protokollierung, ob die Rezeption beim Eintritt frei war
+4. Warten auf einen Rezeptionsplatz oder auf das Schichtende
+5. Erfassung der Queue-Wartezeit
+6. Durchführung der zuvor gezogenen lognormalverteilten Rezeptionsdauer
+7. Abschluss und Freigabe der Ressource
+
+Bei der ersten Rezeption wird Termin beziehungsweise kein Termin protokolliert. Bei der zweiten Rezeption wird `behandlung_bereits_fertig` sowie `macht_folgetermin_aus_oder_rezept` protokolliert.
+
+Erhält ein wartender Patient bis zum Schichtende keinen Platz, wird der Vorgang mit `bricht_ab_wegen_feierabend_rezeption` beendet. Der Patient geht zum Ausgang, verlässt die Klinik und alle offenen Prognosen werden geschlossen. Eine bereits begonnene Rezeptionsbehandlung darf über das Schichtende hinaus abgeschlossen werden.
+
+## 7. Schwesterphase
+
+Die Schwesterphase verwendet sowohl den beweglichen Schwesterpool als auch die Schwesterzimmer-Ressource.
+
+Die Prioritäten lauten:
+
+```text
+Kurz   -> Priorität 1
+Mittel -> Priorität 2
+Lang   -> Priorität 3
+```
+
+Ein kleinerer Zahlenwert besitzt die höhere Priorität. Bei gleicher Priorität verwaltet die `PriorityResource` die Reihenfolge. Der Request wird sofort gestellt, damit wartende Patienten korrekt eingeordnet werden.
+
+Nach erfolgreicher Zuteilung von Schwester und Raum wird eine konkrete Schwester-ID übernommen. Es folgen Bewegung, Betreten des Schwesterzimmers und die zuvor gezogene lognormalverteilte Behandlung. Danach wird die ID wieder an den Pool zurückgegeben.
+
+Wird bis zum Schichtende keine Schwester beziehungsweise kein Raum zugeteilt, erfolgt `bricht_ab_wegen_feierabend_schwester`. Eine bereits begonnene Behandlung darf nach Schichtende beendet werden.
+
+## 8. Arztphase
+
+Die Arztphase arbeitet analog zur Schwesterphase mit dem beweglichen Arztpool und der Arztzimmer-Ressource. Auch hier gilt die Prioritätsreihenfolge `Kurz`, `Mittel`, `Lang`.
+
+Ein Patient zählt als behandelter `Hit`, sobald Arzt und Raum erfolgreich zugeteilt wurden und der Weg zur Behandlung beginnt. Nach dem Betreten des Arztzimmers wird die zuvor gezogene lognormalverteilte Arztbehandlung ausgeführt.
+
+Wird bis zum Schichtende kein Arzt beziehungsweise kein Raum zugeteilt, erfolgt `bricht_ab_wegen_feierabend_arzt`. Eine bereits begonnene Arztbehandlung läuft dagegen bis zum Ende weiter.
+
+## 9. Bewegliche Personalpools
+
+`BeweglicherArztPool` und `BeweglicherSchwesterPool` kapseln jeweils:
+
+- eine `PriorityResource` mit der konfigurierten Mitarbeiterzahl
+- eine FIFO-Liste freier Mitarbeiter-IDs
+- aktuelle Anzahl freier und belegter Mitarbeiter
+- Länge der internen Request-Warteschlange
+- Anfordern und Freigeben der Personalressource
+
+Die Prioritätsressource entscheidet, welcher Patient als Nächstes Personal erhält. Die separate ID-Liste ordnet einer begonnenen Behandlung anschließend eine konkrete Arzt- oder Schwester-ID für den Trace zu.
+
+## 10. Prognosemodell
+
+### 10.1 Checkpoints
+
+Restzeitprognosen werden an folgenden Punkten gespeichert:
 
 - `Ankunft`
 - `NachRezeption`
-- `VorSchwester`
-- `NachSchwester`
+- `VorSchwester`, sofern eine Schwesterphase stattfindet
+- `NachSchwester`, sofern eine Schwesterphase stattfindet
 - `VorArzt`
 - `NachArzt`
 
-### Berechnungsprinzip
+Jede Prüfung enthält unter anderem Patient-ID, Phase, Zeitpunkt, prognostizierte Restzeit, prognostizierte restliche Bearbeitungszeit, bereits verbrauchte Bearbeitungszeit, Kalibrierungskorrektur und die Entscheidung, ob ein Abschluss bis zum Schichtende erwartet wird.
 
-Die Restzeit wird aktuell aus Mittelwerten zusammengesetzt, nicht aus exakten Queue-Längen.
+### 10.2 Bestandteile der Restzeit
 
-Verwendet werden insbesondere:
+Die Prognose verwendet:
 
-- Bewegungszeiten aus `SimulationKonfiguration`
-- mittlere Rezeptionszeit aus `RezeptionKonfiguration`
-- mittlere Schwester-Behandlungszeit aus `SchwesterKonfiguration`
-- mittlere Arzt-Behandlungszeit aus `ArztKonfiguration`
-- mittlere Wartezimmerzeiten und Terminfaktoren aus `PatientenKonfiguration`
-- Pfadwahrscheinlichkeit `WahrscheinlichkeitNachArztZurRezeption = 0.6`
+- die bereits gezogenen konkreten Behandlungsdauern
+- den bereits gezogenen konkreten Patientenpfad
+- Bewegungszeiten
+- die gezogenen exponentiellen Wartezimmerdauern
+- geschätzte Queue-Wartezeiten an Rezeption, Schwester und Arzt
+- Kapazität und aktive Endzeiten der jeweiligen Station
+- geplante zukünftige Ankunftszeitpunkte an den Stationen
+- Bearbeitungsdauer, Priorität und Einfügereihenfolge wartender Patienten
 
-Die Formeln liegen in `PatientenProzess/PatientenProzess.Prognose.cs`.
+Damit ist die Prognose nicht mehr ausschließlich mittelwertbasiert. Sie ist queue-sensitiv, bildet die Warteschlangen jedoch in einem separaten Prognosemodell nach und liest nicht den vollständigen internen SimSharp-Zustand aus.
 
-Hilfsmethoden der Prognose:
+### 10.3 Queue-Schätzung
 
-- `BerechneErwarteteSchwesterRestzeit(...)`
-- `BerechneSchwesterRestzeitNachRezeption(...)`
-- `BerechneRestzeitAbSchwester(...)`
-- `BerechneErwarteteRestzeitNachArzt(...)`
-- `BerechneRestzeitNachArztMitKonkretemPfad(...)`
-- `BerechneMittlereSchwesterWartezimmerzeit(...)`
-- `BerechneMittlereArztWartezimmerzeit()`
+`PrognoseRessourcenStatus` verwaltet aktive Bearbeitungen und wartende beziehungsweise bereits geplante Patienten. Für eine Schätzung werden die Server nach ihrem frühesten Frei-Zeitpunkt betrachtet. Der jeweils nächste Patient wird nach folgenden Regeln gewählt:
 
-### Was die Prognose aktuell nicht berücksichtigt
+1. Bereits am Serverzeitpunkt verfügbare Patienten
+2. niedrigster Prioritätswert
+3. frühere Einfügereihenfolge
 
-Noch nicht enthalten:
+Ist noch niemand verfügbar, wird zur nächsten geplanten Bereit-Zeit vorgerückt. Die geschätzte Queue-Wartezeit ist die Differenz zwischen dem berechneten Bearbeitungsbeginn und der Stationsankunft des betrachteten Patienten.
 
-- konkrete Queue-Länge an Rezeption, Schwester oder Arzt
-- genaue Restarbeitszeit anderer bereits wartender Patienten
-- tatsächliche Ressourcenauslastung über mehrere Ressourcen hinweg
-- konkrete Warteposition des Patienten in der Schlange
+Die Queue-Prognose berücksichtigt Personal- beziehungsweise Rezeptionskapazitäten. Die gesonderten Arzt- und Schwesterzimmerkapazitäten werden im Prognose-Ressourcenstatus derzeit nicht abgebildet.
 
-Deshalb ist das Modell aktuell ein mittelwertbasiertes Flussmodell, kein queue-genaues Vorhersagemodell.
+### 10.4 Kalibrierung
 
-## Prognosebasierter Abbruch
+Vor der Schichtendeprüfung kann `SimulationsDaten` eine phasenspezifische Restzeitkorrektur liefern. Die Kalibrierung ist standardmäßig aktiv und beginnt nach mindestens zwölf abgeschlossenen Beobachtungen einer Phase. Sie verwendet eine geglättete Abweichung mit Lernrate 0,04 und begrenzt die Korrektur auf plus oder minus zwölf Minuten.
 
-### Auslöser
+Die Entscheidung am Checkpoint lautet:
 
-`ErfassePrognoseCheckpoint(...)` gibt `true` oder `false` zurück:
+```text
+aktueller Zeitpunkt + kalibrierte Prognose-Restzeit <= SIMULATIONSDAUER
+```
 
-- `true`: Prognose sagt, der Patient wird voraussichtlich vor Schichtende fertig
-- `false`: Prognose sagt, der Patient wird voraussichtlich nicht vor Schichtende fertig
+Ist die Bedingung falsch, wird der Patientenprozess sofort prognosebedingt beendet.
 
-Wenn `false` zurückkommt, beendet `PatientenProzess/PatientenProzess.PatientenAblauf.cs` den Ablauf sofort mit `BrichWegenPrognoseAb(...)` aus `PatientenProzess/PatientenProzess.Prognose.cs`.
+## 11. Prognosebedingte Abbrüche
 
-### Verhalten bei Prognose-Abbruch
+Bei einer negativen Restzeitprognose führt `BrichWegenPrognoseAb()` den Patienten über einen zum Standort passenden Weg zum Ausgang. Erfasst werden Phase und Zeitpunkt des Prognoseabbruchs. Im Trace wird bewusst kein separates Event `prognose_abbruch` geschrieben; sichtbar sind dort nur `geht_zum_ausgang` und `verlaesst_klinik`.
 
-`BrichWegenPrognoseAb(...)` macht aktuell:
+Verwendete Ausgangswege:
 
-1. `daten.ErfassePrognoseAbbruch(env.StartDate)`
-2. `geht_zum_ausgang`
-3. Bewegung zum Ausgang mit einer phasenspezifischen Wegzeit
-4. `verlaesst_klinik`
-5. `daten.SchliessePrognosen(patientId, nowMinutes)`
+- `Ankunft`: keine zusätzliche Wegzeit
+- `NachRezeption`: Rezeption zum Ausgang
+- `VorSchwester` und `NachSchwester`: interne Bewegungszeit
+- `VorArzt`: interne Bewegungszeit
+- `NachArzt`: Arzt zum Ausgang
 
-Wichtig:
+Nach dem Verlassen werden die offenen Prognosen geschlossen und der Patient aus allen Prognose-Ressourcenstatus entfernt.
 
-- Prognose-Abbrüche werden bewusst nicht als eigenes Trace-Event wie `prognose_abbruch` geloggt.
-- Im Trace sieht man daher nur den normalen Ausgangspfad.
-- Die Zählung erfolgt ausschließlich in `SimulationsDaten`.
+## 12. Aufnahmeprognose eine Stunde vor Schließung
 
-### Verwendete Wegzeiten beim Prognose-Abbruch
+Zusätzlich zum Aufnahmestopp des Generators wird zum konfigurierten Prüfzeitpunkt die verbleibende Arztkapazität geschätzt:
 
-Je nach Prozesspunkt wird eine andere Ausgangswegzeit verwendet:
+```text
+Kapazität = floor(Restminuten * Anzahl Ärzte / mittlere Arztbehandlungsdauer)
+```
 
-- bei `Ankunft`: `TimeSpan.Zero`
-- nach Rezeption: `rezeptionZumAusgangDauer`
-- vor oder nach Schwester: `interneBewegungsdauer`
-- vor Arzt: `interneBewegungsdauer`
-- nach Arzt: `arztZumAusgangDauer`
+Aktive Patienten werden nach prognostizierter Restzeit, Prüfzeitpunkt und Patient-ID sortiert. Bis zur geschätzten Kapazität werden sie zugelassen, weitere aktive Patienten als abzuweisen markiert. Diese Markierung wird an mehreren Übergängen des Patientenablaufs geprüft. Ein betroffener Patient erhält das Event `abgewiesen_wegen_aufnahmeprognose` und verlässt die Klinik.
 
-Das ist eine vereinfachte Annahme über den nächstliegenden realistischen Ausgangspfad.
+Die zwei Ereignisse sind daher zu unterscheiden:
 
-## Rezeption: `RezeptionPhase.cs`
+- `abgewiesen_vor_klinik_wegen_aufnahmeprognose`: Ankunft ab dem generatorseitigen Aufnahmestopp; der Patientenprozess startet nicht.
+- `abgewiesen_wegen_aufnahmeprognose`: bereits gestarteter Patient wird durch die kapazitätsbasierte Aufnahmeprognose beendet.
 
-### Verantwortung
+## 13. Feierabendlogik und Hit/Miss
 
-Die Rezeption kapselt:
+An Rezeption, Schwester und Arzt wartet ein Patient jeweils auf die Ressource oder parallel auf das Schichtende. Tritt das Schichtende zuerst ein, wird der Request abgebrochen und der Patient verlässt die Klinik.
 
-- Eintritt in die Rezeptionswarteschlange
-- Prüfung, ob Rezeption frei ist
-- Warten bis Ressource frei oder Feierabend erreicht ist
-- Durchführung der Rezeptionsbehandlung
-- Erfassung von Warte- und Behandlungszeit
-- Feierabend-Abbruch in der Rezeptionswarteschlange
+Die aktuelle Hit/Miss-Logik verwendet:
 
-### Wichtige Logik
+- `Hit`: eine Arztbehandlung wurde begonnen
+- `Miss`: Abbruch wegen Feierabend an Rezeption, Schwester oder Arzt
 
-- `IstRezeptionFrei(...)` prüft die aktuelle interne Belegung der Ressource per Reflection auf `Users`.
-- Wenn kein Platz frei ist, wartet der Patient auf `rezeption.WhenAny()` oder auf `schichtEnde`.
-- Die Behandlungsdauer ist lognormalverteilt um `MITTELREZEPTIONSZEIT`.
+Ältere Methoden für Abbrüche wegen maximaler Wartezeit sind in `SimulationsDaten` noch vorhanden, werden von den aktuellen Stationsphasen aber nicht verwendet. Es existiert derzeit keine separate maximale Wartezeit als Abbruchkriterium.
 
-### Bezug zur Prognose
+## 14. Wichtige Trace-Ereignisse
 
-Die Rezeption selbst erzeugt keine Prognose.
+Bewegungen folgen dem Muster:
 
-Sie hat aber zwei wichtige Berührungspunkte:
+- `geht_*`: Bewegung beginnt
+- `betritt_*`: Ziel wird nach der jeweiligen Bewegungszeit erreicht
 
-- Nach der ersten Rezeption folgt im Hauptprozess aus `PatientenProzess/PatientenProzess.PatientenAblauf.cs` der Checkpoint `NachRezeption`.
-- Wenn ein Patient wegen Feierabend in der Rezeptionswarteschlange abbricht, ruft die Phase `daten.SchliessePrognosen(...)` auf.
+Wichtige Gruppen sind:
 
-## Schwester: `SchwesterPhase.cs`
+- Klinik: `betritt_klinik`, `geht_zum_ausgang`, `verlaesst_klinik`
+- Rezeption: `betritt_rezeption_warteschlange`, `rezeption_frei`, `rezeption_nicht_frei`, `startet_rezeption`, `beendet_rezeption`
+- Schwester: `betritt_wartezimmer_schwester`, `betritt_schwester_warteschlange`, `startet_schwester_prozess`, `beendet_schwester_prozess`
+- Arzt: `betritt_wartezimmer_fuer_arzt`, `startet_arzt_behandlung`, `beendet_arzt_behandlung`
+- Feierabend: `bricht_ab_wegen_feierabend_rezeption`, `bricht_ab_wegen_feierabend_schwester`, `bricht_ab_wegen_feierabend_arzt`
+- Aufnahmeprognose: `abgewiesen_vor_klinik_wegen_aufnahmeprognose`, `abgewiesen_wegen_aufnahmeprognose`
 
-### Verantwortung
+## 15. Rolle von `BehandlungsPhaseErgebnis`
 
-Die Schwesterphase kapselt:
+Eine Stationsphase kann einen Patienten bereits vollständig zum Ausgang führen, beispielsweise bei einem Feierabendabbruch. `BehandlungsPhaseErgebnis.PatientHatKlinikVerlassen` verhindert anschließend, dass der übergeordnete Patientenablauf mit der nächsten Station fortgesetzt wird.
 
-- Eintritt in Schwester-Warteschlange oder Direktweg
-- Warten auf freie Schwester oder auf Feierabend
-- Prioritätsvergabe nach `PatientenTyp`
-- Bewegung ins Schwesterzimmer
-- Schwesterbehandlung
-- Feierabend-Abbruch in der Schwesterwarteschlange
-
-### Wichtige Logik
-
-- `GetPriority(...)` priorisiert kurze Fälle vor mittleren und langen Fällen.
-- `PriorityResource` wird mit dieser Priorität angefragt.
-- Die Schwester-Behandlungsdauer ist lognormalverteilt auf Basis des zum `PatientenTyp` gehörenden Mittelwerts.
-
-### Bezug zur Prognose
-
-Die Schwesterphase selbst rechnet keine Prognose aus.
-
-Die Prognose wird im Hauptprozess aus `PatientenProzess/PatientenProzess.PatientenAblauf.cs` um die Schwesterphase herum gesetzt:
-
-- `VorSchwester`
-- `NachSchwester`
-
-Wenn die Schwesterphase wegen Feierabend abbricht, schließt sie alle offenen Prognoseprüfungen.
-
-## Arzt: `ArztPhase.cs`
-
-### Verantwortung
-
-Die Arztphase kapselt:
-
-- Warten auf freien Arzt
-- Priorisierung nach `PatientenTyp`
-- Feierabend-Abbruch aus der Arztwarteschlange
-- Bewegung zum Arzt
-- Arztbehandlung
-- Erfassung von Hit, Wartezeit und Behandlungsdauer
-
-### Wichtige Logik
-
-- Auch hier wird `PriorityResource` verwendet.
-- Der Patient gilt als `Hit`, sobald der Request erfolgreich war und die Behandlung beginnt.
-- Die Arztbehandlung darf nach Schichtende noch zu Ende geführt werden, wenn der Patient den Arzt bereits erreicht hat.
-- Abgebrochen wird nur, solange der Patient noch wartet.
-
-### Bezug zur Prognose
-
-Die Arztphase rechnet ebenfalls keine Prognose selbst.
-
-Die Prognosepunkte davor bzw. danach liegen im Hauptprozess aus `PatientenProzess/PatientenProzess.PatientenAblauf.cs`:
-
-- `VorArzt`
-- `NachArzt`
-
-Wenn der Patient die Arztwarteschlange wegen Feierabend verlassen muss, schließt die Arztphase offene Prognoseprüfungen sauber ab.
-
-## Zusammenspiel zwischen Hauptprozess und Phasen
-
-Die Trennung ist bewusst so gewählt:
-
-- `PatientenProzess/PatientenProzess.PatientenAblauf.cs` entscheidet den fachlichen Gesamtpfad
-- `PatientenProzess/PatientenProzess.Prognose.cs` bündelt die Prognoseformeln und den Prognose-Abbruch
-- Stationsphasen entscheiden Ressourcenzuteilung, Warten, Behandlung und Feierabend-Abbruch
-
-Dadurch bleibt die Prognose an einer Stelle gebündelt und die Stationslogik unabhängig von Prognoseformeln.
-
-## Aktuelle Grenzen der Prozessdokumentation
-
-Wichtig für die weitere Pflege:
-
-- Die Prognose ist derzeit mittelwertbasiert, nicht queue-sensitiv.
-- Die Phasenklassen kennen keine Prognose, sondern nur ihre Warte- und Abbruchlogik.
-- `prognose_abbruch` ist im Zustandsmapping vorhanden, wird aber aktuell bewusst nicht als Trace-Event geschrieben.
-
-## Gute nächste Erweiterungen
-
-Wenn die Prozesslogik weiterentwickelt wird, sind diese nächsten Schritte sinnvoll:
-
-- queue-bewusste Prognose auf Basis realer Warteschlangen
-- explizites Trace-Event für Prognose-Abbruch, falls fachlich gewünscht
-- Dokumentation der Prognoseformeln auch im Architektur-README
-- Vergleich von prognosebasiertem Abbruch gegen reinen Feierabend-Abbruch in separaten Reports
+## 16. Aktuelle Modellgrenzen
+
+- Der Ankunftsprozess besitzt drei feste Tagesphasen; innerhalb einer Phase ist die Rate konstant.
+- Generierte Ankünfte ab dem Aufnahmestopp werden unabhängig von einer eventuell noch vorhandenen Einzelkapazität abgewiesen.
+- Die Prognose bildet Personal- und Rezeptionswarteschlangen nach, aber nicht die zusätzlichen Raumkapazitäten.
+- Raum-Requests dienen aktuell als Verfügbarkeitsprüfung und werden vor dem eigentlichen Behandlungsende freigegeben.
+- Die Prognose kennt die vorab gezogenen Zufallsdauern und Pfadentscheidungen. Sie ist dadurch eine simulationsinterne Prognose und keine Vorhersage ausschließlich aus Informationen, die in einer realen Klinik zu diesem Zeitpunkt sicher bekannt wären.
+- Prognoseabbrüche besitzen kein eigenes Trace-Event.
+- Eine begonnene Behandlung darf das Schichtende überschreiten; nur wartende Patienten brechen wegen Feierabend ab.
+- Die Simulation wird durch den festen Nachlaufpuffer von 180 Minuten begrenzt.
+
+## 17. Pflegehinweise
+
+- Änderungen am Ankunftsmodell müssen in `PatientenGenerator.cs` und in Abschnitt 3 dokumentiert werden.
+- Neue Prozessstationen sollten eine eigene Phasenklasse und einen eigenen Prognose-Ressourcenstatus erhalten.
+- Änderungen an Prioritäten müssen sowohl in den Stationsphasen als auch in `PatientenProzess.Prognose.cs` nachvollzogen werden.
+- Neue Abbruchgründe müssen in `SimulationsDaten`, Trace-Zustandsmapping, Reports und dieser Datei ergänzt werden.
+- Werden Raumressourcen künftig über die gesamte Behandlung gehalten, muss dies auch im Prognosemodell berücksichtigt werden.
+- Prozesslogik, Datensammlung, Diagrammerzeugung und UI-Auswertung sollten weiterhin getrennt bleiben.
