@@ -2,19 +2,9 @@ using System;
 using System.Collections.Generic;
 using SimSharp;
 
-// Ein 'namespace' (Namensraum) ist wie ein Ordner für Klassen, um den Code zu organisieren und Namenskonflikte zu vermeiden.
 namespace simSharpSimulation
 {
-    // Kern-Datei der partial class:
-    // Konstruktor, Felder und Tages-Orchestrierung der Simulation.
-    /* Enthält die komplette Ablauf-Logik der Simulation:
-     - Patientenprozess
-     - Generator für Ankünfte
-     - Start/Run der SimSharp-Umgebung
-    */
-    /* internal: Klasse ist nur innerhalb dieses Projekts sichtbar.
-    sealed: Keine andere Klasse darf von dieser Klasse erben (sie ist "versiegelt").
-    class: Der Bauplan für die Klinik-Simulation. */
+    // Felder, Tagesinitialisierung und Orchestrierung der SimSharp-Umgebung.
     internal sealed partial class PatientenProzess
     {
         private const double WahrscheinlichkeitNachArztZurRezeption = 0.6;
@@ -41,7 +31,7 @@ namespace simSharpSimulation
         public void FuehreAus()
         {
             // Phase P-A: Tages-Simulation vorbereiten und starten.
-            // Wir simulieren eine Arbeitswoche: 5 Tage (Montag bis Freitag).
+            // Die Anzahl der simulierten Tage ist in Program.SimulierteArbeitstage festgelegt.
             // Der 3. Januar 2000 war ein Montag.
             DateTime startDatum = new DateTime(2000, 1, 3);
             TimeSpan maximaleTagesdauer = BerechneMaximaleTagesdauer();
@@ -52,10 +42,7 @@ namespace simSharpSimulation
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
                 // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
                 var env = new Simulation(startDatum.AddDays(tag));
-                restAufnahmeplaetzeEineStundeVorSchliessung = null;
-                aktivePatientenPrognosen.Clear();
-                aufnahmeprognoseZugelassenePatienten.Clear();
-                aufnahmeprognoseAbgewiesenePatienten.Clear();
+                SetzeTageszustandZurueck();
                 var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
                 var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
                 var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
@@ -65,9 +52,7 @@ namespace simSharpSimulation
                 var schwesterzimmer = new Resource(
                     env,
                     capacity: KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester);
-                rezeptionStatus = new PrognoseRessourcenStatus(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
-                schwesterStatus = new PrognoseRessourcenStatus(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
-                arztStatus = new PrognoseRessourcenStatus(ArztKonfiguration.ANZAHL_AERZTE);
+                InitialisierePrognoseRessourcen();
                 env.Process(AktiviereAufnahmeprognoseEineStundeVorSchliessung(env));
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
@@ -99,6 +84,21 @@ namespace simSharpSimulation
                 // offenen Warteschlangen oder extrem langen Zufallsdauern unbegrenzt läuft.
                 env.Run(maximaleTagesdauer);
             }
+        }
+
+        private void SetzeTageszustandZurueck()
+        {
+            restAufnahmeplaetzeEineStundeVorSchliessung = null;
+            aktivePatientenPrognosen.Clear();
+            aufnahmeprognoseZugelassenePatienten.Clear();
+            aufnahmeprognoseAbgewiesenePatienten.Clear();
+        }
+
+        private void InitialisierePrognoseRessourcen()
+        {
+            rezeptionStatus = new PrognoseRessourcenStatus(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
+            schwesterStatus = new PrognoseRessourcenStatus(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            arztStatus = new PrognoseRessourcenStatus(ArztKonfiguration.ANZAHL_AERZTE);
         }
 
         private static TimeSpan BerechneMaximaleTagesdauer()

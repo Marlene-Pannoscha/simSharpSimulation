@@ -1,8 +1,8 @@
 Prognosemodell-Auswertung
 ==================================================
-Prognoseprüfungen gesamt: 14.714
+Prognoseprüfungen gesamt: 14.654
 Richtig (+/-30 % oder +/-5 min): 9.811
-Trefferquote: 66,68 %
+Trefferquote: 66,95 %
 Prognose-Abbrüche: 44
 
 Trefferquote je Phase

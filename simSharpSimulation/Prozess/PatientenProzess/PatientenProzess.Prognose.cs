@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SimSharp;
+using static simSharpSimulation.SimulationsHelfer;
 
 namespace simSharpSimulation
 {
@@ -21,7 +22,7 @@ namespace simSharpSimulation
             double prognoseBearbeitungsRestMinuten,
             double verbrauchteBearbeitungsMinuten)
         {
-            double zeitpunktMinuten = (env.Now - env.StartDate).TotalMinutes;
+            double zeitpunktMinuten = AktuelleSimulationszeitMinuten(env);
             double prognoseKorrekturMinuten = daten.ErmittlePrognoseRestzeitKorrektur(phase);
             double kalibriertePrognoseRestMinuten = Math.Max(
                 0.0,
@@ -47,15 +48,10 @@ namespace simSharpSimulation
         // in SimulationsDaten und den üblichen Weg zum Ausgang.
         private IEnumerable<Event> BrichWegenPrognoseAb(Simulation env, int patientId, string phase, TimeSpan wegZumAusgang)
         {
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.ErfassePrognoseAbbruch(env.StartDate, nowMinutes, phase);
-            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
-            yield return env.Timeout(wegZumAusgang);
-
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
-            daten.SchliessePrognosen(patientId, nowMinutes);
-            EntferneAktivePatientenPrognose(patientId);
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.ErfassePrognoseAbbruch(env.StartDate, jetztMinuten, phase);
+            foreach (Event ev in VerlasseKlinikNachAbbruch(env, patientId, wegZumAusgang))
+                yield return ev;
         }
 
         // Eine Stunde vor Schliessung wird die verbleibende Aufnahmekapazitaet geschaetzt.
@@ -63,7 +59,7 @@ namespace simSharpSimulation
         private IEnumerable<Event> AktiviereAufnahmeprognoseEineStundeVorSchliessung(Simulation env)
         {
             double pruefzeitpunkt = BerechneAufnahmeprognoseZeitpunkt();
-            double wartezeitMinuten = pruefzeitpunkt - (env.Now - env.StartDate).TotalMinutes;
+            double wartezeitMinuten = pruefzeitpunkt - AktuelleSimulationszeitMinuten(env);
             if (wartezeitMinuten > 0.0)
             {
                 yield return env.Timeout(TimeSpan.FromMinutes(wartezeitMinuten));
@@ -74,8 +70,8 @@ namespace simSharpSimulation
 
         private bool DarfPatientNachAufnahmeprognoseNochRein(Simulation env, int patientId)
         {
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            if (nowMinutes < BerechneAufnahmeprognoseZeitpunkt())
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            if (jetztMinuten < BerechneAufnahmeprognoseZeitpunkt())
             {
                 return true;
             }
@@ -96,31 +92,29 @@ namespace simSharpSimulation
 
         private IEnumerable<Event> WeiseWegenAufnahmeprognoseAb(Simulation env, int patientId, TimeSpan wegZumAusgang)
         {
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, nowMinutes, patientId);
-            daten.LogEvent(nowMinutes, "abgewiesen_wegen_aufnahmeprognose", patientId);
-            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
-            yield return env.Timeout(wegZumAusgang);
-
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
-            daten.SchliessePrognosen(patientId, nowMinutes);
-            EntferneAktivePatientenPrognose(patientId);
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.ErfassePrognoseAufnahmeAbgewiesen(env.StartDate, jetztMinuten, patientId);
+            daten.LogEvent(jetztMinuten, "abgewiesen_wegen_aufnahmeprognose", patientId);
+            foreach (Event ev in VerlasseKlinikNachAbbruch(env, patientId, wegZumAusgang))
+                yield return ev;
         }
 
         private void AktiviereAufnahmeprognose(Simulation env)
         {
+            // Die Aufnahmeentscheidung wird einmal pro Tag eingefroren, auch wenn mehrere Prozesse sie ausloesen.
             if (restAufnahmeplaetzeEineStundeVorSchliessung.HasValue)
             {
                 return;
             }
 
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            double restMinuten = Math.Max(0.0, SimulationKonfiguration.SIMULATIONSDAUER - nowMinutes);
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            double restMinuten = Math.Max(0.0, SimulationKonfiguration.SIMULATIONSDAUER - jetztMinuten);
             double mittlereArztBehandlungsdauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
             int kapazitaet = (int)Math.Floor(
                 (restMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztBehandlungsdauer);
             int aufnahmeKapazitaet = Math.Max(0, kapazitaet);
+            // Die verbleibende Arztkapazitaet begrenzt die Zulassung. Kuerzere Restprognosen werden bevorzugt;
+            // Checkpoint-Zeitpunkt und Patienten-ID sorgen bei Gleichstand fuer eine feste Reihenfolge.
             var aktivePatienten = aktivePatientenPrognosen.Values
                 .OrderBy(p => p.PrognoseRestMinuten)
                 .ThenBy(p => p.ZeitpunktMinuten)
@@ -137,10 +131,11 @@ namespace simSharpSimulation
                 aufnahmeprognoseAbgewiesenePatienten.Add(patient.PatientId);
             }
 
+            // Der Wert dient auch als Aktivierungsmarker; freie Restplaetze werden hier nicht an neue Ankuenfte vergeben.
             restAufnahmeplaetzeEineStundeVorSchliessung = Math.Max(0, aufnahmeKapazitaet - aktivePatienten.Count);
             daten.ErfassePrognoseAufnahmepruefung(
                 env.StartDate,
-                nowMinutes,
+                jetztMinuten,
                 aufnahmeKapazitaet);
         }
 
@@ -154,7 +149,7 @@ namespace simSharpSimulation
 
         private bool IstDurchAufnahmeprognoseAbgewiesen(Simulation env, int patientId)
         {
-            if ((env.Now - env.StartDate).TotalMinutes >= BerechneAufnahmeprognoseZeitpunkt())
+            if (AktuelleSimulationszeitMinuten(env) >= BerechneAufnahmeprognoseZeitpunkt())
             {
                 AktiviereAufnahmeprognose(env);
             }
@@ -172,6 +167,7 @@ namespace simSharpSimulation
 
         private void EntferneAktivePatientenPrognose(int patientId)
         {
+            // Klinikabgaenge muessen aus allen Schaetzmodellen verschwinden, damit sie keine weitere Kapazitaet belegen.
             aktivePatientenPrognosen.Remove(patientId);
             aufnahmeprognoseZugelassenePatienten.Remove(patientId);
             aufnahmeprognoseAbgewiesenePatienten.Remove(patientId);
@@ -184,7 +180,7 @@ namespace simSharpSimulation
         // Falls keine Schwester-Vorbereitung mehr noetig ist, ist dieser Teil 0.
         // Falls Vorbereitung noetig ist, schaetzen wir:
         // - ggf. Bewegung und Warten bis zur Schwester
-        // - Schwesterbehandlung mit Mittelwert
+        // - Schwesterbehandlung mit der vorab gezogenen Dauer
         private static double BerechneSchwesterRestzeitNachRezeption(
             bool brauchtVorbereitung,
             bool direktZurSchwester,
@@ -305,12 +301,8 @@ namespace simSharpSimulation
             double behandlungsdauer,
             double minutenBisAnkunft = 0.0)
         {
-            double jetztMinuten = AktuelleMinute(env);
-            return rezeptionStatus.SchaetzeWartezeit(
-                jetztMinuten,
-                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
-                patientId,
-                behandlungsdauer);
+            return SchaetzeQueueWartezeit(
+                env, rezeptionStatus, patientId, behandlungsdauer, minutenBisAnkunft);
         }
 
         private void PlaneRezeptionsAnkunft(
@@ -319,10 +311,8 @@ namespace simSharpSimulation
             double minutenBisAnkunft,
             double behandlungsdauer)
         {
-            rezeptionStatus.RegistriereGeplanteAnkunft(
-                patientId,
-                AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
-                behandlungsdauer);
+            PlaneRessourcenAnkunft(
+                env, rezeptionStatus, patientId, minutenBisAnkunft, behandlungsdauer);
         }
 
         private double SchaetzeSchwesterQueueWartezeit(
@@ -332,13 +322,8 @@ namespace simSharpSimulation
             PatientenTyp patientenTyp,
             double minutenBisAnkunft = 0.0)
         {
-            double jetztMinuten = AktuelleMinute(env);
-            return schwesterStatus.SchaetzeWartezeit(
-                jetztMinuten,
-                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
-                patientId,
-                behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+            return SchaetzeQueueWartezeit(
+                env, schwesterStatus, patientId, behandlungsdauer, minutenBisAnkunft, ErmittlePatientenPrioritaet(patientenTyp));
         }
 
         private void PlaneSchwesterAnkunft(
@@ -348,11 +333,8 @@ namespace simSharpSimulation
             double behandlungsdauer,
             PatientenTyp patientenTyp)
         {
-            schwesterStatus.RegistriereGeplanteAnkunft(
-                patientId,
-                AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
-                behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+            PlaneRessourcenAnkunft(
+                env, schwesterStatus, patientId, minutenBisAnkunft, behandlungsdauer, ErmittlePatientenPrioritaet(patientenTyp));
         }
 
         private double SchaetzeArztQueueWartezeit(
@@ -362,13 +344,8 @@ namespace simSharpSimulation
             PatientenTyp patientenTyp,
             double minutenBisAnkunft = 0.0)
         {
-            double jetztMinuten = AktuelleMinute(env);
-            return arztStatus.SchaetzeWartezeit(
-                jetztMinuten,
-                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
-                patientId,
-                behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+            return SchaetzeQueueWartezeit(
+                env, arztStatus, patientId, behandlungsdauer, minutenBisAnkunft, ErmittlePatientenPrioritaet(patientenTyp));
         }
 
         private void PlaneArztAnkunft(
@@ -378,27 +355,40 @@ namespace simSharpSimulation
             double behandlungsdauer,
             PatientenTyp patientenTyp)
         {
-            arztStatus.RegistriereGeplanteAnkunft(
+            PlaneRessourcenAnkunft(
+                env, arztStatus, patientId, minutenBisAnkunft, behandlungsdauer, ErmittlePatientenPrioritaet(patientenTyp));
+        }
+
+        private static double SchaetzeQueueWartezeit(
+            Simulation env,
+            PrognoseRessourcenStatus status,
+            int patientId,
+            double behandlungsdauer,
+            double minutenBisAnkunft,
+            int prioritaet = 0)
+        {
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            return status.SchaetzeWartezeit(
+                jetztMinuten,
+                jetztMinuten + Math.Max(0.0, minutenBisAnkunft),
                 patientId,
-                AktuelleMinute(env) + Math.Max(0.0, minutenBisAnkunft),
                 behandlungsdauer,
-                ErmittlePrioritaet(patientenTyp));
+                prioritaet);
         }
 
-        private static double AktuelleMinute(Simulation env)
+        private static void PlaneRessourcenAnkunft(
+            Simulation env,
+            PrognoseRessourcenStatus status,
+            int patientId,
+            double minutenBisAnkunft,
+            double behandlungsdauer,
+            int prioritaet = 0)
         {
-            return (env.Now - env.StartDate).TotalMinutes;
-        }
-
-        private static int ErmittlePrioritaet(PatientenTyp typ)
-        {
-            return typ switch
-            {
-                PatientenTyp.Kurz => 1,
-                PatientenTyp.Mittel => 2,
-                PatientenTyp.Lang => 3,
-                _ => 3
-            };
+            status.RegistriereGeplanteAnkunft(
+                patientId,
+                AktuelleSimulationszeitMinuten(env) + Math.Max(0.0, minutenBisAnkunft),
+                behandlungsdauer,
+                prioritaet);
         }
     }
 }

@@ -1,4 +1,5 @@
 using SimSharp;
+using static simSharpSimulation.SimulationsHelfer;
 using System;
 using System.Collections.Generic;
 
@@ -6,17 +7,6 @@ namespace simSharpSimulation
 {
     public static class SchwesterPhase
     {
-        private static int GetPriority(PatientenTyp typ)
-        {
-            return typ switch
-            {
-                PatientenTyp.Kurz => 1,
-                PatientenTyp.Mittel => 2,
-                PatientenTyp.Lang => 3,
-                _ => 3
-            };
-        }
-
         public static IEnumerable<Event> DurchlaufeSchwester(
             Simulation env,
             int patientId,
@@ -33,19 +23,19 @@ namespace simSharpSimulation
             PrognoseRessourcenStatus prognoseStatus)
         {
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
 
             bool schwesterSofortVerfuegbar = schwestern.IstFrei;
             bool betrittWarteschlange = !direktZurSchwester || !schwesterSofortVerfuegbar;
-            int prioritaet = GetPriority(patientenTyp);
+            int prioritaet = ErmittlePatientenPrioritaet(patientenTyp);
             prognoseStatus.RegistriereWartend(patientId, behandlungsdauer, prioritaet);
 
             if (betrittWarteschlange)
             {
-                daten.LogEvent(nowMinutes, "betritt_schwester_warteschlange", patientId);
+                daten.LogEvent(jetztMinuten, "betritt_schwester_warteschlange", patientId);
             }
 
-            if (nowMinutes >= schichtEndeMinuten)
+            if (jetztMinuten >= schichtEndeMinuten)
             {
                 foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis, prognoseStatus))
                     yield return ev;
@@ -53,72 +43,49 @@ namespace simSharpSimulation
             }
 
             bool brichtWartenAb = false;
-            Request req = schwestern.FordereMitarbeiterAn(prioritaet);
+            Request mitarbeiterAnforderung = schwestern.FordereMitarbeiterAn(prioritaet);
             try
             {
-                double restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
-                Event schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                yield return req | schichtEnde;
+                yield return WarteAufRessourceOderSchichtende(env, mitarbeiterAnforderung, schichtEndeMinuten);
 
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                if (!req.IsProcessed || nowMinutes >= schichtEndeMinuten)
+                if (MussWartenAbbrechen(env, mitarbeiterAnforderung, schichtEndeMinuten))
                 {
                     brichtWartenAb = true;
                 }
                 else
                 {
-                    Request raumReq = schwesterzimmer.Request();
+                    Request raumAnforderung = schwesterzimmer.Request();
                     try
                     {
-                        restMinuten = schichtEndeMinuten - (env.Now - env.StartDate).TotalMinutes;
-                        schichtEnde = env.Timeout(TimeSpan.FromMinutes(restMinuten));
-                        yield return raumReq | schichtEnde;
+                        yield return WarteAufRessourceOderSchichtende(env, raumAnforderung, schichtEndeMinuten);
 
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        if (!raumReq.IsProcessed || nowMinutes >= schichtEndeMinuten)
+                        if (MussWartenAbbrechen(env, raumAnforderung, schichtEndeMinuten))
                         {
                             brichtWartenAb = true;
                         }
                     }
                     finally
                     {
-                        DisposeWennVerarbeitet(raumReq);
+                        // Im bestehenden Modell wird der Raum bereits nach der Zuteilung freigegeben,
+                        // bevor Bewegung und Behandlung beginnen. Der Mitarbeiter bleibt dagegen gebunden.
+                        GibVerarbeiteteAnforderungFrei(raumAnforderung);
                     }
 
                     if (!brichtWartenAb)
                     {
-                        int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
-
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        if (betrittWarteschlange)
+                        foreach (Event ev in FuehreSchwesterBehandlungDurch(
+                            env, patientId, schwestern, patientenTyp, ankunftszeit, hatTermin,
+                            betrittWarteschlange, interneBewegungsdauer, behandlungsdauer,
+                            daten, prognoseStatus))
                         {
-                            daten.LogEvent(nowMinutes, "verlaesst_wartezimmer_schwester", patientId);
+                            yield return ev;
                         }
-
-                        daten.LogEvent(nowMinutes, "geht_zur_schwester", patientId);
-                        yield return env.Timeout(interneBewegungsdauer);
-
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "betritt_schwesterzimmer", patientId);
-                        daten.LogEvent(nowMinutes, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
-                        prognoseStatus.StarteBehandlung(patientId, nowMinutes, behandlungsdauer);
-
-                        double wartezeitSchwester = nowMinutes - ankunftszeit;
-                        daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
-
-                        daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
-                        yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
-
-                        nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-                        daten.LogEvent(nowMinutes, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
-                        prognoseStatus.BeendeBehandlung(patientId);
-                        schwestern.GibMitarbeiterZurueck(schwesterId);
                     }
                 }
             }
             finally
             {
-                DisposeWennVerarbeitet(req);
+                GibVerarbeiteteAnforderungFrei(mitarbeiterAnforderung);
             }
 
             if (brichtWartenAb)
@@ -128,10 +95,46 @@ namespace simSharpSimulation
             }
         }
 
-        private static void DisposeWennVerarbeitet(Request request)
+        private static IEnumerable<Event> FuehreSchwesterBehandlungDurch(
+            Simulation env,
+            int patientId,
+            BeweglicherSchwesterPool schwestern,
+            PatientenTyp patientenTyp,
+            double ankunftszeit,
+            bool hatTermin,
+            bool betrittWarteschlange,
+            TimeSpan interneBewegungsdauer,
+            double behandlungsdauer,
+            SimulationsDaten daten,
+            PrognoseRessourcenStatus prognoseStatus)
         {
-            if (request.IsProcessed)
-                request.Dispose();
+            int schwesterId = schwestern.UebernehmeFreienMitarbeiter();
+
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            if (betrittWarteschlange)
+            {
+                daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_schwester", patientId);
+            }
+
+            daten.LogEvent(jetztMinuten, "geht_zur_schwester", patientId);
+            yield return env.Timeout(interneBewegungsdauer);
+
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "betritt_schwesterzimmer", patientId);
+            daten.LogEvent(jetztMinuten, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
+            prognoseStatus.StarteBehandlung(patientId, jetztMinuten, behandlungsdauer);
+
+            double wartezeitSchwester = jetztMinuten - ankunftszeit;
+            daten.ErfasseSchwesterWartezeit(wartezeitSchwester, patientenTyp, hatTermin);
+
+            daten.ErfasseSchwesterBehandlungszeit(behandlungsdauer, hatTermin, patientenTyp);
+            // Eine begonnene Behandlung laeuft bis zum Ende; die Schichtgrenze wird nur beim Warten geprueft.
+            yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
+
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "beendet_schwester_prozess", patientId, schwesterId: schwesterId);
+            prognoseStatus.BeendeBehandlung(patientId);
+            schwestern.GibMitarbeiterZurueck(schwesterId);
         }
 
         private static IEnumerable<Event> BrichSchwesterWartenAb(
@@ -143,18 +146,18 @@ namespace simSharpSimulation
             BehandlungsPhaseErgebnis ergebnis,
             PrognoseRessourcenStatus prognoseStatus)
         {
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
             prognoseStatus.EntfernePatient(patientId);
             // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
             daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
-            daten.LogEvent(nowMinutes, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
+            daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
 
-            daten.LogEvent(nowMinutes, "geht_zum_ausgang", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId);
             yield return env.Timeout(interneBewegungsdauer);
 
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
-            daten.SchliessePrognosen(patientId, nowMinutes);
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, jetztMinuten);
             ergebnis.MarkiereKlinikVerlassen();
         }
     }

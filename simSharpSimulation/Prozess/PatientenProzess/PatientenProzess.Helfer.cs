@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using SimSharp;
+using static simSharpSimulation.SimulationsHelfer;
 
 namespace simSharpSimulation
 {
-    // Diese Datei enthaelt gemeinsam genutzte Zufalls- und Dauer-Hilfsmethoden
-    // des Patientenprozesses.
+    // Gemeinsam genutzte Hilfen fuer Zufallsdauern, Simulationszeit, Prioritaeten
+    // und den Klinikabgang nach einem Abbruch.
     internal sealed partial class PatientenProzess
     {
         // Zieht konkrete Behandlungsdauern vorab, damit Prognose und Simulation dieselben
@@ -65,6 +68,22 @@ namespace simSharpSimulation
                 rnd,
                 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * faktor));
         }
+
+        private IEnumerable<Event> VerlasseKlinikNachAbbruch(
+            Simulation env,
+            int patientId,
+            TimeSpan wegZumAusgang)
+        {
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId);
+            yield return env.Timeout(wegZumAusgang);
+
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, jetztMinuten);
+            EntferneAktivePatientenPrognose(patientId);
+        }
+
 
     }
 }

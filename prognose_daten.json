@@ -1,10 +1,10 @@
 {
-  "AnzahlPrognosePruefungen": 14714,
+  "AnzahlPrognosePruefungen": 14654,
   "AnzahlPrognoseRichtig": 9811,
   "AnzahlPrognoseAbbruch": 44,
   "PrognoseTrefferToleranzProzent": 30,
   "PrognoseTrefferMindestToleranzMinuten": 5,
-  "PrognoseTrefferquote": 66.67799374745141,
+  "PrognoseTrefferquote": 66.95100313907466,
   "Abbruchgruende": {
     "Prognose": 44,
     "Aufnahmeprognose": 56,
@@ -220038,6 +220038,702 @@
     {
       "ZeitpunktMinuten": 409.3015507233333,
       "Phase": "VorArzt"
+    }
+  ],
+  "AufnahmeprognosePruefungen": [
+    {
+      "Tag": "2000-01-03T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-03T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-04T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-04T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-05T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-05T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-06T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-06T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-08T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-08T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-09T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-09T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-10T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-10T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-11T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-11T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-12T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-12T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-14T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-14T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-15T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-15T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-16T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-16T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-17T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-17T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-18T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-18T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-19T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-19T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-20T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-20T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-21T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-21T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-22T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-22T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-23T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-23T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-24T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-24T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-25T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-25T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-26T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-26T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-27T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-27T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-28T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-28T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-29T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-29T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-30T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-30T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-01-31T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-01-31T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    },
+    {
+      "Tag": "2000-02-01T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 145
+    },
+    {
+      "Tag": "2000-02-01T00:00:00",
+      "ZeitpunktMinuten": 420,
+      "AufnahmeKapazitaet": 18
+    }
+  ],
+  "AufnahmeprognoseEntscheidungen": [
+    {
+      "Tag": "2000-01-04T00:00:00",
+      "ZeitpunktMinuten": 452.2185906783333,
+      "PatientId": 10079,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-06T00:00:00",
+      "ZeitpunktMinuten": 434.924339815,
+      "PatientId": 30105,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-06T00:00:00",
+      "ZeitpunktMinuten": 473.387212905,
+      "PatientId": 30106,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 421.63428373666665,
+      "PatientId": 40100,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 428.0718399,
+      "PatientId": 40101,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 429.24580839833334,
+      "PatientId": 40102,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 461.33602063666666,
+      "PatientId": 40103,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 464.12486378666665,
+      "PatientId": 40104,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-07T00:00:00",
+      "ZeitpunktMinuten": 479.68937974333335,
+      "PatientId": 40105,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-08T00:00:00",
+      "ZeitpunktMinuten": 437.908582355,
+      "PatientId": 50095,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-08T00:00:00",
+      "ZeitpunktMinuten": 460.78387577166666,
+      "PatientId": 50096,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-09T00:00:00",
+      "ZeitpunktMinuten": 429.3785685533333,
+      "PatientId": 60091,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-10T00:00:00",
+      "ZeitpunktMinuten": 457.42121643166666,
+      "PatientId": 70110,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-12T00:00:00",
+      "ZeitpunktMinuten": 448.4028254333333,
+      "PatientId": 90100,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-12T00:00:00",
+      "ZeitpunktMinuten": 460.38260037333333,
+      "PatientId": 90101,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 436.40921408833333,
+      "PatientId": 100119,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 447.98283740833335,
+      "PatientId": 100120,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 449.18052450666664,
+      "PatientId": 100121,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 462.11197833833336,
+      "PatientId": 100122,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-13T00:00:00",
+      "ZeitpunktMinuten": 469.45829890333334,
+      "PatientId": 100123,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-14T00:00:00",
+      "ZeitpunktMinuten": 457.617360485,
+      "PatientId": 110108,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-15T00:00:00",
+      "ZeitpunktMinuten": 440.88203493,
+      "PatientId": 120108,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-15T00:00:00",
+      "ZeitpunktMinuten": 458.7035680316667,
+      "PatientId": 120109,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-15T00:00:00",
+      "ZeitpunktMinuten": 478.25830504833334,
+      "PatientId": 120110,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-16T00:00:00",
+      "ZeitpunktMinuten": 426.026765545,
+      "PatientId": 130105,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-16T00:00:00",
+      "ZeitpunktMinuten": 450.07308889166666,
+      "PatientId": 130106,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-16T00:00:00",
+      "ZeitpunktMinuten": 474.9272001383333,
+      "PatientId": 130107,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-17T00:00:00",
+      "ZeitpunktMinuten": 453.68731216,
+      "PatientId": 140114,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-18T00:00:00",
+      "ZeitpunktMinuten": 444.1099161733333,
+      "PatientId": 150104,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-18T00:00:00",
+      "ZeitpunktMinuten": 445.97658936166664,
+      "PatientId": 150105,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-21T00:00:00",
+      "ZeitpunktMinuten": 435.7632975,
+      "PatientId": 180099,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-21T00:00:00",
+      "ZeitpunktMinuten": 453.738129025,
+      "PatientId": 180100,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-21T00:00:00",
+      "ZeitpunktMinuten": 463.39023367833335,
+      "PatientId": 180101,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-21T00:00:00",
+      "ZeitpunktMinuten": 469.5143973566667,
+      "PatientId": 180102,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-22T00:00:00",
+      "ZeitpunktMinuten": 433.930723455,
+      "PatientId": 190092,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-22T00:00:00",
+      "ZeitpunktMinuten": 449.76021211166665,
+      "PatientId": 190093,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-23T00:00:00",
+      "ZeitpunktMinuten": 451.813211475,
+      "PatientId": 200097,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-23T00:00:00",
+      "ZeitpunktMinuten": 457.77396554666666,
+      "PatientId": 200098,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-24T00:00:00",
+      "ZeitpunktMinuten": 420.92614926833335,
+      "PatientId": 210101,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-24T00:00:00",
+      "ZeitpunktMinuten": 479.3358842783333,
+      "PatientId": 210102,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-25T00:00:00",
+      "ZeitpunktMinuten": 436.710840345,
+      "PatientId": 220096,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-26T00:00:00",
+      "ZeitpunktMinuten": 435.870946225,
+      "PatientId": 230097,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-26T00:00:00",
+      "ZeitpunktMinuten": 454.9276327233333,
+      "PatientId": 230098,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-26T00:00:00",
+      "ZeitpunktMinuten": 474.28787766,
+      "PatientId": 230099,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-27T00:00:00",
+      "ZeitpunktMinuten": 451.24095164,
+      "PatientId": 240097,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-28T00:00:00",
+      "ZeitpunktMinuten": 438.05559798666667,
+      "PatientId": 250096,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-28T00:00:00",
+      "ZeitpunktMinuten": 448.5069244133333,
+      "PatientId": 250097,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-28T00:00:00",
+      "ZeitpunktMinuten": 470.9845017916667,
+      "PatientId": 250098,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-29T00:00:00",
+      "ZeitpunktMinuten": 460.09756603666665,
+      "PatientId": 260105,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-30T00:00:00",
+      "ZeitpunktMinuten": 446.19771779166666,
+      "PatientId": 270110,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-30T00:00:00",
+      "ZeitpunktMinuten": 479.7057938566667,
+      "PatientId": 270111,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-01-31T00:00:00",
+      "ZeitpunktMinuten": 439.0204820733333,
+      "PatientId": 280089,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-02-01T00:00:00",
+      "ZeitpunktMinuten": 423.38888439333334,
+      "PatientId": 290097,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-02-01T00:00:00",
+      "ZeitpunktMinuten": 443.42550067,
+      "PatientId": 290098,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-02-01T00:00:00",
+      "ZeitpunktMinuten": 453.97150387,
+      "PatientId": 290099,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
+    },
+    {
+      "Tag": "2000-02-01T00:00:00",
+      "ZeitpunktMinuten": 474.81723954833336,
+      "PatientId": 290100,
+      "Zugelassen": false,
+      "RestKapazitaet": 0
     }
   ]
 }

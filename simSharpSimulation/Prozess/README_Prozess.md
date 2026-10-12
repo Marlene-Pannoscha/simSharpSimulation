@@ -333,3 +333,12 @@ Wenn die Prozesslogik weiterentwickelt wird, sind diese nächsten Schritte sinnv
 - explizites Trace-Event für Prognose-Abbruch, falls fachlich gewünscht
 - Dokumentation der Prognoseformeln auch im Architektur-README
 - Vergleich von prognosebasiertem Abbruch gegen reinen Feierabend-Abbruch in separaten Reports
+
+## Gemeinsame technische Bausteine
+
+- `MitarbeiterPool.cs` kapselt die gemeinsame PriorityResource und die FIFO-Verwaltung freier Mitarbeiter-IDs. `BeweglicherArztPool` und `BeweglicherSchwesterPool` behalten ihre bisherigen oeffentlichen Schnittstellen und delegieren an diesen Baustein.
+- `SimulationsHelfer.cs` vereinheitlicht Simulationszeit in Minuten, Patientenprioritaeten, Warten bis zum Schichtende und die Freigabe verarbeiteter Anforderungen.
+- Der Reflection-Zugriff auf die interne SimSharp-Warteschlange liegt ausschliesslich im Mitarbeiterpool. Bei einem SimSharp-Update muss dieser Zugriff geprueft werden.
+- Lokale Zeitwerte tragen nach Moeglichkeit die Einheit im Namen; Ressourcenanforderungen werden als `mitarbeiterAnforderung`, `raumAnforderung` oder `rezeptionsAnforderung` bezeichnet. Die Namen der Trace-Ereignisse bleiben fuer bestehende Auswertungen unveraendert.
+
+Die Zusammenfassung der Hilfen veraendert keine Ressourcenlebensdauer: Arzt- und Schwesterzimmer werden weiterhin vor Bewegung und Behandlung freigegeben; die Mitarbeiteranforderung bleibt bis zum Behandlungsende bestehen. Nur bereits verarbeitete Mitarbeiter- und Raumforderungen werden freigegeben. Die Rezeption behaelt ihre bisherige `using`-Freigabe bei.

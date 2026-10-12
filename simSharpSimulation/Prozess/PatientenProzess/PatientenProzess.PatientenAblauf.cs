@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SimSharp;
+using static simSharpSimulation.SimulationsHelfer;
 
 namespace simSharpSimulation
 {
@@ -33,14 +34,14 @@ namespace simSharpSimulation
 
             // Phase P-B: Individueller Patientenablauf.
             // Schritt P4.1: Aktuelle Simulationszeit in Minuten holen.
-            double nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
 
             // Schritt P4.2: Patient betritt die Klinik (Startpunkt des individuellen Ablaufs).
             // EREIGNIS 1: Patient betritt die Klinik
-            daten.LogEvent(nowMinutes, "betritt_klinik", patientId);
+            daten.LogEvent(jetztMinuten, "betritt_klinik", patientId);
 
             // Schritt P4.3: Ankunftszeit merken (Basis für Wartezeit-Berechnungen).
-            double ankunftszeit = nowMinutes;
+            double ankunftszeit = jetztMinuten;
             daten.EchteAnkunftszeiten.Add(ankunftszeit);
 
             // Schritt P4.3B: Patienten-Typ zuweisen basierend auf Verteilung.
@@ -49,6 +50,8 @@ namespace simSharpSimulation
 
             // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
             bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
+            // Dauern und Pfadentscheidungen werden einmal vorab gezogen, auch fuer spaeter nicht genutzte Stationen.
+            // Prognose und Ablauf verwenden dieselben Werte; die Ziehungsreihenfolge muss erhalten bleiben.
             double ersteRezeptionsdauer = ZieheRezeptionsdauer(rnd);
             double zweiteRezeptionsdauer = ZieheRezeptionsdauer(rnd);
             double schwesterBehandlungsdauer = ZieheSchwesterBehandlungsdauer(patientenTyp, rnd);
@@ -60,6 +63,7 @@ namespace simSharpSimulation
                 : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
             bool brauchtVorbereitung = rnd.NextDouble() < vorbereitungsWahrscheinlichkeit;
             bool gehtNachArztZurRezeption = rnd.NextDouble() < WahrscheinlichkeitNachArztZurRezeption;
+            // Bearbeitungszeit umfasst nur Stationsleistungen; die Gesamtprognose enthaelt zusaetzlich Wege und Warten.
             double prognoseBearbeitungsRestzeitAbAnkunft =
                 ersteRezeptionsdauer +
                 (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0) +
@@ -124,12 +128,17 @@ namespace simSharpSimulation
 
             // Schritt P4.4: Rezeption durchlaufen.
             // --- REZEPTION (RECEPTION) PHASE ---
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zur_rezeption", patientId);
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zur_rezeption", patientId);
             yield return env.Timeout(eingangZurRezeptionDauer);
-            double ankunftszeitRezeption = (env.Now - env.StartDate).TotalMinutes;
+            double ankunftszeitRezeption = AktuelleSimulationszeitMinuten(env);
 
             var ersteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
-            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, ankunftszeitRezeption, hatTermin, false, rezeptionZumAusgangDauer, ersteRezeptionsdauer, daten, ersteRezeptionErgebnis, rezeptionStatus))
+            foreach (var ev in RezeptionPhase.DurchlaufeRezeption(
+                env, patientId, rezeption, ankunftszeitRezeption, hatTermin,
+                behandlungBereitsFertig: false,
+                wegZumAusgang: rezeptionZumAusgangDauer,
+                behandlungsdauer: ersteRezeptionsdauer,
+                daten: daten, ergebnis: ersteRezeptionErgebnis, prognoseStatus: rezeptionStatus))
                 yield return ev;
 
             if (ersteRezeptionErgebnis.PatientHatKlinikVerlassen)
@@ -138,82 +147,9 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            // Schritt P4.5: Entscheidungsvariablen für den weiteren Ablauf vorbereiten.
-            bool direktZurSchwester = false;
-            bool ueberspringeSchwester = false;
-
-            // Schritt P4.6: Prüfen, ob der Patient einen Termin hat.
-            if (hatTermin)
-            {
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_termin", patientId);
-
-                // Schritt P4.7A: Bei Termin prüfen, ob Schwester-Vorbereitung nötig ist.
-                if (brauchtVorbereitung)
-                {
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
-
-                    // Schritt P4.8A: Prüfen, ob sofort eine Schwester frei ist.
-                    if (schwestern.IstFrei)
-                    {
-                        // Schritt P4.9A: Schwester ist frei -> direkt ins Schwesterzimmer.
-                        direktZurSchwester = true;
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_frei", patientId);
-                    }
-                    else
-                    {
-                        // Keine Schwester frei: Der Weg ins Wartezimmer folgt nach dem NachRezeption-Checkpoint.
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
-
-                        // Schritt P4.9C: Der Weg ins Wartezimmer ist eine interne Bewegung.
-
-                        // Schritt P4.10B: Terminpatienten warten im Schnitt kürzer im Wartezimmer.
-
-                        // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
-                    }
-                }
-                else
-                {
-                    // Schritt P4.8B: Termin vorhanden, aber keine Schwester-Vorbereitung nötig.
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "keine_schwester_vorbereitung", patientId);
-                    ueberspringeSchwester = true;
-                }
-            }
-            else
-            {
-                // Schritt P4.7B: Patient hat keinen Termin.
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "hat_keinen_termin", patientId);
-
-                // Auch ohne Termin prüfen, ob eine Schwester-Vorbereitung anfällt.
-                if (brauchtVorbereitung)
-                {
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "benoetigt_schwester_vorbereitung", patientId);
-
-                    // Prüfen, ob eine Schwester frei ist.
-                    if (schwestern.IstFrei)
-                    {
-                        // Schwester ist frei -> direkt ins Schwesterzimmer.
-                        direktZurSchwester = true;
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_frei", patientId);
-                    }
-                    else
-                    {
-                        // Keine Schwester frei: Der Weg ins Wartezimmer folgt nach dem NachRezeption-Checkpoint.
-                        daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "schwester_nicht_frei", patientId);
-
-                        // Schritt P4.9D: Auch der Weg ins Wartezimmer ist eine interne Bewegung.
-
-                        // Ohne Termin warten Patienten im Schnitt länger im Wartezimmer auf die Schwester.
-
-                        // Das Wartezimmer wird erst verlassen, wenn eine Schwester frei wird.
-                    }
-                }
-                else
-                {
-                    // Keine Schwester-Vorbereitung nötig -> Schwester wird übersprungen.
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "keine_schwester_vorbereitung", patientId);
-                    ueberspringeSchwester = true;
-                }
-            }
+            // Terminstatus und Vorbereitungsbedarf bestimmen die protokollierten Entscheidungen.
+            bool direktZurSchwester = ErmittleDirektenSchwesterZugang(
+                env, patientId, hatTermin, brauchtVorbereitung, schwestern);
 
             // Schritt P4.10: Falls Schwester nicht übersprungen wird,
             // Schwester-Phase (Variante mit Prüfung) durchlaufen.
@@ -303,14 +239,14 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            if (!ueberspringeSchwester)
+            if (brauchtVorbereitung)
             {
-                double ankunftszeitSchwesterWartebereich = (env.Now - env.StartDate).TotalMinutes;
+                double ankunftszeitSchwesterWartebereich = AktuelleSimulationszeitMinuten(env);
                 if (!direktZurSchwester)
                 {
-                    daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_schwester", patientId);
+                    daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_ins_wartezimmer_schwester", patientId);
                     yield return env.Timeout(interneBewegungsdauer);
-                    ankunftszeitSchwesterWartebereich = (env.Now - env.StartDate).TotalMinutes;
+                    ankunftszeitSchwesterWartebereich = AktuelleSimulationszeitMinuten(env);
                     daten.LogEvent(ankunftszeitSchwesterWartebereich, "betritt_wartezimmer_schwester", patientId);
                     yield return env.Timeout(TimeSpan.FromMinutes(schwesterWartezimmerdauer));
                 }
@@ -410,17 +346,17 @@ namespace simSharpSimulation
             }
             else
             {
-                // Schritt P4.10B: Schwester wird in diesem Pfad übersprungen (nur bei Terminpatienten).
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "ueberspringt_schwester", patientId);
+                // Ohne Vorbereitungsbedarf wird die Schwesterphase uebersprungen.
+                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "ueberspringt_schwester", patientId);
             }
 
             // Schritt P4.11: Wartevorgang für den Arzt.
             // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
-            daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_ins_wartezimmer_fuer_arzt", patientId);
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_ins_wartezimmer_fuer_arzt", patientId);
 
             // Der Weg ins Arzt-Wartezimmer ist ebenfalls eine interne Bewegung.
             yield return env.Timeout(interneBewegungsdauer);
-            double ankunftszeitArztWartebereich = (env.Now - env.StartDate).TotalMinutes;
+            double ankunftszeitArztWartebereich = AktuelleSimulationszeitMinuten(env);
             daten.LogEvent(ankunftszeitArztWartebereich, "betritt_wartezimmer_fuer_arzt", patientId);
 
             yield return env.Timeout(TimeSpan.FromMinutes(arztWartezimmerdauer));
@@ -518,15 +454,20 @@ namespace simSharpSimulation
                     yield return ev;
                 yield break;
             }
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, gehtNachArztZurRezeption ? "geht_nach_arzt_zur_rezeption" : "verlaesst_nach_arzt_ohne_rezeption", patientId);
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, gehtNachArztZurRezeption ? "geht_nach_arzt_zur_rezeption" : "verlaesst_nach_arzt_ohne_rezeption", patientId);
 
             if (gehtNachArztZurRezeption)
             {
                 yield return env.Timeout(interneBewegungsdauer);
-                nowMinutes = (env.Now - env.StartDate).TotalMinutes;
+                jetztMinuten = AktuelleSimulationszeitMinuten(env);
                 var zweiteRezeptionErgebnis = new BehandlungsPhaseErgebnis();
-                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(env, patientId, rezeption, nowMinutes, hatTermin, true, rezeptionZumAusgangDauer, zweiteRezeptionsdauer, daten, zweiteRezeptionErgebnis, rezeptionStatus))
+                foreach (var ev in RezeptionPhase.DurchlaufeRezeption(
+                    env, patientId, rezeption, jetztMinuten, hatTermin,
+                    behandlungBereitsFertig: true,
+                    wegZumAusgang: rezeptionZumAusgangDauer,
+                    behandlungsdauer: zweiteRezeptionsdauer,
+                    daten: daten, ergebnis: zweiteRezeptionErgebnis, prognoseStatus: rezeptionStatus))
                     yield return ev;
 
                 if (zweiteRezeptionErgebnis.PatientHatKlinikVerlassen)
@@ -535,30 +476,45 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
+                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zum_ausgang", patientId);
                 yield return env.Timeout(rezeptionZumAusgangDauer);
             }
             else
             {
-                daten.LogEvent((env.Now - env.StartDate).TotalMinutes, "geht_zum_ausgang", patientId);
+                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zum_ausgang", patientId);
                 yield return env.Timeout(arztZumAusgangDauer);
             }
 
             // Schritt P4.14: Patient verlässt die Klinik (Ende des Patientenablaufs).
             // EREIGNIS 10: Patient verlässt die Klinik
-            nowMinutes = (env.Now - env.StartDate).TotalMinutes;
-            daten.LogEvent(nowMinutes, "verlaesst_klinik", patientId);
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
 
             // Gesamtprozesszeit = von Klinik-Eintritt bis Klinik-Austritt.
-            double gesamtprozesszeit = nowMinutes - ankunftszeit;
-            double gesampelteBearbeitungszeitGesamt =
-                ersteRezeptionsdauer +
-                (brauchtVorbereitung ? schwesterBehandlungsdauer : 0.0) +
-                arztBehandlungsdauer +
-                (gehtNachArztZurRezeption ? zweiteRezeptionsdauer : 0.0);
+            double gesamtprozesszeit = jetztMinuten - ankunftszeit;
             daten.ErfasseGesamtprozesszeit(gesamtprozesszeit, hatTermin);
-            daten.SchliessePrognosen(patientId, nowMinutes, gesampelteBearbeitungszeitGesamt);
+            daten.SchliessePrognosen(patientId, jetztMinuten, prognoseBearbeitungsRestzeitAbAnkunft);
             EntferneAktivePatientenPrognose(patientId);
+        }
+
+        private bool ErmittleDirektenSchwesterZugang(
+            Simulation env,
+            int patientId,
+            bool hatTermin,
+            bool brauchtVorbereitung,
+            BeweglicherSchwesterPool schwestern)
+        {
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), hatTermin ? "hat_termin" : "hat_keinen_termin", patientId);
+            if (!brauchtVorbereitung)
+            {
+                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "keine_schwester_vorbereitung", patientId);
+                return false;
+            }
+
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "benoetigt_schwester_vorbereitung", patientId);
+            bool direktZurSchwester = schwestern.IstFrei;
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), direktZurSchwester ? "schwester_frei" : "schwester_nicht_frei", patientId);
+            return direktZurSchwester;
         }
     }
 }

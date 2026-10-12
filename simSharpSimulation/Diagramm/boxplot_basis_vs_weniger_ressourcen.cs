@@ -42,7 +42,8 @@ namespace simSharpSimulation
                 basisDaten,
                 wenigerDaten,
                 "boxplot_basis_vs_weniger_ressourcen.png",
-                16);
+                16,
+                boxplotSkalenbruchEnde: 250.0);
         }
 
         private static SzenarioBoxplotDaten SimuliereBoxplotSzenario(RessourcenSzenario szenario)
@@ -315,7 +316,8 @@ namespace simSharpSimulation
             SzenarioBoxplotDaten erstesSzenario,
             SzenarioBoxplotDaten zweitesSzenario,
             string dateiname,
-            int diagrammNummer)
+            int diagrammNummer,
+            double boxplotSkalenbruchEnde = BoxplotSkalenbruchEnde)
         {
             const int breite = 1800;
             const int hoehe = 1040;
@@ -363,7 +365,8 @@ namespace simSharpSimulation
                 achsenFont,
                 kleinFont,
                 textBrush,
-                achsenPen);
+                achsenPen,
+                boxplotSkalenbruchEnde);
             ZeichneBoxplotPanel(
                 g,
                 panels[1],
@@ -376,7 +379,8 @@ namespace simSharpSimulation
                 achsenFont,
                 kleinFont,
                 textBrush,
-                achsenPen);
+                achsenPen,
+                boxplotSkalenbruchEnde);
             ZeichneKostenPanel(
                 g,
                 panels[2],
@@ -399,7 +403,8 @@ namespace simSharpSimulation
                 achsenFont,
                 kleinFont,
                 textBrush,
-                achsenPen);
+                achsenPen,
+                boxplotSkalenbruchEnde);
 
             bitmap.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
             Console.WriteLine($"--- Diagramm {diagrammNummer} gespeichert: {outputPath} ---");
@@ -437,14 +442,15 @@ namespace simSharpSimulation
             Font achsenFont,
             Font kleinFont,
             Brush textBrush,
-            Pen achsenPen)
+            Pen achsenPen,
+            double boxplotSkalenbruchEnde)
         {
             RectangleF plotArea = new(panel.Left + 104, panel.Top + 46, panel.Width - 154, panel.Height - 126);
             BoxplotStatistik erstes = BerechneBoxplotStatistik(gruppe.ErstesSzenario);
             BoxplotStatistik zweites = BerechneBoxplotStatistik(gruppe.ZweitesSzenario);
             double maxY = Math.Max(1.0, Math.Max(erstes.Max, zweites.Max));
             double yMax = maxY * 1.12;
-            BoxplotSkala skala = ErzeugeBoxplotSkala(yMax);
+            BoxplotSkala skala = ErzeugeBoxplotSkala(yMax, boxplotSkalenbruchEnde);
 
             using Pen gridPen = new(Color.FromArgb(224, 229, 234), 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
             using Pen panelPen = new(Color.FromArgb(224, 228, 232), 1);
@@ -677,12 +683,12 @@ namespace simSharpSimulation
             return (float)(plotArea.Bottom - Math.Clamp(anteil, 0.0, 1.0) * plotArea.Height);
         }
 
-        private static BoxplotSkala ErzeugeBoxplotSkala(double maxY)
+        private static BoxplotSkala ErzeugeBoxplotSkala(double maxY, double skalenbruchEnde = BoxplotSkalenbruchEnde)
         {
             return ErzeugeBoxplotSkala(
                 maxY,
                 BoxplotSkalenbruchStart,
-                BoxplotSkalenbruchEnde,
+                skalenbruchEnde,
                 BoxplotSkalenbruchAngezeigteSpanne);
         }
 
