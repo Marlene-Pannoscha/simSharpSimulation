@@ -172,28 +172,7 @@ namespace simSharpSimulation
 
         private static string ErmittleProjektRoot()
         {
-            string? vonCwd = FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
-            if (!string.IsNullOrEmpty(vonCwd))
-                return vonCwd;
-
-            string? vonBinary = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj");
-            if (!string.IsNullOrEmpty(vonBinary))
-                return vonBinary;
-
-            // Fallback, falls die .csproj-Datei unerwartet nicht gefunden wird.
-            return Directory.GetCurrentDirectory();
-        }
-
-        private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
-        {
-            var current = new DirectoryInfo(startPfad);
-            while (current != null)
-            {
-                if (File.Exists(Path.Combine(current.FullName, dateiname)))
-                    return current.FullName;
-                current = current.Parent;
-            }
-            return null;
+            return ProjektPfade.ErmittleProjektOrdner();
         }
 
         // Erzeugt eine Sequenz von gleichmäßig verteilten Zahlen über ein angegebenes Intervall.

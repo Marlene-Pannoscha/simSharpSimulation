@@ -160,13 +160,9 @@ Die Formeln liegen in `PatientenProzess/PatientenProzess.Prognose.cs`.
 
 Hilfsmethoden der Prognose:
 
-- `BerechneErwarteteSchwesterRestzeit(...)`
 - `BerechneSchwesterRestzeitNachRezeption(...)`
 - `BerechneRestzeitAbSchwester(...)`
-- `BerechneErwarteteRestzeitNachArzt(...)`
 - `BerechneRestzeitNachArztMitKonkretemPfad(...)`
-- `BerechneMittlereSchwesterWartezimmerzeit(...)`
-- `BerechneMittlereArztWartezimmerzeit()`
 
 ### Was die Prognose aktuell nicht berücksichtigt
 

@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -47,45 +47,9 @@ namespace simSharpSimulation
             Console.WriteLine("--- Ende der SimSharp-Simulation. ---");
             SchreibeReineSimulationszeit(simulationszeit);
 
-            // --- 6. VISUALISIERUNG (Diagramme) ---
-            GenerateDiagramme.GeneriereDiagramme(
-                daten.EchteAnkunftszeiten,
-                daten.Wartezeiten,
-                daten.WartezeitenMitTermin,
-                daten.WartezeitenOhneTermin,
-                daten.SchwesternWartezeiten,
-                daten.SchwesternWartezeitenMitTermin,
-                daten.SchwesternWartezeitenOhneTermin,
-                daten.RezeptionsWartezeiten,
-                daten.Gesamtprozesszeiten,
-                daten.HitMissProTag,
-                daten.TraceData,
-                daten.ArztBehandlungszeitenNachTyp,
-                daten.SchwesternBehandlungszeitenNachTyp,
-                daten.RezeptionsBehandlungszeiten,
-                SimulationKonfiguration.SIMULATIONSDAUER,
-                PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN,
-                PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN,
-                PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN,
-                ArztKonfiguration.ANZAHL_AERZTE,
-                SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+            ErzeugeSimulationsDiagramme(daten);
 
-
-            // --- 7. EXPORT IN TEXTDATEI ---
-            Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
-            var traceWithHeader = daten.TraceData.ToList();
-            // Nur noch Heading-Zeile (keine Kommentarzeilen mehr)
-            traceWithHeader.Insert(0, "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId");
-            File.WriteAllLines("klinik_trace.txt", traceWithHeader);
-            Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
-
-            string prognosePfad = "prognose_report.txt";
-            daten.SchreibePrognoseReport(prognosePfad);
-            Console.WriteLine($"--- Prognose-Report gespeichert: {prognosePfad} ---");
-
-            string prognoseJsonPfad = "prognose_daten.json";
-            daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
-            Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
+            ExportiereSimulationsDaten(daten);
 
             Console.WriteLine();
             Console.WriteLine(daten.ErzeugePrognoseReportText());
@@ -176,7 +140,7 @@ namespace simSharpSimulation
                     "nicht erzeugt (--simulation-only)",
                     "nicht erzeugt (--simulation-only)",
                     "nicht erzeugt (--simulation-only)");
-            string reportText = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
+            string reportText = FinanzVisualisierung.ErzeugeErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
             Console.WriteLine(reportText);
 
             Console.WriteLine("--- Finanzen (Tagesübersicht) ---");
@@ -189,12 +153,52 @@ namespace simSharpSimulation
             Console.WriteLine("Tipp: Für die Finanzansicht im extra Fenster verwende '--finanz-wpf'.");
         }
 
-        private static void SchreibeHilfe()
+        private static void ErzeugeSimulationsDiagramme(SimulationsDaten daten)
         {
-            Console.WriteLine("Verwendung:");
-            Console.WriteLine("  dotnet run -- --simulation-only   Simulation ohne PNG-Diagramme/Bilder");
-            Console.WriteLine("  dotnet run -- --with-images       Simulation mit allen Diagrammen/Bildern");
-            Console.WriteLine("  dotnet run -- --finanz-wpf        Finanz- und Auswertungsfenster starten");
+        // --- 6. VISUALISIERUNG (Diagramme) ---
+        GenerateDiagramme.GeneriereDiagramme(
+            daten.EchteAnkunftszeiten,
+            daten.Wartezeiten,
+            daten.WartezeitenMitTermin,
+            daten.WartezeitenOhneTermin,
+            daten.SchwesternWartezeiten,
+            daten.SchwesternWartezeitenMitTermin,
+            daten.SchwesternWartezeitenOhneTermin,
+            daten.RezeptionsWartezeiten,
+            daten.Gesamtprozesszeiten,
+            daten.HitMissProTag,
+            daten.TraceData,
+            daten.ArztBehandlungszeitenNachTyp,
+            daten.SchwesternBehandlungszeitenNachTyp,
+            daten.RezeptionsBehandlungszeiten,
+            SimulationKonfiguration.SIMULATIONSDAUER,
+            PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN,
+            PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN,
+            PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN,
+            ArztKonfiguration.ANZAHL_AERZTE,
+            SchwesterKonfiguration.ANZAHL_SCHWESTERN);
+
+
+        }
+
+        private static void ExportiereSimulationsDaten(SimulationsDaten daten)
+        {
+        // --- 7. EXPORT IN TEXTDATEI ---
+        Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
+        var traceWithHeader = daten.TraceData.ToList();
+        // Nur noch Heading-Zeile (keine Kommentarzeilen mehr)
+        traceWithHeader.Insert(0, "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId");
+        File.WriteAllLines("klinik_trace.txt", traceWithHeader);
+        Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
+
+        string prognosePfad = "prognose_report.txt";
+        daten.SchreibePrognoseReport(prognosePfad);
+        Console.WriteLine($"--- Prognose-Report gespeichert: {prognosePfad} ---");
+
+        string prognoseJsonPfad = "prognose_daten.json";
+        daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
+        Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
+
         }
 
         private static void SchreibeFinanzwerte(Tagesergebnis finanzen)
@@ -236,33 +240,6 @@ namespace simSharpSimulation
         private static void SchreibeReineSimulationszeit(TimeSpan simulationszeit)
         {
             Console.WriteLine($"Reine Simulationszeit (ohne Diagramm- und Dateierzeugung): {FormatiereDauer(simulationszeit)}");
-        }
-
-        private static string ErmittleProjektOrdner()
-        {
-            string? viaCwd = FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
-            if (!string.IsNullOrEmpty(viaCwd))
-                return viaCwd;
-
-            string? viaBase = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj");
-            if (!string.IsNullOrEmpty(viaBase))
-                return viaBase;
-
-            return Directory.GetCurrentDirectory();
-        }
-
-        private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
-        {
-            DirectoryInfo? current = new(startPfad);
-            while (current != null)
-            {
-                if (File.Exists(Path.Combine(current.FullName, dateiname)))
-                    return current.FullName;
-
-                current = current.Parent;
-            }
-
-            return null;
         }
 
     }

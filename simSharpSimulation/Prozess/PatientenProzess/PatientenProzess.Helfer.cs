@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using SimSharp;
 using static simSharpSimulation.SimulationsHelfer;
 
@@ -31,7 +30,7 @@ namespace simSharpSimulation
 
         private static double ZieheSchwesterBehandlungsdauer(PatientenTyp patientenTyp, Random rnd)
         {
-            var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+            var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
             return ZieheLogNormalDauer(
                 typInfo.BehandlungszeitSchwester,
                 typInfo.VariationskoeffizientSchwester,
@@ -40,7 +39,7 @@ namespace simSharpSimulation
 
         private static double ZieheArztBehandlungsdauer(PatientenTyp patientenTyp, Random rnd)
         {
-            var typInfo = PatientenKonfiguration.TYPEN_VERTEILUNG.First(t => t.Typ == patientenTyp);
+            var typInfo = PatientenKonfiguration.HoleTypInfo(patientenTyp);
             return ZieheLogNormalDauer(
                 typInfo.BehandlungszeitArzt,
                 typInfo.VariationskoeffizientArzt,
@@ -83,7 +82,6 @@ namespace simSharpSimulation
             daten.SchliessePrognosen(patientId, jetztMinuten);
             EntferneAktivePatientenPrognose(patientId);
         }
-
 
     }
 }

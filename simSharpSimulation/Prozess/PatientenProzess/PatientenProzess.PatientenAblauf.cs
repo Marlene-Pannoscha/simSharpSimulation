@@ -202,7 +202,6 @@ namespace simSharpSimulation
                 BerechneSchwesterRestzeitNachRezeption(
                     brauchtVorbereitung,
                     direktZurSchwester,
-                    hatTermin,
                     interneBewegungsdauer,
                     schwesterBehandlungsdauer,
                     schwesterWartezimmerdauer) +

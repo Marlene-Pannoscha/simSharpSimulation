@@ -121,11 +121,11 @@ namespace simSharpSimulation
         public void LogEvent(double zeit, string eventTyp, int patientId, int? arztId = null, int? schwesterId = null)
         {
             var (vonZustand, zuZustand) = ErmittleZustandswechsel(eventTyp);
-            string timeStr = zeit.ToString("000.00", CultureInfo.InvariantCulture);
-            string arztStr = arztId.HasValue ? arztId.Value.ToString() : "";
-            string schwesterStr = schwesterId.HasValue ? schwesterId.Value.ToString() : "";
-            string logEntry = $"{timeStr};{eventTyp};{vonZustand};{zuZustand};{patientId};{arztStr};{schwesterStr}";
-            TraceData.Add(logEntry);
+            string zeitText = zeit.ToString("000.00", CultureInfo.InvariantCulture);
+            string arztIdText = arztId.HasValue ? arztId.Value.ToString() : "";
+            string schwesterIdText = schwesterId.HasValue ? schwesterId.Value.ToString() : "";
+            string traceEintrag = $"{zeitText};{eventTyp};{vonZustand};{zuZustand};{patientId};{arztIdText};{schwesterIdText}";
+            TraceData.Add(traceEintrag);
         }
 
         public void ErfasseArztWartezeit(double wartezeitArzt, bool hatTermin, PatientenTyp patientenTyp)
@@ -335,10 +335,10 @@ namespace simSharpSimulation
 
             foreach (var pruefung in liste)
             {
-                double actualRest = Math.Max(0.0, endZeitpunktMinuten - pruefung.ZeitpunktMinuten);
-                double abweichungMinuten = pruefung.PrognoseRestMinuten - actualRest;
-                double? abweichungProzent = actualRest > 0.0001
-                    ? (abweichungMinuten / actualRest) * 100.0
+                double istRestMinuten = Math.Max(0.0, endZeitpunktMinuten - pruefung.ZeitpunktMinuten);
+                double abweichungMinuten = pruefung.PrognoseRestMinuten - istRestMinuten;
+                double? abweichungProzent = istRestMinuten > 0.0001
+                    ? (abweichungMinuten / istRestMinuten) * 100.0
                     : null;
                 double? gesampelteBearbeitungsRestMinuten = gesampelteBearbeitungszeitGesamt.HasValue
                     ? Math.Max(0.0, gesampelteBearbeitungszeitGesamt.Value - pruefung.VerbrauchteBearbeitungsMinuten)
@@ -352,21 +352,21 @@ namespace simSharpSimulation
                         : null;
                 bool korrekt;
 
-                if (actualRest <= 0.0001)
+                if (istRestMinuten <= 0.0001)
                 {
                     korrekt = pruefung.PrognoseRestMinuten <= 0.0001;
                 }
                 else
                 {
-                    double toleranz = BerechnePrognoseTrefferToleranz(actualRest);
-                    korrekt = Math.Abs(pruefung.PrognoseRestMinuten - actualRest) <= toleranz;
+                    double toleranz = BerechnePrognoseTrefferToleranz(istRestMinuten);
+                    korrekt = Math.Abs(pruefung.PrognoseRestMinuten - istRestMinuten) <= toleranz;
                 }
 
                 if (korrekt)
                     AnzahlPrognoseRichtig++;
 
                 double basisPrognoseRestMinuten = pruefung.PrognoseRestMinuten - pruefung.PrognoseKorrekturMinuten;
-                AktualisierePrognoseKalibrierung(pruefung.Phase, actualRest - basisPrognoseRestMinuten);
+                AktualisierePrognoseKalibrierung(pruefung.Phase, istRestMinuten - basisPrognoseRestMinuten);
                 prognoseErgebnisse.Add(new PrognoseErgebnis(
                     pruefung.PatientId,
                     pruefung.Phase,
@@ -376,7 +376,7 @@ namespace simSharpSimulation
                     gesampelteBearbeitungsRestMinuten,
                     abweichungBearbeitungMinuten,
                     abweichungBearbeitungProzent,
-                    actualRest,
+                    istRestMinuten,
                     abweichungMinuten,
                     abweichungProzent,
                     korrekt,
@@ -647,8 +647,8 @@ namespace simSharpSimulation
                     return kandidat;
             }
 
-            string? projektOrdner = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj")
-                ?? FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
+            string? projektOrdner = ProjektPfade.FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj")
+                ?? ProjektPfade.FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
 
             if (!string.IsNullOrEmpty(projektOrdner))
             {
@@ -660,20 +660,6 @@ namespace simSharpSimulation
             throw new FileNotFoundException(
                 $"Die Ressourcen-Datei wurde nicht gefunden: {dateiname}",
                 dateiname);
-        }
-
-        private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
-        {
-            DirectoryInfo? current = new(startPfad);
-            while (current != null)
-            {
-                if (File.Exists(Path.Combine(current.FullName, dateiname)))
-                    return current.FullName;
-
-                current = current.Parent;
-            }
-
-            return null;
         }
 
         private TagesHitMissZaehler ErmittleOderErzeugeTagesHitMiss(DateTime tag)

@@ -35,9 +35,6 @@ internal sealed partial class FinanzWpfFenster : Window
     private TextBox geraeteWartungProTagTextBox = new TextBox();
     private ComboBox zeitraumComboBox = new ComboBox();
 
-    private Button? exportButton;
-    private Button? exportFinanzenButton;
-
     private readonly TextBlock statusTextBlock;
     // Kennzahlen Anzeige (wird im Konfiguration-Tab angezeigt)
     private TextBlock raeumeKurzinfoTextBlock = new TextBlock();
@@ -384,7 +381,7 @@ internal sealed partial class FinanzWpfFenster : Window
         double gesamtFlaeche = schwesterZimmer * flaecheSchwester
             + arztZimmer * flaecheArzt
             + flaecheWartezimmer;
-        double mietkostenProQm = FinanzRechner.GetMietkostenProQuadratmeterProMonat(gesamtFlaeche);
+        double mietkostenProQm = FinanzRechner.ErmittleMietkostenProQuadratmeterProMonat(gesamtFlaeche);
         double gesamtMietkostenProTag = (mietkostenProQm * gesamtFlaeche * 12) / 365.0;
         double energieProTag = (energieProQmProMonat * gesamtFlaeche * 12) / 365.0;
         double reinigungProTag = (reinigungProQmProMonat * gesamtFlaeche * 12) / 365.0;
@@ -553,7 +550,7 @@ internal sealed partial class FinanzWpfFenster : Window
             // Textbericht und Bilder werden gemeinsam aktualisiert, damit die Ansicht konsistent bleibt.
             if (ergebnisTextBox != null)
             {
-                ergebnisTextBox.Text = FinanzVisualisierung.GenerateErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
+                ergebnisTextBox.Text = FinanzVisualisierung.ErzeugeErgebnisReportText(ergebnis, finanzenPfad, gewinnPfad, kostenstrukturPfad);
             }
             if (breakEvenTicker != null)
             {
@@ -580,9 +577,10 @@ internal sealed partial class FinanzWpfFenster : Window
                 gesamtMietkostenTextBox.Text = FinanzVisualisierung.FormatEuro(ergebnis.GesamtMietkostenProTag);
                 AktualisiereRaeumeKurzinfo();
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignoriere UI-Update-Fehler (sollte nicht passieren)
+                // Die Simulation bleibt erfolgreich; der Fehler der Kennzahlenanzeige bleibt nachvollziehbar.
+                Trace.TraceError($"Kennzahlenanzeige konnte nicht aktualisiert werden: {ex}");
             }
             
             // Hit/Miss Tab aktualisieren
@@ -630,7 +628,7 @@ internal sealed partial class FinanzWpfFenster : Window
             return false;
         }
 
-        if (value < min || value > max)
+        if (!double.IsFinite(value) || value < min || value > max)
         {
             error = $"Wert ausserhalb des Bereichs: erlaubt ist {min.ToString(DeCulture)} bis {max.ToString(DeCulture)}.";
             return false;

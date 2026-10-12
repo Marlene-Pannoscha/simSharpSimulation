@@ -184,7 +184,6 @@ namespace simSharpSimulation
         private static double BerechneSchwesterRestzeitNachRezeption(
             bool brauchtVorbereitung,
             bool direktZurSchwester,
-            bool hatTermin,
             TimeSpan interneBewegungsdauer,
             double schwesterBehandlungsdauer,
             double schwesterWartezimmerdauer)
@@ -203,25 +202,6 @@ namespace simSharpSimulation
             return restzeit;
         }
 
-        // Erwartete Schwester-Restzeit zu einem frühen Zeitpunkt, an dem noch nicht feststeht,
-        // ob die Schwester-Vorbereitung wirklich anfällt.
-        // Deshalb rechnen wir mit:
-        // Vorbereitungswahrscheinlichkeit * erwartete Restzeit im Schwesterpfad.
-        private static double BerechneErwarteteSchwesterRestzeit(
-            bool hatTermin,
-            TimeSpan interneBewegungsdauer,
-            double vorbereitungsWahrscheinlichkeit,
-            double schwesterBehandlungsdauer,
-            double schwesterWartezimmerdauer)
-        {
-            double restzeitMitVorbereitung =
-                (2.0 * interneBewegungsdauer.TotalMinutes) +
-                schwesterWartezimmerdauer +
-                schwesterBehandlungsdauer;
-
-            return vorbereitungsWahrscheinlichkeit * restzeitMitVorbereitung;
-        }
-
         // Restzeit ab abgeschlossenem Schwesterpfad:
         // Bewegung zum Arzt-Wartezimmer + erwartete Wartezimmerzeit + Arztbehandlung.
         private static double BerechneRestzeitAbSchwester(
@@ -232,25 +212,6 @@ namespace simSharpSimulation
             return (2.0 * interneBewegungsdauer.TotalMinutes) +
                    arztWartezimmerdauer +
                    arztBehandlungsdauer;
-        }
-
-        // Erwartete Restzeit nach dem Arzt, solange noch nicht entschieden ist,
-        // ob der Patient zur Rezeption zurückgeht oder direkt die Klinik verlässt.
-        // Der Wert ist also ein gewichteter Erwartungswert über beide Pfade.
-        private static double BerechneErwarteteRestzeitNachArzt(
-            TimeSpan interneBewegungsdauer,
-            TimeSpan rezeptionZumAusgangDauer,
-            TimeSpan arztZumAusgangDauer,
-            double rezeptionsdauerNachArzt)
-        {
-            double restMitRezeption =
-                interneBewegungsdauer.TotalMinutes +
-                rezeptionsdauerNachArzt +
-                rezeptionZumAusgangDauer.TotalMinutes;
-
-            double restOhneRezeption = arztZumAusgangDauer.TotalMinutes;
-            return WahrscheinlichkeitNachArztZurRezeption * restMitRezeption +
-                   ((1.0 - WahrscheinlichkeitNachArztZurRezeption) * restOhneRezeption);
         }
 
         // Restzeit nach dem Arzt, wenn der konkrete Pfad bereits feststeht.
@@ -270,29 +231,6 @@ namespace simSharpSimulation
             return interneBewegungsdauer.TotalMinutes +
                    rezeptionsdauerNachArzt +
                    rezeptionZumAusgangDauer.TotalMinutes;
-        }
-
-        // Für die Prognose wird die Wartezimmerzeit nicht aus der echten Queue geschätzt,
-        // sondern aus Mittelwert * Terminfaktor.
-        // Terminpatienten und Patienten ohne Termin bekommen dadurch unterschiedliche Erwartungen.
-        private static double BerechneMittlereSchwesterWartezimmerzeit(bool hatTermin)
-        {
-            double faktor = hatTermin
-                ? PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER
-                : PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER;
-            return PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_SCHWESTER * faktor;
-        }
-
-        // Auch beim Arzt verwenden wir aktuell einen gemittelten Erwartungswert.
-        // Der Terminanteil mischt die beiden Wartezimmerfaktoren zu einem Gesamtwert.
-        // Das ist einfach und stabil, aber noch nicht queue-genau.
-        private static double BerechneMittlereArztWartezimmerzeit()
-        {
-            double terminAnteil = PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
-            double faktor =
-                (terminAnteil * PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT) +
-                ((1.0 - terminAnteil) * PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT);
-            return PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * faktor;
         }
 
         private double SchaetzeRezeptionsQueueWartezeit(

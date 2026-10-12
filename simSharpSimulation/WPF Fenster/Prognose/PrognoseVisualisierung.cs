@@ -215,28 +215,7 @@ internal static class PrognoseVisualisierung
 
     private static string ErmittleProjektRoot()
     {
-        string? viaCwd = FindeOrdnerMitDatei(Directory.GetCurrentDirectory(), "simSharpSimulation.csproj");
-        if (!string.IsNullOrEmpty(viaCwd))
-            return viaCwd;
-
-        string? viaBase = FindeOrdnerMitDatei(AppContext.BaseDirectory, "simSharpSimulation.csproj");
-        if (!string.IsNullOrEmpty(viaBase))
-            return viaBase;
-
-        return Directory.GetCurrentDirectory();
-    }
-
-    private static string? FindeOrdnerMitDatei(string startPfad, string dateiname)
-    {
-        DirectoryInfo? current = new(startPfad);
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, dateiname)))
-                return current.FullName;
-            current = current.Parent;
-        }
-
-        return null;
+        return ProjektPfade.ErmittleProjektOrdner();
     }
 
     internal readonly record struct PrognoseDiagrammPfade(

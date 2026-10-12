@@ -104,17 +104,17 @@ public static class FinanzRechner
             behandeltePatienten);
     }
 
-    internal static double GetMietkostenProQuadratmeterProMonat(double flaeche)
+    internal static double ErmittleMietkostenProQuadratmeterProMonat(double flaeche)
     {
-        var MietAufteilung = Finanzen.Fixkosten.MietkostenAufteilung
+        var mietaufteilung = Finanzen.Fixkosten.MietkostenAufteilung
             .FirstOrDefault(s => flaeche >= s.MinFlaeche && flaeche <= s.MaxFlaeche);
 
-        if (MietAufteilung != null)
+        if (mietaufteilung != null)
         {
-            return MietAufteilung.KostenProQm;
+            return mietaufteilung.KostenProQm;
         }
 
-        // Fallback, falls keine MietAufteilung passt (sollte durch die Konfiguration nicht passieren)
+        // Fallback, falls keine mietaufteilung passt (sollte durch die Konfiguration nicht passieren)
         return 0.0;
     }
 
@@ -132,12 +132,7 @@ public static class FinanzRechner
             SchwesterKonfiguration.ANZAHL_SCHWESTERN,
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
             behandeltePatienten);
-        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
-        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        double umsatz = umsatzverteilung.Gesamtumsatz;
-        Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
-        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, behandeltePatienten, umsatz / Math.Max(1, behandeltePatienten));
-        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
+        return ErzeugeFinanzErgebnis(kosten, behandlungsmix, behandeltePatienten);
     }
 
     public static Tagesergebnis BerechneTagesergebnis(
@@ -157,12 +152,7 @@ public static class FinanzRechner
             anzahlSchwestern,
             anzahlRezeptionisten,
             behandeltePatienten);
-        Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
-        Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
-        double umsatz = umsatzverteilung.Gesamtumsatz;
-        Kostenstruktur kostenstruktur = BerechneKostenstruktur(kosten, umsatz);
-        BreakEvenPoint breakEven = BerechneBreakEvenPoint(kosten, behandeltePatienten, umsatz / Math.Max(1, behandeltePatienten));
-        return ErstelleErgebnis(kosten, versicherungen, umsatzverteilung, behandlungsmix, kostenstruktur, breakEven);
+        return ErzeugeFinanzErgebnis(kosten, behandlungsmix, behandeltePatienten);
     }
 
     public static Tagesergebnis BerechneZeitraumergebnis(int anzahlAerzte, int behandeltePatienten, int arbeitstage)
@@ -177,6 +167,14 @@ public static class FinanzRechner
             SchwesterKonfiguration.ANZAHL_SCHWESTERN,
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
             behandeltePatienten);
+        return ErzeugeFinanzErgebnis(kosten, behandlungsmix, behandeltePatienten);
+    }
+
+    private static Tagesergebnis ErzeugeFinanzErgebnis(
+        Tageskosten kosten,
+        Behandlungsmix behandlungsmix,
+        int behandeltePatienten)
+    {
         Versicherungsverteilung versicherungen = BerechneVersicherungsverteilung(behandeltePatienten);
         Umsatzverteilung umsatzverteilung = BerechneUmsatzverteilung(versicherungen);
         double umsatz = umsatzverteilung.Gesamtumsatz;
@@ -246,7 +244,7 @@ public static class FinanzRechner
                              + Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt * Finanzen.Fixkosten.FlaecheBehandlungsraumArztQuadratmeter
                              + Finanzen.Fixkosten.FlaecheWartezimmerQuadratmeter;
 
-        double mietkostenProQuadratmeterProMonat = GetMietkostenProQuadratmeterProMonat(gesamtflaeche);
+        double mietkostenProQuadratmeterProMonat = ErmittleMietkostenProQuadratmeterProMonat(gesamtflaeche);
         double mietkostenProTag = (mietkostenProQuadratmeterProMonat * gesamtflaeche * 12) / 365.0;
         double energiekostenProTag = (Finanzen.Fixkosten.EnergiekostenProQmProMonat * gesamtflaeche * 12) / 365.0;
         double reinigungskostenProTag = (Finanzen.Fixkosten.ReinigungskostenProQmProMonat * gesamtflaeche * 12) / 365.0;

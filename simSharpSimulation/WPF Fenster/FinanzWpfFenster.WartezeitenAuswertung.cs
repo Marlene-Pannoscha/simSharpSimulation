@@ -1,0 +1,508 @@
+using System.Globalization;
+
+namespace simSharpSimulation;
+
+internal sealed partial class FinanzWpfFenster
+{
+    private sealed record WartezeitenAuswertung(
+        double AuswertungsdauerMinuten,
+        int TraceEreignisse,
+        string Zeitraum,
+        double Saisonfaktor,
+        List<AnzahlZeile> Warteschlangen,
+        List<AuslastungZeile> Auslastungen,
+        List<AnzahlZeile> Bereiche,
+        List<WartezeitZeile> Wartezeiten,
+        List<BehandlungszeitVergleichZeile> Behandlungszeiten)
+    {
+        private const double TagesNachlaufPufferMinuten = 180.0;
+        private const double RezeptionsAusreisserGrenzeMinuten = 15.0;
+        private static double TagesAbstandMinuten => SimulationKonfiguration.SIMULATIONSDAUER + TagesNachlaufPufferMinuten;
+
+        public static WartezeitenAuswertung Erzeuge(SimulationsDaten daten, string zeitraum)
+        {
+            string normalisierterZeitraum = NormalisiereZeitraum(zeitraum);
+            double saisonfaktor = ErmittleSaisonfaktor(normalisierterZeitraum);
+            List<TraceEvent> events = daten.TraceData
+                .Select(ParseTraceEvent)
+                .Where(e => e is not null)
+                .Select(e => e!)
+                .OrderBy(e => e.GlobalZeit)
+                .ThenBy(e => e.Index)
+                .ToList();
+
+            string[] zaehlerNamen =
+            {
+                "Warteschlange Rezeption",
+                "Warteschlange Schwester",
+                "Warteschlange Arzt",
+                "Klinik gesamt",
+                "Rezeption",
+                "Schwester belegt",
+                "Arzt belegt",
+                "Schwesterzimmer",
+                "Arztzimmer"
+            };
+
+            Dictionary<string, HashSet<int>> patientenJeZaehler = zaehlerNamen
+                .ToDictionary(name => name, _ => new HashSet<int>(), StringComparer.Ordinal);
+            Dictionary<string, AnzahlStatistik> statistiken = zaehlerNamen
+                .ToDictionary(name => name, _ => new AnzahlStatistik(), StringComparer.Ordinal);
+            Dictionary<string, Dictionary<int, double>> warteStart = new(StringComparer.Ordinal)
+            {
+                ["Rezeption"] = new Dictionary<int, double>(),
+                ["Schwester"] = new Dictionary<int, double>(),
+                ["Arzt"] = new Dictionary<int, double>()
+            };
+            Dictionary<string, List<double>> warteDauern = new(StringComparer.Ordinal)
+            {
+                ["Rezeption"] = new List<double>(),
+                ["Schwester"] = new List<double>(),
+                ["Arzt"] = new List<double>()
+            };
+
+            double letzteZeit = events.Count > 0 ? events[0].GlobalZeit : 0.0;
+            int index = 0;
+            foreach (TraceEvent traceEvent in events)
+            {
+                double dauer = Math.Max(0.0, traceEvent.GlobalZeit - letzteZeit);
+                foreach ((string name, AnzahlStatistik statistik) in statistiken)
+                    statistik.ErfasseDauer(dauer, patientenJeZaehler[name].Count);
+
+                VerarbeiteEvent(traceEvent, patientenJeZaehler, warteStart, warteDauern);
+
+                foreach ((string name, AnzahlStatistik statistik) in statistiken)
+                    statistik.ErfasseMoment(patientenJeZaehler[name].Count);
+
+                letzteZeit = traceEvent.GlobalZeit;
+                index++;
+            }
+
+            List<AnzahlZeile> warteschlangen = new()
+            {
+                ErzeugeAnzahlZeile("Rezeption", statistiken["Warteschlange Rezeption"], saisonfaktor),
+                ErzeugeAnzahlZeile("Schwester", statistiken["Warteschlange Schwester"], saisonfaktor),
+                ErzeugeAnzahlZeile("Arzt", statistiken["Warteschlange Arzt"], saisonfaktor)
+            };
+
+            List<AnzahlZeile> bereiche = new()
+            {
+                ErzeugeAnzahlZeile("Klinik gesamt", statistiken["Klinik gesamt"], saisonfaktor),
+                ErzeugeAnzahlZeile("Rezeption", statistiken["Rezeption"], saisonfaktor),
+                ErzeugeAnzahlZeile("Schwesterzimmer", statistiken["Schwesterzimmer"], saisonfaktor),
+                ErzeugeAnzahlZeile("Arztzimmer", statistiken["Arztzimmer"], saisonfaktor)
+            };
+
+            List<AuslastungZeile> auslastungen = new()
+            {
+                ErzeugeAuslastungZeile(
+                    "Aerzte",
+                    statistiken["Arzt belegt"],
+                    ArztKonfiguration.ANZAHL_AERZTE,
+                    daten.ArztBehandlungszeitenMitTermin.Count + daten.ArztBehandlungszeitenOhneTermin.Count,
+                    BerechneErwartbarePatientenKapazitaet(ArztKonfiguration.ANZAHL_AERZTE, BerechneMittlereArztBehandlungszeit()),
+                    saisonfaktor),
+                ErzeugeAuslastungZeile(
+                    "Schwestern",
+                    statistiken["Schwester belegt"],
+                    SchwesterKonfiguration.ANZAHL_SCHWESTERN,
+                    daten.SchwesternBehandlungszeitenMitTermin.Count + daten.SchwesternBehandlungszeitenOhneTermin.Count,
+                    BerechneErwartbarePatientenKapazitaet(SchwesterKonfiguration.ANZAHL_SCHWESTERN, BerechneMittlereSchwesterBehandlungszeit()),
+                    saisonfaktor),
+                ErzeugeAuslastungZeile(
+                    "Arztzimmer",
+                    statistiken["Arztzimmer"],
+                    KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt,
+                    daten.ArztBehandlungszeitenMitTermin.Count + daten.ArztBehandlungszeitenOhneTermin.Count,
+                    BerechneErwartbarePatientenKapazitaet(KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt, BerechneMittlereArztBehandlungszeit()),
+                    saisonfaktor),
+                ErzeugeAuslastungZeile(
+                    "Schwesterzimmer",
+                    statistiken["Schwesterzimmer"],
+                    KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester,
+                    daten.SchwesternBehandlungszeitenMitTermin.Count + daten.SchwesternBehandlungszeitenOhneTermin.Count,
+                    BerechneErwartbarePatientenKapazitaet(KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester, BerechneMittlereSchwesterBehandlungszeit()),
+                    saisonfaktor)
+            };
+
+            List<WartezeitZeile> wartezeiten = new()
+            {
+                ErzeugeWartezeitZeile("Rezeption", warteDauern["Rezeption"], saisonfaktor, RezeptionsAusreisserGrenzeMinuten),
+                ErzeugeWartezeitZeile("Schwester", warteDauern["Schwester"], saisonfaktor),
+                ErzeugeWartezeitZeile("Arzt", warteDauern["Arzt"], saisonfaktor)
+            };
+
+            List<BehandlungszeitVergleichZeile> behandlungszeiten = new()
+            {
+                ErzeugeBehandlungszeitVergleichZeile(
+                    "Rezeption",
+                    daten.RezeptionsBehandlungszeitenMitTermin.Concat(daten.RezeptionsBehandlungszeitenOhneTermin).ToList(),
+                    RezeptionKonfiguration.MITTELREZEPTIONSZEIT,
+                    saisonfaktor),
+                ErzeugeBehandlungszeitVergleichZeile(
+                    "Schwester",
+                    daten.SchwesternBehandlungszeitenMitTermin.Concat(daten.SchwesternBehandlungszeitenOhneTermin).ToList(),
+                    BerechneMittlereSchwesterBehandlungszeit(),
+                    saisonfaktor),
+                ErzeugeBehandlungszeitVergleichZeile(
+                    "Arzt",
+                    daten.ArztBehandlungszeitenMitTermin.Concat(daten.ArztBehandlungszeitenOhneTermin).ToList(),
+                    BerechneMittlereArztBehandlungszeit(),
+                    saisonfaktor)
+            };
+
+            double auswertungsdauer = statistiken.Values.FirstOrDefault()?.Gesamtdauer ?? 0.0;
+            return new WartezeitenAuswertung(auswertungsdauer, events.Count, normalisierterZeitraum, saisonfaktor, warteschlangen, auslastungen, bereiche, wartezeiten, behandlungszeiten);
+        }
+
+        private static void VerarbeiteEvent(
+            TraceEvent traceEvent,
+            Dictionary<string, HashSet<int>> patientenJeZaehler,
+            Dictionary<string, Dictionary<int, double>> warteStart,
+            Dictionary<string, List<double>> warteDauern)
+        {
+            int patientId = traceEvent.PatientId;
+            switch (traceEvent.EventTyp)
+            {
+                case "betritt_klinik":
+                    patientenJeZaehler["Klinik gesamt"].Add(patientId);
+                    break;
+                case "geht_zum_ausgang":
+                    BeendeAlleWartezeiten(patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    EntferneAusWarteschlangen(patientId, patientenJeZaehler);
+                    break;
+                case "verlaesst_klinik":
+                    BeendeAlleWartezeiten(patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    EntferneAusAllen(patientId, patientenJeZaehler);
+                    break;
+                case "betritt_rezeption_warteschlange":
+                    patientenJeZaehler["Warteschlange Rezeption"].Add(patientId);
+                    BeginneWarten("Rezeption", patientId, traceEvent.GlobalZeit, warteStart);
+                    break;
+                case "betritt_rezeption":
+                    patientenJeZaehler["Warteschlange Rezeption"].Remove(patientId);
+                    patientenJeZaehler["Rezeption"].Add(patientId);
+                    BeendeWarten("Rezeption", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "beendet_rezeption":
+                    patientenJeZaehler["Warteschlange Rezeption"].Remove(patientId);
+                    patientenJeZaehler["Rezeption"].Remove(patientId);
+                    break;
+                case "bricht_ab_wegen_feierabend_rezeption":
+                    patientenJeZaehler["Warteschlange Rezeption"].Remove(patientId);
+                    patientenJeZaehler["Rezeption"].Remove(patientId);
+                    BeendeWarten("Rezeption", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "betritt_wartezimmer":
+                case "betritt_schwester_warteschlange":
+                    patientenJeZaehler["Warteschlange Schwester"].Add(patientId);
+                    BeginneWarten("Schwester", patientId, traceEvent.GlobalZeit, warteStart);
+                    break;
+                case "verlaesst_wartezimmer":
+                    patientenJeZaehler["Warteschlange Schwester"].Remove(patientId);
+                    BeendeWarten("Schwester", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "betritt_schwesterzimmer":
+                    patientenJeZaehler["Warteschlange Schwester"].Remove(patientId);
+                    patientenJeZaehler["Schwesterzimmer"].Add(patientId);
+                    BeendeWarten("Schwester", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "startet_schwester_prozess":
+                    patientenJeZaehler["Schwester belegt"].Add(patientId);
+                    break;
+                case "beendet_schwester_prozess":
+                case "bricht_ab_wegen_feierabend_schwester":
+                    patientenJeZaehler["Warteschlange Schwester"].Remove(patientId);
+                    patientenJeZaehler["Schwester belegt"].Remove(patientId);
+                    patientenJeZaehler["Schwesterzimmer"].Remove(patientId);
+                    BeendeWarten("Schwester", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "betritt_wartezimmer_fuer_arzt":
+                    patientenJeZaehler["Warteschlange Arzt"].Add(patientId);
+                    BeginneWarten("Arzt", patientId, traceEvent.GlobalZeit, warteStart);
+                    break;
+                case "verlaesst_wartezimmer_fuer_arzt":
+                    patientenJeZaehler["Warteschlange Arzt"].Remove(patientId);
+                    BeendeWarten("Arzt", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "betritt_arztzimmer":
+                    patientenJeZaehler["Warteschlange Arzt"].Remove(patientId);
+                    patientenJeZaehler["Arztzimmer"].Add(patientId);
+                    BeendeWarten("Arzt", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+                case "startet_arzt_behandlung":
+                    patientenJeZaehler["Arzt belegt"].Add(patientId);
+                    break;
+                case "beendet_arzt_behandlung":
+                case "bricht_ab_wegen_feierabend_arzt":
+                    patientenJeZaehler["Warteschlange Arzt"].Remove(patientId);
+                    patientenJeZaehler["Arzt belegt"].Remove(patientId);
+                    patientenJeZaehler["Arztzimmer"].Remove(patientId);
+                    BeendeWarten("Arzt", patientId, traceEvent.GlobalZeit, warteStart, warteDauern);
+                    break;
+            }
+        }
+
+        private static void BeginneWarten(
+            string name,
+            int patientId,
+            double zeitpunkt,
+            Dictionary<string, Dictionary<int, double>> warteStart)
+        {
+            warteStart[name].TryAdd(patientId, zeitpunkt);
+        }
+
+        private static void BeendeWarten(
+            string name,
+            int patientId,
+            double zeitpunkt,
+            Dictionary<string, Dictionary<int, double>> warteStart,
+            Dictionary<string, List<double>> warteDauern)
+        {
+            if (!warteStart[name].Remove(patientId, out double start))
+                return;
+
+            warteDauern[name].Add(Math.Max(0.0, zeitpunkt - start));
+        }
+
+        private static void BeendeAlleWartezeiten(
+            int patientId,
+            double zeitpunkt,
+            Dictionary<string, Dictionary<int, double>> warteStart,
+            Dictionary<string, List<double>> warteDauern)
+        {
+            foreach (string name in warteStart.Keys)
+            {
+                BeendeWarten(name, patientId, zeitpunkt, warteStart, warteDauern);
+            }
+        }
+
+        private static void EntferneAusWarteschlangen(int patientId, Dictionary<string, HashSet<int>> patientenJeZaehler)
+        {
+            patientenJeZaehler["Warteschlange Rezeption"].Remove(patientId);
+            patientenJeZaehler["Warteschlange Schwester"].Remove(patientId);
+            patientenJeZaehler["Warteschlange Arzt"].Remove(patientId);
+        }
+
+        private static void EntferneAusAllen(int patientId, Dictionary<string, HashSet<int>> patientenJeZaehler)
+        {
+            foreach (HashSet<int> patienten in patientenJeZaehler.Values)
+                patienten.Remove(patientId);
+        }
+
+        private static AnzahlZeile ErzeugeAnzahlZeile(string name, AnzahlStatistik statistik, double saisonfaktor)
+        {
+            return new AnzahlZeile(
+                name,
+                Math.Round(statistik.Minimum * saisonfaktor, 2),
+                Math.Round(statistik.Durchschnitt * saisonfaktor, 2),
+                Math.Round(statistik.Maximum * saisonfaktor, 2));
+        }
+
+        private static WartezeitZeile ErzeugeWartezeitZeile(
+            string name,
+            IReadOnlyList<double> werte,
+            double saisonfaktor,
+            double? ausreisserGrenzeMinuten = null)
+        {
+            List<double> ausgewerteteWerte = ausreisserGrenzeMinuten.HasValue
+                ? werte.Where(wert => wert <= ausreisserGrenzeMinuten.Value).ToList()
+                : werte.ToList();
+            int ausreisserAnzahl = werte.Count - ausgewerteteWerte.Count;
+
+            return new WartezeitZeile(
+                name,
+                SkaliereAnzahl(werte.Count, saisonfaktor),
+                "Minuten",
+                SkaliereAnzahl(ausgewerteteWerte.Count, saisonfaktor),
+                SkaliereAnzahl(ausreisserAnzahl, saisonfaktor),
+                ausreisserGrenzeMinuten.HasValue ? $"> {ausreisserGrenzeMinuten.Value.ToString("N0", DeCulture)} min" : "-",
+                Math.Round(ausgewerteteWerte.Count > 0 ? ausgewerteteWerte.Min() : 0.0, 2),
+                Math.Round(ausgewerteteWerte.Count > 0 ? ausgewerteteWerte.Average() : 0.0, 2),
+                Math.Round(ausgewerteteWerte.Count > 0 ? ausgewerteteWerte.Max() : 0.0, 2));
+        }
+
+        private static BehandlungszeitVergleichZeile ErzeugeBehandlungszeitVergleichZeile(
+            string name,
+            IReadOnlyList<double> tatsaechlicheWerte,
+            double erwarteteDauer,
+            double saisonfaktor)
+        {
+            double durchschnitt = tatsaechlicheWerte.Count > 0 ? tatsaechlicheWerte.Average() : 0.0;
+            double differenz = durchschnitt - erwarteteDauer;
+            double differenzProzent = erwarteteDauer > 0.0 ? (differenz / erwarteteDauer) * 100.0 : 0.0;
+
+            return new BehandlungszeitVergleichZeile(
+                name,
+                SkaliereAnzahl(tatsaechlicheWerte.Count, saisonfaktor),
+                "Minuten",
+                Math.Round(durchschnitt, 2),
+                Math.Round(erwarteteDauer, 2),
+                Math.Round(differenz, 2),
+                Math.Round(differenzProzent, 2));
+        }
+
+        private static AuslastungZeile ErzeugeAuslastungZeile(
+            string name,
+            AnzahlStatistik statistik,
+            int kapazitaet,
+            int behandeltePatienten,
+            double erwartbarePatientenKapazitaet,
+            double saisonfaktor)
+        {
+            double verfuegbareKapazitaetsminuten = kapazitaet * Program.SimulierteArbeitstage * SimulationKonfiguration.SIMULATIONSDAUER;
+            double belegteMinuten = statistik.BelegteMinuten * saisonfaktor;
+            int skalierteBehandeltePatienten = SkaliereAnzahl(behandeltePatienten, saisonfaktor);
+            double zeitbasierteAuslastung = verfuegbareKapazitaetsminuten > 0.0
+                ? (belegteMinuten / verfuegbareKapazitaetsminuten) * 100.0
+                : 0.0;
+            double patientenbasierteAuslastung = erwartbarePatientenKapazitaet > 0.0
+                ? (skalierteBehandeltePatienten / erwartbarePatientenKapazitaet) * 100.0
+                : 0.0;
+
+            return new AuslastungZeile(
+                name,
+                kapazitaet,
+                Math.Round(belegteMinuten, 2),
+                Math.Round(zeitbasierteAuslastung, 2),
+                skalierteBehandeltePatienten,
+                Math.Round(erwartbarePatientenKapazitaet, 2),
+                Math.Round(patientenbasierteAuslastung, 2));
+        }
+
+        private static int SkaliereAnzahl(int anzahl, double saisonfaktor)
+        {
+            return (int)Math.Round(anzahl * saisonfaktor, MidpointRounding.AwayFromZero);
+        }
+
+        private static string NormalisiereZeitraum(string? zeitraum)
+        {
+            if (string.IsNullOrWhiteSpace(zeitraum))
+                return "Jahr";
+
+            return FinanzVisualisierung.ZeitraumOptionen
+                .FirstOrDefault(option => string.Equals(option, zeitraum.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? "Jahr";
+        }
+
+        private static double ErmittleSaisonfaktor(string zeitraum)
+        {
+            List<int> tage = FinanzVisualisierung.ErmittleTageFuerZeitraum(zeitraum);
+            if (tage.Count == 0)
+                return 1.0;
+
+            return tage
+                .Select(tag => ErmittleSaisonfaktorFuerSaison(FinanzVisualisierung.ErmittleSaisonFuerTag(tag)))
+                .Average();
+        }
+
+        private static double ErmittleSaisonfaktorFuerSaison(string saison)
+        {
+            var faktoren = KonfigurationJsonExport.Finanzen.Saisonfaktoren;
+            return saison switch
+            {
+                "Winter" => faktoren.Winter,
+                "Fruehling" => faktoren.Fruehling,
+                "Sommer" => faktoren.Sommer,
+                "Herbst" => faktoren.Herbst,
+                _ => 1.0
+            };
+        }
+
+        private static double BerechneErwartbarePatientenKapazitaet(int kapazitaet, double mittlereDauerMinuten)
+        {
+            if (kapazitaet <= 0 || mittlereDauerMinuten <= 0.0)
+                return 0.0;
+
+            return kapazitaet * Program.SimulierteArbeitstage * SimulationKonfiguration.SIMULATIONSDAUER / mittlereDauerMinuten;
+        }
+
+        private static double BerechneMittlereArztBehandlungszeit()
+        {
+            return PatientenKonfiguration.TYPEN_VERTEILUNG
+                .Sum(t => t.Wahrscheinlichkeit * t.BehandlungszeitArzt);
+        }
+
+        private static double BerechneMittlereSchwesterBehandlungszeit()
+        {
+            return PatientenKonfiguration.TYPEN_VERTEILUNG
+                .Sum(t => t.Wahrscheinlichkeit * t.BehandlungszeitSchwester);
+        }
+
+        private static TraceEvent? ParseTraceEvent(string zeile, int index)
+        {
+            string[] teile = zeile.Split(';');
+            if (teile.Length < 5)
+                return null;
+
+            if (!double.TryParse(teile[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double zeit))
+                return null;
+
+            if (!int.TryParse(teile[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out int patientId))
+                return null;
+
+            int tagIndex = Math.Max(0, (patientId - 1) / 10_000);
+            return new TraceEvent(index, zeit + (tagIndex * TagesAbstandMinuten), teile[1], patientId);
+        }
+    }
+
+    private sealed class AnzahlStatistik
+    {
+        private double gewichteteSumme;
+
+        public int Minimum { get; private set; }
+        public int Maximum { get; private set; }
+        public double Gesamtdauer { get; private set; }
+        public double BelegteMinuten => gewichteteSumme;
+        public double Durchschnitt => Gesamtdauer > 0.0 ? gewichteteSumme / Gesamtdauer : 0.0;
+
+        public void ErfasseDauer(double dauer, int wert)
+        {
+            ErfasseMoment(wert);
+            if (dauer <= 0.0)
+                return;
+
+            gewichteteSumme += wert * dauer;
+            Gesamtdauer += dauer;
+        }
+
+        public void ErfasseMoment(int wert)
+        {
+            Minimum = Math.Min(Minimum, wert);
+            Maximum = Math.Max(Maximum, wert);
+        }
+    }
+
+    private sealed record TraceEvent(int Index, double GlobalZeit, string EventTyp, int PatientId);
+
+    private sealed record AnzahlZeile(string Name, double Minimum, double Durchschnitt, double Maximum);
+
+    private sealed record AuslastungZeile(
+        string Name,
+        int Kapazitaet,
+        double BelegteMinuten,
+        double ZeitbasierteAuslastungProzent,
+        int BehandeltePatienten,
+        double ErwartbarePatientenKapazitaet,
+        double PatientenbasierteAuslastungProzent);
+
+    private sealed record WartezeitZeile(
+        string Name,
+        int AnzahlGesamt,
+        string Einheit,
+        int AnzahlAusgewertet,
+        int AusreisserAnzahl,
+        string AusreisserRegel,
+        double Minimum,
+        double Durchschnitt,
+        double Maximum);
+
+    private sealed record BehandlungszeitVergleichZeile(
+        string Name,
+        int Anzahl,
+        string Einheit,
+        double TatsaechlichDurchschnittMinuten,
+        double ErwartetMinuten,
+        double AbweichungMinuten,
+        double AbweichungProzent);
+}
