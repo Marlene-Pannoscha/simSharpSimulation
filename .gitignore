@@ -1,6 +1,7 @@
 # Never track generated build output, even if it contains generated .cs files.
 **/bin/**
 **/obj/**
+PraxisSimulation.Server/wwwroot/unity/
 **/.dotnet/**
 **/klinik_trace.txt
 # Bilder und Bildordner bleiben lokal.

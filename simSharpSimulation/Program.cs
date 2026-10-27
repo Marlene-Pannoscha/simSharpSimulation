@@ -230,6 +230,9 @@ namespace simSharpSimulation
         private static (SimulationsDaten Daten, TimeSpan Simulationszeit) FuehreSimulationMitZeitmessungAus()
         {
             var daten = new SimulationsDaten();
+            var eventQueue = new SimulationEventQueue();
+
+            daten.LiveEventOccurred += eventQueue.Publish;
             var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
             Stopwatch simulationsStoppuhr = Stopwatch.StartNew();
             simulation.FuehreAus();

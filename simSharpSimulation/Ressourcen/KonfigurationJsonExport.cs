@@ -112,6 +112,10 @@ namespace simSharpSimulation
 
         private static string ErmittleRessourcenOrdner()
         {
+            string ausgabeRessourcen = Path.Combine(AppContext.BaseDirectory, "Ressourcen");
+            if (Directory.Exists(ausgabeRessourcen))
+                return ausgabeRessourcen;
+
             string aktuellerOrdner = Directory.GetCurrentDirectory();
             string projektRessourcen = Path.Combine(aktuellerOrdner, "simSharpSimulation", "Ressourcen");
             if (Directory.Exists(projektRessourcen))

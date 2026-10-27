@@ -28,15 +28,25 @@ namespace simSharpSimulation
 
         // Schritt P2: Der Start
         // Richtet die Simulationsuhr und die Ärzte ein und startet den Ablauf.
-        public void FuehreAus()
+        public void FuehreAus(int arbeitstage = 30)
+        {
+            FuehreAusAsync(arbeitstage, (env, dauer) =>
+            {
+                env.Run(dauer);
+                return System.Threading.Tasks.Task.CompletedTask;
+            }).GetAwaiter().GetResult();
+        }
+
+        internal async System.Threading.Tasks.Task FuehreAusAsync(
+            int arbeitstage, Func<Simulation, TimeSpan, System.Threading.Tasks.Task> fuehreTagAus)
         {
             // Phase P-A: Tages-Simulation vorbereiten und starten.
-            // Die Anzahl der simulierten Tage ist in Program.SimulierteArbeitstage festgelegt.
+            // Der Aufrufer bestimmt die Anzahl der Tage; Desktop-Standard sind 30 Tage.
             // Der 3. Januar 2000 war ein Montag.
             DateTime startDatum = new DateTime(2000, 1, 3);
             TimeSpan maximaleTagesdauer = BerechneMaximaleTagesdauer();
 
-            for (int tag = 0; tag < Program.SimulierteArbeitstage; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
+            for (int tag = 0; tag < arbeitstage; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
             {
                 // Schritt P2.1: Für jeden Tag eine neue Simulationsumgebung erzeugen.
                 // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
@@ -82,7 +92,7 @@ namespace simSharpSimulation
                 // Die Ankünfte enden nach SIMULATIONSDAUER, aber einzelne Prozesse können
                 // noch nachlaufen. Ein fester Nachlaufpuffer verhindert, dass der Tag bei
                 // offenen Warteschlangen oder extrem langen Zufallsdauern unbegrenzt läuft.
-                env.Run(maximaleTagesdauer);
+                await fuehreTagAus(env, maximaleTagesdauer);
             }
         }
 

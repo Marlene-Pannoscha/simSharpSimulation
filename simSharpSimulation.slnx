@@ -1,2 +1,5 @@
 <Solution>
+  <Project Path="simSharpSimulation/simSharpSimulation.csproj" />
+  <Project Path="PraxisSimulation.Core/PraxisSimulation.Core.csproj" />
+  <Project Path="PraxisSimulation.Server/PraxisSimulation.Server.csproj" />
 </Solution>

@@ -8,11 +8,12 @@ using System.Text.Json;
 namespace simSharpSimulation
 {
     /// <summary>
-    /// HÃ¤lt alle wÃ¤hrend der Simulation gesammelten Daten (Trace, Wartezeiten, AnkÃ¼nfte).
+    /// Hält alle während der Simulation gesammelten Daten (Trace, Wartezeiten, Ankünfte).
     /// Diese Klasse entkoppelt Datenspeicherung von der eigentlichen Simulationslogik.
     /// </summary>
     public sealed class SimulationsDaten
     {
+        public event Action<SimulationLiveEvent>? LiveEventOccurred;
         private const string ZustandUnveraendert = "UNVERAENDERT";
         private const double PrognoseTrefferToleranzAnteil = 0.30;
         private const double PrognoseTrefferMindestToleranzMinuten = 5.0;
@@ -126,6 +127,17 @@ namespace simSharpSimulation
             string schwesterIdText = schwesterId.HasValue ? schwesterId.Value.ToString() : "";
             string traceEintrag = $"{zeitText};{eventTyp};{vonZustand};{zuZustand};{patientId};{arztIdText};{schwesterIdText}";
             TraceData.Add(traceEintrag);
+            LiveEventOccurred?.Invoke(
+    new SimulationLiveEvent(
+        zeit,
+        eventTyp,
+        patientId,
+        vonZustand,
+        zuZustand,
+        arztId,
+        schwesterId
+    )
+);
         }
 
         public void ErfasseArztWartezeit(double wartezeitArzt, bool hatTermin, PatientenTyp patientenTyp)

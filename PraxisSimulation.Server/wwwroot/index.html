@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimSharp Live-Verbindung</title>
+<style>
+body { font: 16px system-ui; max-width: 960px; margin: 40px auto; padding: 0 20px; background: #f4f7fb; color: #173047; }
+button,input { font: inherit; padding: 8px; margin: 4px; } pre { background: #13283a; color: #d5eeff; padding: 16px; height: 350px; overflow: auto; }
+#patients { display:flex; flex-wrap:wrap; gap:8px; padding:16px; background:white; min-height:60px; }
+.patient { border:1px solid #7ea8c7; border-radius:8px; padding:8px; }
+</style>
+<h1>SimSharp · Live-Test</h1>
+<p>Ein echter Simulationstag aus dem bestehenden Patientenprozess. Jeder Tab erhält eine eigene Sitzung mit denselben Standardparametern.</p>
+<label>Simulationssekunden pro Echtzeitsekunde <input id="speed" type="number" min="1" max="600" value="60"></label>
+<p><button id="start" disabled>Simulation starten</button><button id="stop" disabled>Stoppen</button></p>
+<p id="status">Verbindung wird hergestellt …</p>
+<h2>Patienten in der Klinik</h2><div id="patients"></div>
+<h2>Letzte Nachrichten</h2><pre id="log"></pre>
+<script>
+const status = document.querySelector('#status'), log = document.querySelector('#log');
+const start = document.querySelector('#start'), stop = document.querySelector('#stop');
+const patients = document.querySelector('#patients');
+const socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/simulation`);
+const lines = [];
+socket.onmessage = ({data}) => {
+  const message = JSON.parse(data);
+  lines.push(data); if (lines.length > 100) lines.shift(); log.textContent = lines.join('\n'); log.scrollTop = log.scrollHeight;
+  if (message.type === 'ready') { status.textContent = `Verbunden: ${message.sessionId}`; start.disabled = false; }
+  if (message.type === 'started') { patients.replaceChildren(); start.disabled = true; stop.disabled = false; status.textContent = 'Simulation läuft'; }
+  if (['completed', 'stopped', 'error'].includes(message.type)) {
+    if (message.type !== 'error' || message.code === 'simulation_failed') { start.disabled = false; stop.disabled = true; }
+    status.textContent = message.code || message.type;
+  }
+  if (message.type === 'event') {
+    const ev = message.data, id = `patient-${ev.patientId}`;
+    if (ev.eventTyp === 'betritt_klinik') {
+      const el = document.createElement('div'); el.id = id; el.className = 'patient'; patients.append(el);
+    }
+    const el = document.getElementById(id);
+    if (el) el.textContent = `Patient ${ev.patientId}: ${ev.eventTyp} (${ev.zeit.toFixed(2)} min)`;
+    if (ev.eventTyp === 'verlaesst_klinik') el?.remove();
+  }
+};
+start.onclick = () => socket.send(JSON.stringify({type:'start', speed: Number(document.querySelector('#speed').value)}));
+stop.onclick = () => socket.send(JSON.stringify({type:'stop'}));
+socket.onclose = () => { status.textContent = 'Verbindung beendet. Zum Verbinden Seite neu laden.'; start.disabled = stop.disabled = true; };
+socket.onerror = () => { status.textContent = 'WebSocket-Verbindungsfehler'; };
+</script>
+</html>
