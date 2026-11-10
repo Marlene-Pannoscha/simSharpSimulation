@@ -16,6 +16,7 @@ internal sealed class SimulationSocket(WebSocket socket, ILogger logger)
     });
     private CancellationTokenSource? runCancellation;
     private Task simulation = Task.CompletedTask;
+    private SimulationClock? clock;
 
     private void Publish(object message)
     {
@@ -28,7 +29,7 @@ internal sealed class SimulationSocket(WebSocket socket, ILogger logger)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(requestAborted);
         lifetime.CancelAfter(TimeSpan.FromMinutes(15));
-        Publish(new { type = "ready", sessionId, protocolVersion = 1,
+        Publish(new { type = "ready", sessionId, protocolVersion = 1, motionProtocolVersion = 1, clockProtocolVersion = 1,
             timeUnit = "minutes", dayIndex = 0, maxDurationSeconds = 900 });
         var sending = SendAsync(lifetime.Token);
         var receiving = ReceiveAsync(lifetime.Token);
@@ -108,17 +109,26 @@ internal sealed class SimulationSocket(WebSocket socket, ILogger logger)
                             break;
                         }
                         var speed = command.Speed ?? 60;
-                        if (!double.IsFinite(speed) || speed is < 1 or > 600)
+                        if (!double.IsFinite(speed) || speed is < 0.5 or > 600)
                         {
                             Publish(new { type = "error", code = "invalid_speed" });
                             break;
                         }
                         runCancellation?.Dispose();
                         runCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        clock = new SimulationClock(speed);
                         var runId = Guid.NewGuid();
                         Publish(new { type = "started", sessionId, runId, speed, dayIndex = 0 });
                         var token = runCancellation.Token;
                         simulation = Task.Run(() => SimulateAsync(runId, speed, token), CancellationToken.None);
+                        break;
+                    case "setSpeed":
+                        var newSpeed = command.Speed ?? double.NaN;
+                        if (!double.IsFinite(newSpeed) || newSpeed is < 0.5 or > 600)
+                            Publish(new { type = "error", code = "invalid_speed" });
+                        else if (simulation.IsCompleted || clock is null)
+                            Publish(new { type = "error", code = "not_running" });
+                        else clock.SetSpeed(newSpeed);
                         break;
                     case "stop":
                         if (runCancellation is not null) await runCancellation.CancelAsync();
@@ -144,7 +154,10 @@ internal sealed class SimulationSocket(WebSocket socket, ILogger logger)
             await LiveSimulation.RunAsync(ev => Publish(new
             {
                 type = "event", sessionId, runId, sequence = ++sequence, dayIndex = 0, data = ev
-            }), speed, cancellationToken);
+            }), speed, cancellationToken, clock, (minutes, actualSpeed) => Publish(new
+            {
+                type = "clock", sessionId, runId, elapsedMinutes = minutes, speed = actualSpeed
+            }));
             Publish(new { type = "completed", sessionId, runId, lastSequence = sequence });
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

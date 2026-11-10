@@ -4,6 +4,47 @@ Simulation einer Arztpraxis mit SimSharp. Das Projekt kann als Konsolenprogramm
 oder mit einem zusaetzlichen WPF-Fenster fuer Finanz-, Wartezeiten- und
 Prognoseauswertungen gestartet werden.
 
+## Vorhandene Unity-Raumaufteilung live verwenden
+
+Die integrierte Szene liegt im Unity-Projekt `C:\Users\marle\arztdemo` unter
+`Assets/Scenes/PraxisLive.unity`. Sie uebernimmt die gespeicherte Raumaufteilung
+aus `SampleScene` und das vorhandene Patientenmodell. Die Originalszene bleibt
+erhalten; lokale Testankuenfte und Testbehandlungen sind in der Live-Kopie deaktiviert.
+
+Server aus dem Repository-Hauptverzeichnis starten:
+
+```powershell
+dotnet run --project PraxisSimulation.Server --urls http://localhost:5080
+```
+
+In Unity Play beenden, die Skriptkompilierung abwarten und
+**Tools > Arztpraxis > Vorhandene Praxis live oeffnen** waehlen.
+Danach Play und im Game-Fenster **Simulation starten** anklicken.
+Die Patienten laufen anhand der SimSharp-Ereignisse ueber Tueren und Mittelflur
+zwischen Eingang, Rezeption, Wartezimmer, Schwester, Arzt und Ausgang.
+Die Wegezeiten kommen aus SimSharp. Die Patientenbewegungen folgen der
+vom Server gemeldeten Simulationszeit. Unity startet standardmaessig mit 6x; der erste Patient erscheint bei
+den Standardwerten nach ca. 22 Sekunden. `Simulation Speed` ist am
+SimSharpLiveDemo im Inspector vor dem Start einstellbar.
+Nach Aenderungen am Backend den laufenden Server neu starten.
+
+Das Bedienfeld zeigt eine Simulationsuhr ab `00:00:00`. Mit **Langsamer** und
+**Schneller** kann die Geschwindigkeit vor dem Start und waehrend des Laufs
+zwischen 0.5x, 1x, 2x, 6x, 12x, 30x und 60x gewechselt werden.
+0.5x entspricht halber Echtzeit, 60x einer Simulationsminute pro Echtzeitsekunde.
+Auch bereits laufende Patienten passen sich an. Die Uhr verwendet bestaetigte
+Serverzeit; sie berechnet keine eigenen Patientenprozesse. Beim Stoppen bleibt
+sie stehen; ein neuer Lauf setzt sie auf null. Stop ist weiterhin kein Pause/Fortsetzen.
+Nach Unity-Skriptaenderungen Play beenden und die Kompilierung abwarten.
+Browsernutzer benoetigen einen neu erstellten und kopierten Praxis-Live-Webbuild.
+
+
+Die Raumzuordnung wird unter **Tools > Arztpraxis > Praxis-Live-Zuordnung pruefen**
+geprueft; das Ergebnis liegt in Unity unter `Logs/PraxisLive-validation.txt`.
+Fuer einen Webbuild die Aktion **Praxis-Live-Webbuild erstellen** im selben
+Menue verwenden. Weitere Hinweise stehen in `PraxisSimulation.Server/README.md`
+und im Unity-Projekt unter `Assets/Scripts/SimSharpLive/README.md`.
+
 ## Projektordner oeffnen
 
 Wechsle zuerst in den C#-Projektordner:
@@ -137,3 +178,14 @@ Aktuelle Wegezeiten:
 - Arzt zu Ausgang: 15 Sekunden
 - Rezeption zu Ausgang: 5 Sekunden
 
+
+## Kompakte Praxisansicht
+
+Die obere Leiste enthaelt Start, Stop, Simulationsuhr, Langsamer/Schneller und
+Details. Unten stehen Verbindungsstatus, Patientenanzahl und Ereignisanzahl.
+Details blendet die letzte Ereignismeldung ein und wieder aus; standardmaessig
+ist dieses Feld geschlossen. Die Kamera verwendet den freien Bereich zwischen
+den Leisten und passt den Ausschnitt beim Aendern der Fenstergroesse an.
+Die vorhandene Perspektive und Raumaufteilung bleiben erhalten.
+Nach dem Skriptupdate Play beenden, die Unity-Kompilierung abwarten und erneut
+Play starten. Fuer den Browser einen neuen Praxis-Live-Webbuild erstellen/kopieren.

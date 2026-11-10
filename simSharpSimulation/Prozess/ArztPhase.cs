@@ -109,7 +109,7 @@ namespace simSharpSimulation
             daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_fuer_arzt", patientId);
 
             // Weg zum Arzt (interne Bewegung).
-            daten.LogEvent(jetztMinuten, "geht_zum_arzt", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zum_arzt", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
@@ -149,7 +149,7 @@ namespace simSharpSimulation
             daten.ErfasseArztAbbruchFeierabend(env.StartDate);
             daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_arzt", patientId, arztId: arztId);
 
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);

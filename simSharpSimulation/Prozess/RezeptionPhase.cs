@@ -129,7 +129,7 @@ namespace simSharpSimulation
             daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
             daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_rezeption", patientId);
 
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);

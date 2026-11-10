@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using simSharpSimulation;
 
 namespace PraxisSimulation.Core;
@@ -13,9 +12,10 @@ public static class LiveSimulation
     });
 
     public static async Task RunAsync(Action<SimulationLiveEvent> publish,
-        double simulatedSecondsPerSecond, CancellationToken cancellationToken)
+        double simulatedSecondsPerSecond, CancellationToken cancellationToken,
+        SimulationClock? simulationClock = null, Action<double, double>? publishClock = null)
     {
-        if (!double.IsFinite(simulatedSecondsPerSecond) || simulatedSecondsPerSecond is < 1 or > 600)
+        if (!double.IsFinite(simulatedSecondsPerSecond) || simulatedSecondsPerSecond is < 0.5 or > 600)
             throw new ArgumentOutOfRangeException(nameof(simulatedSecondsPerSecond));
 
         _ = Configuration.Value;
@@ -24,19 +24,38 @@ public static class LiveSimulation
         var prozess = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
         await prozess.FuehreAusAsync(1, async (env, dauer) =>
         {
-            var clock = Stopwatch.StartNew();
+            var clock = simulationClock ?? new SimulationClock(simulatedSecondsPerSecond);
             var end = env.StartDate + dauer;
-            while (env.Peek() < end)
+            var lastReport = Environment.TickCount64 - 100;
+            double reportedSeconds = 0;
+            clock.Start();
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var due = (env.Peek() - env.StartDate).TotalSeconds / simulatedSecondsPerSecond;
-                var remaining = due - clock.Elapsed.TotalSeconds;
-                if (remaining > 0)
+                while (env.Peek() < end)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Min(remaining, 0.1)), cancellationToken);
-                    continue;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var nextSeconds = (env.Peek() - env.StartDate).TotalSeconds;
+                    var target = clock.Seconds;
+                    if (nextSeconds <= target)
+                    {
+                        env.Step();
+                        reportedSeconds = (env.Now - env.StartDate).TotalSeconds;
+                        continue;
+                    }
+                    reportedSeconds = Math.Min(target, nextSeconds);
+                    if (Environment.TickCount64 - lastReport >= 100)
+                    {
+                        publishClock?.Invoke(reportedSeconds / 60, clock.Speed);
+                        lastReport = Environment.TickCount64;
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Min((nextSeconds - target) / clock.Speed, 0.025)), cancellationToken);
                 }
-                env.Step();
+                reportedSeconds = Math.Min(clock.Seconds, dauer.TotalSeconds);
+            }
+            finally
+            {
+                clock.Stop();
+                publishClock?.Invoke(reportedSeconds / 60, clock.Speed);
             }
         });
     }

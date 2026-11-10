@@ -128,7 +128,7 @@ namespace simSharpSimulation
 
             // Schritt P4.4: Rezeption durchlaufen.
             // --- REZEPTION (RECEPTION) PHASE ---
-            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zur_rezeption", patientId);
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zur_rezeption", patientId, bewegungsdauerMinuten: eingangZurRezeptionDauer.TotalMinutes);
             yield return env.Timeout(eingangZurRezeptionDauer);
             double ankunftszeitRezeption = AktuelleSimulationszeitMinuten(env);
 
@@ -243,7 +243,7 @@ namespace simSharpSimulation
                 double ankunftszeitSchwesterWartebereich = AktuelleSimulationszeitMinuten(env);
                 if (!direktZurSchwester)
                 {
-                    daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_ins_wartezimmer_schwester", patientId);
+                    daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_ins_wartezimmer_schwester", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
                     yield return env.Timeout(interneBewegungsdauer);
                     ankunftszeitSchwesterWartebereich = AktuelleSimulationszeitMinuten(env);
                     daten.LogEvent(ankunftszeitSchwesterWartebereich, "betritt_wartezimmer_schwester", patientId);
@@ -351,7 +351,7 @@ namespace simSharpSimulation
 
             // Schritt P4.11: Wartevorgang für den Arzt.
             // Alle Patienten (mit/ohne Termin, mit/ohne Schwester) kommen hier an, bevor sie zum Arzt gehen.
-            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_ins_wartezimmer_fuer_arzt", patientId);
+            daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_ins_wartezimmer_fuer_arzt", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
 
             // Der Weg ins Arzt-Wartezimmer ist ebenfalls eine interne Bewegung.
             yield return env.Timeout(interneBewegungsdauer);
@@ -454,7 +454,8 @@ namespace simSharpSimulation
                 yield break;
             }
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, gehtNachArztZurRezeption ? "geht_nach_arzt_zur_rezeption" : "verlaesst_nach_arzt_ohne_rezeption", patientId);
+            daten.LogEvent(jetztMinuten, gehtNachArztZurRezeption ? "geht_nach_arzt_zur_rezeption" : "verlaesst_nach_arzt_ohne_rezeption", patientId,
+                bewegungsdauerMinuten: gehtNachArztZurRezeption ? interneBewegungsdauer.TotalMinutes : arztZumAusgangDauer.TotalMinutes);
 
             if (gehtNachArztZurRezeption)
             {
@@ -475,12 +476,12 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zum_ausgang", patientId);
+                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zum_ausgang", patientId, bewegungsdauerMinuten: rezeptionZumAusgangDauer.TotalMinutes);
                 yield return env.Timeout(rezeptionZumAusgangDauer);
             }
             else
             {
-                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zum_ausgang", patientId);
+                daten.LogEvent(AktuelleSimulationszeitMinuten(env), "geht_zum_ausgang", patientId, bewegungsdauerMinuten: arztZumAusgangDauer.TotalMinutes);
                 yield return env.Timeout(arztZumAusgangDauer);
             }
 

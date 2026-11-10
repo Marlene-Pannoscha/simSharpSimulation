@@ -74,7 +74,7 @@ namespace simSharpSimulation
             TimeSpan wegZumAusgang)
         {
             double jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: wegZumAusgang.TotalMinutes);
             yield return env.Timeout(wegZumAusgang);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);

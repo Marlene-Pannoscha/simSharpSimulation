@@ -7,6 +7,7 @@ namespace simSharpSimulation
         string VonZustand,
         string ZuZustand,
         int? ArztId,
-        int? SchwesterId
+        int? SchwesterId,
+        double BewegungsdauerMinuten = 0
     );
 }

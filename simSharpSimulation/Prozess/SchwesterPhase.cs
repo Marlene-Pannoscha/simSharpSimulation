@@ -116,7 +116,7 @@ namespace simSharpSimulation
                 daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_schwester", patientId);
             }
 
-            daten.LogEvent(jetztMinuten, "geht_zur_schwester", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zur_schwester", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
@@ -152,7 +152,7 @@ namespace simSharpSimulation
             daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
             daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
 
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
