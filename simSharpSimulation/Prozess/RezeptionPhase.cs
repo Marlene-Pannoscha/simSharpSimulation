@@ -23,7 +23,7 @@ namespace simSharpSimulation
             double behandlungsdauer,
             SimulationsDaten daten,
             BehandlungsPhaseErgebnis ergebnis,
-            PrognoseRessourcenStatus prognoseStatus)
+            PrognoseRessourcenStatus prognoseStatus, StationsPersonalPool? personal = null)
         {
             double schichtEndeMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
             double jetztMinuten = AktuelleSimulationszeitMinuten(env);
@@ -31,7 +31,7 @@ namespace simSharpSimulation
             daten.LogEvent(jetztMinuten, "betritt_rezeption_warteschlange", patientId);
             prognoseStatus.RegistriereWartend(patientId, behandlungsdauer);
 
-            bool rezeptionWarFrei = IstRezeptionFrei(rezeption);
+            bool rezeptionWarFrei = personal?.IstRezeptionFrei ?? IstRezeptionFrei(rezeption);
             daten.LogEvent(jetztMinuten, rezeptionWarFrei ? "rezeption_frei" : "rezeption_nicht_frei", patientId);
             if (!rezeptionWarFrei)
             {
@@ -45,6 +45,24 @@ namespace simSharpSimulation
                 yield break;
             }
 
+            // Optionaler gemeinsamer Pool: dieselbe Schwester darf nie parallel beide Rollen belegen.
+            if (personal is not null)
+            {
+                using var anforderung = personal.Anfordern("Rezeption", patientId);
+                double rest = schichtEndeMinuten - AktuelleSimulationszeitMinuten(env);
+                yield return anforderung.Bereit | env.Timeout(TimeSpan.FromMinutes(rest));
+                if (!anforderung.Bereit.IsProcessed || AktuelleSimulationszeitMinuten(env) >= schichtEndeMinuten)
+                {
+                    anforderung.Dispose();
+                    foreach (var ev in BrichRezeptionWartenAb(env, daten, patientId, wegZumAusgang, ergebnis, prognoseStatus))
+                        yield return ev;
+                }
+                else
+                    foreach (var ev in FuehreRezeptionBehandlungDurch(env, patientId, ankunftszeit, hatTermin,
+                        behandlungBereitsFertig, rezeptionWarFrei, behandlungsdauer, daten, prognoseStatus, anforderung))
+                        yield return ev;
+                yield break;
+            }
             bool brichtWartenAb = false;
             using (Request rezeptionsAnforderung = rezeption.Request())
             {
@@ -81,7 +99,7 @@ namespace simSharpSimulation
             bool rezeptionWarFrei,
             double behandlungsdauer,
             SimulationsDaten daten,
-            PrognoseRessourcenStatus prognoseStatus)
+            PrognoseRessourcenStatus prognoseStatus, PersonalAnforderung? anforderung = null)
         {
             double jetztMinuten = AktuelleSimulationszeitMinuten(env);
             if (!rezeptionWarFrei)
@@ -89,9 +107,9 @@ namespace simSharpSimulation
                 daten.LogEvent(jetztMinuten, "rezeption_frei", patientId);
             }
 
-            daten.LogEvent(jetztMinuten, "betritt_rezeption", patientId);
+            daten.LogEvent(jetztMinuten, "betritt_rezeption", patientId, schwesterId: anforderung?.SchwesterId, personalId: anforderung?.PersonalId, arbeitsplatzId: anforderung?.ArbeitsplatzId);
             daten.LogEvent(jetztMinuten, behandlungBereitsFertig ? "behandlung_bereits_fertig" : "behandlung_nicht_fertig", patientId);
-            daten.LogEvent(jetztMinuten, "startet_rezeption", patientId);
+            daten.LogEvent(jetztMinuten, "startet_rezeption", patientId, schwesterId: anforderung?.SchwesterId, personalId: anforderung?.PersonalId, arbeitsplatzId: anforderung?.ArbeitsplatzId);
             prognoseStatus.StarteBehandlung(patientId, jetztMinuten, behandlungsdauer);
 
             double wartezeitRezeption = jetztMinuten - ankunftszeit;
@@ -103,7 +121,7 @@ namespace simSharpSimulation
             yield return env.Timeout(TimeSpan.FromMinutes(behandlungsdauer));
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "beendet_rezeption", patientId);
+            daten.LogEvent(jetztMinuten, "beendet_rezeption", patientId, schwesterId: anforderung?.SchwesterId, personalId: anforderung?.PersonalId, arbeitsplatzId: anforderung?.ArbeitsplatzId);
             prognoseStatus.BeendeBehandlung(patientId);
             if (behandlungBereitsFertig)
             {
@@ -121,7 +139,7 @@ namespace simSharpSimulation
             int patientId,
             TimeSpan interneBewegungsdauer,
             BehandlungsPhaseErgebnis ergebnis,
-            PrognoseRessourcenStatus prognoseStatus)
+            PrognoseRessourcenStatus prognoseStatus, PersonalAnforderung? anforderung = null)
         {
             double jetztMinuten = AktuelleSimulationszeitMinuten(env);
             prognoseStatus.EntfernePatient(patientId);

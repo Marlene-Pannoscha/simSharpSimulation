@@ -37,6 +37,8 @@ namespace simSharpSimulation
             var schwester = LeseJson<SchwesterKonfigurationJson>(Path.Combine(zielOrdner, "schwester-konfiguration.json"));
             SchwesterKonfiguration.ANZAHL_SCHWESTERN = schwester.AnzahlSchwestern;
             SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER = schwester.MittlereBehandlungsdauer;
+            SchwesterKonfiguration.Rollenwechsel = schwester.Rollenwechsel ?? new RollenwechselOptionen();
+            SchwesterKonfiguration.Rollenwechsel.Pruefen(schwester.AnzahlSchwestern);
 
             var rezeption = LeseJson<RezeptionKonfigurationJson>(Path.Combine(zielOrdner, "rezeption-konfiguration.json"));
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = rezeption.AnzahlRezeptionisten;
@@ -136,6 +138,7 @@ namespace simSharpSimulation
 
     internal sealed class SchwesterKonfigurationJson
     {
+        public RollenwechselOptionen? Rollenwechsel { get; set; }
         public int AnzahlSchwestern { get; set; }
         public double MittlereBehandlungsdauer { get; set; }
         public string Beschreibung { get; set; } = string.Empty;

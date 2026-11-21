@@ -10,7 +10,7 @@ namespace simSharpSimulation
     {
         // Kleine Rundungsabweichungen sollen zeitlich gleiche Verfuegbarkeiten nicht auseinanderziehen.
         private const double ZeitvergleichToleranzMinuten = 0.0001;
-        private readonly int kapazitaet;
+        private int kapazitaet;
         private readonly Dictionary<int, double> aktiveEndzeiten = new();
         private readonly List<WartenderPatient> wartendePatienten = new();
         private long naechsteReihenfolge;
@@ -19,6 +19,9 @@ namespace simSharpSimulation
         {
             this.kapazitaet = Math.Max(1, kapazitaet);
         }
+
+        // Aktuell verfuegbare Rollen beruecksichtigen; die flexible Person zaehlt nie in beiden Pools.
+        public void SetzeKapazitaet(int wert) => kapazitaet = Math.Max(1, wert);
 
         public void RegistriereWartend(int patientId, double bearbeitungsdauerMinuten, int prioritaet = 0)
         {

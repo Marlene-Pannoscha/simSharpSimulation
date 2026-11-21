@@ -119,7 +119,9 @@ namespace simSharpSimulation
         /// Speichert ein Ereignis im Trace-Format:
         /// "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId".
         /// </summary>
-        public void LogEvent(double zeit, string eventTyp, int patientId, int? arztId = null, int? schwesterId = null)
+        public void LogEvent(double zeit, string eventTyp, int patientId, int? arztId = null, int? schwesterId = null,
+            string? personalId = null, string? arbeitsplatzId = null, string? vonRolle = null,
+            string? zuRolle = null, double? bewegungsdauerMinuten = null)
         {
             var (vonZustand, zuZustand) = ErmittleZustandswechsel(eventTyp);
             string zeitText = zeit.ToString("000.00", CultureInfo.InvariantCulture);
@@ -135,7 +137,12 @@ namespace simSharpSimulation
         vonZustand,
         zuZustand,
         arztId,
-        schwesterId
+        schwesterId,
+        personalId,
+        arbeitsplatzId,
+        vonRolle,
+        zuRolle,
+        bewegungsdauerMinuten
     )
 );
         }

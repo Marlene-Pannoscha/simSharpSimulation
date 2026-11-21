@@ -17,6 +17,7 @@ namespace simSharpSimulation
         private PrognoseRessourcenStatus rezeptionStatus = null!;
         private PrognoseRessourcenStatus schwesterStatus = null!;
         private PrognoseRessourcenStatus arztStatus = null!;
+        private StationsPersonalPool? rollenPersonal;
 
         // Schritt P1: Vorbereitung (Konstruktor)
         // Erhält einen Startwert für den Zufallsgenerator und ein Objekt zum Speichern der Ergebnisse.
@@ -63,6 +64,13 @@ namespace simSharpSimulation
                     env,
                     capacity: KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester);
                 InitialisierePrognoseRessourcen();
+                rollenPersonal = SchwesterKonfiguration.Rollenwechsel.Aktiv
+                    ? new StationsPersonalPool(env, RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+                        SchwesterKonfiguration.ANZAHL_SCHWESTERN,
+                        KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester,
+                        SchwesterKonfiguration.Rollenwechsel, daten, (r, s) =>
+                        { rezeptionStatus.SetzeKapazitaet(r); schwesterStatus.SetzeKapazitaet(s); })
+                    : null;
                 env.Process(AktiviereAufnahmeprognoseEineStundeVorSchliessung(env));
 
                 // Schritt P3: PatientenGenerator für den jeweiligen Tag starten

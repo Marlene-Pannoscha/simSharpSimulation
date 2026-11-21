@@ -138,7 +138,7 @@ namespace simSharpSimulation
                 behandlungBereitsFertig: false,
                 wegZumAusgang: rezeptionZumAusgangDauer,
                 behandlungsdauer: ersteRezeptionsdauer,
-                daten: daten, ergebnis: ersteRezeptionErgebnis, prognoseStatus: rezeptionStatus))
+                daten: daten, ergebnis: ersteRezeptionErgebnis, prognoseStatus: rezeptionStatus, personal: rollenPersonal))
                 yield return ev;
 
             if (ersteRezeptionErgebnis.PatientHatKlinikVerlassen)
@@ -294,7 +294,7 @@ namespace simSharpSimulation
                     schwesterzimmer,
                     daten,
                     schwesterErgebnis,
-                    schwesterStatus))
+                    schwesterStatus, rollenPersonal))
                     yield return ev;
 
                 if (schwesterErgebnis.PatientHatKlinikVerlassen)
@@ -466,7 +466,7 @@ namespace simSharpSimulation
                     behandlungBereitsFertig: true,
                     wegZumAusgang: rezeptionZumAusgangDauer,
                     behandlungsdauer: zweiteRezeptionsdauer,
-                    daten: daten, ergebnis: zweiteRezeptionErgebnis, prognoseStatus: rezeptionStatus))
+                    daten: daten, ergebnis: zweiteRezeptionErgebnis, prognoseStatus: rezeptionStatus, personal: rollenPersonal))
                     yield return ev;
 
                 if (zweiteRezeptionErgebnis.PatientHatKlinikVerlassen)
@@ -511,7 +511,7 @@ namespace simSharpSimulation
             }
 
             daten.LogEvent(AktuelleSimulationszeitMinuten(env), "benoetigt_schwester_vorbereitung", patientId);
-            bool direktZurSchwester = schwestern.IstFrei;
+            bool direktZurSchwester = rollenPersonal?.IstSchwesterFrei ?? schwestern.IstFrei;
             daten.LogEvent(AktuelleSimulationszeitMinuten(env), direktZurSchwester ? "schwester_frei" : "schwester_nicht_frei", patientId);
             return direktZurSchwester;
         }

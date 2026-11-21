@@ -7,6 +7,11 @@ namespace simSharpSimulation
         string VonZustand,
         string ZuZustand,
         int? ArztId,
-        int? SchwesterId
+        int? SchwesterId,
+        string? PersonalId = null,
+        string? ArbeitsplatzId = null,
+        string? VonRolle = null,
+        string? ZuRolle = null,
+        double? BewegungsdauerMinuten = null
     );
 }
