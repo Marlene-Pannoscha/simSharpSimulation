@@ -113,14 +113,15 @@ namespace simSharpSimulation
             double jetztMinuten = AktuelleSimulationszeitMinuten(env);
             if (betrittWarteschlange)
             {
-                daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_schwester", patientId);
+                daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_schwester", patientId, schwesterId: schwesterId);
             }
 
-            daten.LogEvent(jetztMinuten, "geht_zur_schwester", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
+            daten.LogEvent(jetztMinuten, "geht_zur_schwester", patientId, schwesterId: schwesterId,
+                bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "betritt_schwesterzimmer", patientId);
+            daten.LogEvent(jetztMinuten, "betritt_schwesterzimmer", patientId, schwesterId: schwesterId);
             daten.LogEvent(jetztMinuten, "startet_schwester_prozess", patientId, schwesterId: schwesterId);
             prognoseStatus.StarteBehandlung(patientId, jetztMinuten, behandlungsdauer);
 

@@ -106,14 +106,15 @@ namespace simSharpSimulation
 
             double jetztMinuten = AktuelleSimulationszeitMinuten(env);
             // Patient verlaesst das Wartezimmer, sobald der Arzt frei ist.
-            daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_fuer_arzt", patientId);
+            daten.LogEvent(jetztMinuten, "verlaesst_wartezimmer_fuer_arzt", patientId, arztId: arztId);
 
             // Weg zum Arzt (interne Bewegung).
-            daten.LogEvent(jetztMinuten, "geht_zum_arzt", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
+            daten.LogEvent(jetztMinuten, "geht_zum_arzt", patientId, arztId: arztId,
+                bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
             yield return env.Timeout(interneBewegungsdauer);
 
             jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "betritt_arztzimmer", patientId);
+            daten.LogEvent(jetztMinuten, "betritt_arztzimmer", patientId, arztId: arztId);
 
             // Arztbehandlung beginnt.
             daten.LogEvent(jetztMinuten, "startet_arzt_behandlung", patientId, arztId: arztId);
