@@ -1,8 +1,8 @@
 {
   "RandomSeed": 42,
   "Simulationsdauer": 480,
-  "BewegungszeitEingangZurRezeptionSekunden": 5,
+  "BewegungszeitEingangZurRezeptionSekunden": 50,
   "BewegungszeitInnerhalbKlinikSekunden": 300,
-  "BewegungszeitArztZumAusgangSekunden": 15,
-  "BewegungszeitRezeptionZumAusgangSekunden": 5
+  "BewegungszeitArztZumAusgangSekunden": 300,
+  "BewegungszeitRezeptionZumAusgangSekunden": 50
 }
