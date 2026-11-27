@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using SimSharp;
 using static simSharpSimulation.SimulationsHelfer;
+using static simSharpSimulation.RestzeitPrognose;
 
 namespace simSharpSimulation
 {
     // Diese Datei enthält den fachlichen End-to-End-Ablauf eines einzelnen Patienten.
     // Hier werden die Stationsphasen in der richtigen Reihenfolge zusammengesetzt.
-    internal sealed partial class PatientenProzess
+    internal sealed partial class PatientenTagesablauf
     {
         /*Schritt P4: Der Weg des Patienten
         Beschreibt exakt, was passiert, von der Tür bis zur Entlassung.
@@ -18,15 +19,17 @@ namespace simSharpSimulation
         - Terminpatienten warten im Schnitt kürzer über kürzere Wartezimmerdauer.
         - Patienten ohne Termin warten im Schnitt länger, laufen aber parallel weiter.
         */
-        private IEnumerable<Event> Patient(
+        internal IEnumerable<Event> Patient(
             Simulation env,
             int patientId,
-            Resource rezeption,
-            BeweglicherSchwesterPool schwestern,
-            BeweglicherArztPool aerzte,
-            Resource arztzimmer,
-            Resource schwesterzimmer)
+            Tagesressourcen ressourcen)
         {
+            var rezeption = ressourcen.Rezeption;
+            var schwestern = ressourcen.Schwestern;
+            var aerzte = ressourcen.Aerzte;
+            var arztzimmer = ressourcen.Arztzimmer;
+            var schwesterzimmer = ressourcen.Schwesterzimmer;
+
             TimeSpan eingangZurRezeptionDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN);
             TimeSpan interneBewegungsdauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN);
             TimeSpan arztZumAusgangDauer = TimeSpan.FromSeconds(SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN);
@@ -48,21 +51,9 @@ namespace simSharpSimulation
             PatientenTyp patientenTyp = PatientenKonfiguration.WaehlePatientenTyp(rnd);
             daten.ErfassePatientenTyp(patientenTyp);
 
-            // Schritt P4.3A: Terminstatus früh festlegen, damit die Rezeption ihn kennt und loggen kann.
-            bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
-            // Dauern und Pfadentscheidungen werden einmal vorab gezogen, auch fuer spaeter nicht genutzte Stationen.
-            // Prognose und Ablauf verwenden dieselben Werte; die Ziehungsreihenfolge muss erhalten bleiben.
-            double ersteRezeptionsdauer = ZieheRezeptionsdauer(rnd);
-            double zweiteRezeptionsdauer = ZieheRezeptionsdauer(rnd);
-            double schwesterBehandlungsdauer = ZieheSchwesterBehandlungsdauer(patientenTyp, rnd);
-            double arztBehandlungsdauer = ZieheArztBehandlungsdauer(patientenTyp, rnd);
-            double schwesterWartezimmerdauer = ZieheSchwesterWartezimmerdauer(hatTermin, rnd);
-            double arztWartezimmerdauer = ZieheArztWartezimmerdauer(hatTermin, rnd);
-            double vorbereitungsWahrscheinlichkeit = hatTermin
-                ? PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT
-                : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
-            bool brauchtVorbereitung = rnd.NextDouble() < vorbereitungsWahrscheinlichkeit;
-            bool gehtNachArztZurRezeption = rnd.NextDouble() < WahrscheinlichkeitNachArztZurRezeption;
+            var (hatTermin, ersteRezeptionsdauer, zweiteRezeptionsdauer,
+                schwesterBehandlungsdauer, arztBehandlungsdauer, schwesterWartezimmerdauer,
+                arztWartezimmerdauer, brauchtVorbereitung, gehtNachArztZurRezeption) = PatientenBehandlungsplan.Ziehen(patientenTyp, rnd);
             // Bearbeitungszeit umfasst nur Stationsleistungen; die Gesamtprognose enthaelt zusaetzlich Wege und Warten.
             double prognoseBearbeitungsRestzeitAbAnkunft =
                 ersteRezeptionsdauer +
@@ -106,7 +97,7 @@ namespace simSharpSimulation
                     arztZumAusgangDauer,
                     zweiteRezeptionsdauer);
 
-            if (!DarfPatientNachAufnahmeprognoseNochRein(env, patientId))
+            if (!Aufnahme.DarfPatientNochRein(env, patientId))
             {
                 foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, TimeSpan.Zero))
                     yield return ev;
@@ -188,7 +179,7 @@ namespace simSharpSimulation
                     patientenTyp);
             }
 
-            if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+            if (Aufnahme.IstAbgewiesen(env, patientId))
             {
                 foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, rezeptionZumAusgangDauer))
                     yield return ev;
@@ -303,7 +294,7 @@ namespace simSharpSimulation
                     yield break;
                 }
 
-                if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+                if (Aufnahme.IstAbgewiesen(env, patientId))
                 {
                     foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, interneBewegungsdauer))
                         yield return ev;
@@ -360,7 +351,7 @@ namespace simSharpSimulation
 
             yield return env.Timeout(TimeSpan.FromMinutes(arztWartezimmerdauer));
 
-            if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+            if (Aufnahme.IstAbgewiesen(env, patientId))
             {
                 foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, interneBewegungsdauer))
                     yield return ev;
@@ -413,7 +404,7 @@ namespace simSharpSimulation
                 yield break;
             }
 
-            if (IstDurchAufnahmeprognoseAbgewiesen(env, patientId))
+            if (Aufnahme.IstAbgewiesen(env, patientId))
             {
                 foreach (var ev in WeiseWegenAufnahmeprognoseAb(env, patientId, arztZumAusgangDauer))
                     yield return ev;

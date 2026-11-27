@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using SimSharp;
 
 namespace simSharpSimulation
@@ -45,6 +46,18 @@ namespace simSharpSimulation
             // Noch wartende Anforderungen werden hier nicht storniert.
             if (anforderung.IsProcessed)
                 anforderung.Dispose();
+        }
+
+        internal static IEnumerable<Event> VerlasseKlinik(
+            Simulation env, SimulationsDaten daten, int patientId, TimeSpan wegZumAusgang)
+        {
+            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: wegZumAusgang.TotalMinutes);
+            yield return env.Timeout(wegZumAusgang);
+
+            jetztMinuten = AktuelleSimulationszeitMinuten(env);
+            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
+            daten.SchliessePrognosen(patientId, jetztMinuten);
         }
     }
 }

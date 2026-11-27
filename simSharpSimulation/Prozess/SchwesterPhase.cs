@@ -37,7 +37,7 @@ namespace simSharpSimulation
 
             if (jetztMinuten >= schichtEndeMinuten)
             {
-                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis, prognoseStatus))
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis, prognoseStatus))
                     yield return ev;
                 yield break;
             }
@@ -90,7 +90,7 @@ namespace simSharpSimulation
 
             if (brichtWartenAb)
             {
-                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, null, interneBewegungsdauer, ergebnis, prognoseStatus))
+                foreach (Event ev in BrichSchwesterWartenAb(env, daten, patientId, interneBewegungsdauer, ergebnis, prognoseStatus))
                     yield return ev;
             }
         }
@@ -142,7 +142,6 @@ namespace simSharpSimulation
             Simulation env,
             SimulationsDaten daten,
             int patientId,
-            int? schwesterId,
             TimeSpan interneBewegungsdauer,
             BehandlungsPhaseErgebnis ergebnis,
             PrognoseRessourcenStatus prognoseStatus)
@@ -151,14 +150,10 @@ namespace simSharpSimulation
             prognoseStatus.EntfernePatient(patientId);
             // Hit/Miss jetzt nur noch: Abbruch wegen Feierabend.
             daten.ErfasseSchwesterAbbruchFeierabend(env.StartDate);
-            daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_schwester", patientId, schwesterId: schwesterId);
+            daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_schwester", patientId);
 
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
-            yield return env.Timeout(interneBewegungsdauer);
-
-            jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
-            daten.SchliessePrognosen(patientId, jetztMinuten);
+            foreach (Event ev in VerlasseKlinik(env, daten, patientId, interneBewegungsdauer))
+                yield return ev;
             ergebnis.MarkiereKlinikVerlassen();
         }
     }

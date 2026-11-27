@@ -1,125 +1,57 @@
 using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using SimSharp;
 
 namespace simSharpSimulation
 {
-    // Felder, Tagesinitialisierung und Orchestrierung der SimSharp-Umgebung.
-    internal sealed partial class PatientenProzess
+    internal sealed class PatientenProzess
     {
-        private const double WahrscheinlichkeitNachArztZurRezeption = 0.6;
+        private static readonly DateTime ErsterSimulationstag = new(2000, 1, 3);
+        private const int PatientenIdAbstandProTag = 10_000;
         private readonly Random rnd;
         private readonly SimulationsDaten daten;
-        private int? restAufnahmeplaetzeEineStundeVorSchliessung;
-        private readonly Dictionary<int, AktiverPatientPrognose> aktivePatientenPrognosen = new();
-        private readonly HashSet<int> aufnahmeprognoseZugelassenePatienten = new();
-        private readonly HashSet<int> aufnahmeprognoseAbgewiesenePatienten = new();
-        private PrognoseRessourcenStatus rezeptionStatus = null!;
-        private PrognoseRessourcenStatus schwesterStatus = null!;
-        private PrognoseRessourcenStatus arztStatus = null!;
 
-        // Schritt P1: Vorbereitung (Konstruktor)
-        // Erhält einen Startwert für den Zufallsgenerator und ein Objekt zum Speichern der Ergebnisse.
         public PatientenProzess(int randomSeed, SimulationsDaten daten)
         {
-            this.rnd = new Random(randomSeed);
+            rnd = new Random(randomSeed);
             this.daten = daten;
         }
 
-        // Schritt P2: Der Start
-        // Richtet die Simulationsuhr und die Ärzte ein und startet den Ablauf.
         public void FuehreAus(int arbeitstage = 30)
         {
             FuehreAusAsync(arbeitstage, (env, dauer) =>
             {
                 env.Run(dauer);
-                return System.Threading.Tasks.Task.CompletedTask;
+                return Task.CompletedTask;
             }).GetAwaiter().GetResult();
         }
 
-        internal async System.Threading.Tasks.Task FuehreAusAsync(
-            int arbeitstage, Func<Simulation, TimeSpan, System.Threading.Tasks.Task> fuehreTagAus)
+        internal async Task FuehreAusAsync(int arbeitstage, Func<Simulation, TimeSpan, Task> fuehreTagAus)
         {
-            // Phase P-A: Tages-Simulation vorbereiten und starten.
-            // Der Aufrufer bestimmt die Anzahl der Tage; Desktop-Standard sind 30 Tage.
-            // Der 3. Januar 2000 war ein Montag.
-            DateTime startDatum = new DateTime(2000, 1, 3);
-            TimeSpan maximaleTagesdauer = BerechneMaximaleTagesdauer();
+            ArgumentOutOfRangeException.ThrowIfNegative(arbeitstage);
+            ArgumentNullException.ThrowIfNull(fuehreTagAus);
 
-            for (int tag = 0; tag < arbeitstage; tag++) // 0: Montag, 1: Dienstag, ... 4: Freitag
+            var maximaleTagesdauer = TimeSpan.FromMinutes(
+                SimulationKonfiguration.SIMULATIONSDAUER + SimulationKonfiguration.NACHLAUF_MINUTEN);
+
+            for (int tag = 0; tag < arbeitstage; tag++)
             {
-                // Schritt P2.1: Für jeden Tag eine neue Simulationsumgebung erzeugen.
-                // Jeder Tag bekommt seine eigene Simulations-Umgebung (Uhr) und neue Ressourcen.
-                // Das Datum wird für jeden Durchlauf um 'tag' Tage erhöht.
-                var env = new Simulation(startDatum.AddDays(tag));
-                SetzeTageszustandZurueck();
-                var aerzte = new BeweglicherArztPool(env, ArztKonfiguration.ANZAHL_AERZTE);
-                var schwestern = new BeweglicherSchwesterPool(env, SchwesterKonfiguration.ANZAHL_SCHWESTERN);
-                var rezeption = new Resource(env, capacity: RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
-                var arztzimmer = new Resource(
-                    env,
-                    capacity: KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeArzt);
-                var schwesterzimmer = new Resource(
-                    env,
-                    capacity: KonfigurationJsonExport.Finanzen.Fixkosten.AnzahlBehandlungsraeumeSchwester);
-                InitialisierePrognoseRessourcen();
-                env.Process(AktiviereAufnahmeprognoseEineStundeVorSchliessung(env));
+                var env = new Simulation(ErsterSimulationstag.AddDays(tag));
+                var raeume = KonfigurationJsonExport.Finanzen.Fixkosten;
+                var ressourcen = new Tagesressourcen(env,
+                    ArztKonfiguration.ANZAHL_AERZTE,
+                    SchwesterKonfiguration.ANZAHL_SCHWESTERN,
+                    RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN,
+                    raeume.AnzahlBehandlungsraeumeArzt,
+                    raeume.AnzahlBehandlungsraeumeSchwester);
+                var ablauf = new PatientenTagesablauf(rnd, daten, ressourcen);
+                env.Process(ablauf.Aufnahme.PlaneAufnahmeprognose(env));
+                int erstePatientId = (tag * PatientenIdAbstandProTag) + 1;
+                env.Process(PatientenGenerator.Generiere(env, rnd, daten, erstePatientId,
+                    patientId => ablauf.Patient(env, patientId, ressourcen)));
 
-                // Schritt P3: PatientenGenerator für den jeweiligen Tag starten
-                // PatientenGenerator liefert die Ankunftszeiten und startet für jede Ankunft
-                // diesen Patient()-Ablauf als eigenen Simulationsprozess.
-                // Eindeutige Patienten-IDs pro Tag, damit Trace-Auswertungen (z.B. Zeitachse eines Patienten) sauber sind.
-                int patientIdStart = (tag * 10_000) + 1;
-                env.Process(PatientenGenerator.Generiere(
-                    env,
-                    rezeption,
-                    aerzte,
-                    schwestern,
-                    rnd,
-                    daten,
-                    patientIdStart,
-                    (simulation, patientId, rezeptionsRessource, schwesternPool, aerztePool) =>
-                        Patient(
-                            simulation,
-                            patientId,
-                            rezeptionsRessource,
-                            schwesternPool,
-                            aerztePool,
-                            arztzimmer,
-                            schwesterzimmer)));
-
-                // Schritt P2.2: Tages-Simulation ausführen.
-                // Die Ankünfte enden nach SIMULATIONSDAUER, aber einzelne Prozesse können
-                // noch nachlaufen. Ein fester Nachlaufpuffer verhindert, dass der Tag bei
-                // offenen Warteschlangen oder extrem langen Zufallsdauern unbegrenzt läuft.
                 await fuehreTagAus(env, maximaleTagesdauer);
             }
         }
-
-        private void SetzeTageszustandZurueck()
-        {
-            restAufnahmeplaetzeEineStundeVorSchliessung = null;
-            aktivePatientenPrognosen.Clear();
-            aufnahmeprognoseZugelassenePatienten.Clear();
-            aufnahmeprognoseAbgewiesenePatienten.Clear();
-        }
-
-        private void InitialisierePrognoseRessourcen()
-        {
-            rezeptionStatus = new PrognoseRessourcenStatus(RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN);
-            schwesterStatus = new PrognoseRessourcenStatus(SchwesterKonfiguration.ANZAHL_SCHWESTERN);
-            arztStatus = new PrognoseRessourcenStatus(ArztKonfiguration.ANZAHL_AERZTE);
-        }
-
-        private static TimeSpan BerechneMaximaleTagesdauer()
-        {
-            const double nachlaufPufferMinuten = 180.0;
-            return TimeSpan.FromMinutes(SimulationKonfiguration.SIMULATIONSDAUER + nachlaufPufferMinuten);
-        }
-
-        private sealed record AktiverPatientPrognose(
-            int PatientId,
-            double ZeitpunktMinuten,
-            double PrognoseRestMinuten);
     }
 }

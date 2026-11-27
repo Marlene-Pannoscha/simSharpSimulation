@@ -129,12 +129,8 @@ namespace simSharpSimulation
             daten.ErfasseRezeptionAbbruchFeierabend(env.StartDate);
             daten.LogEvent(jetztMinuten, "bricht_ab_wegen_feierabend_rezeption", patientId);
 
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: interneBewegungsdauer.TotalMinutes);
-            yield return env.Timeout(interneBewegungsdauer);
-
-            jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
-            daten.SchliessePrognosen(patientId, jetztMinuten);
+            foreach (Event ev in VerlasseKlinik(env, daten, patientId, interneBewegungsdauer))
+                yield return ev;
             ergebnis.MarkiereKlinikVerlassen();
         }
 

@@ -5,6 +5,10 @@ Sie ergaenzt die `README.md`: Die README beschreibt vor allem Bedienung und
 Startbefehle, diese Datei erklaert Aufbau, Datenfluss und Verantwortlichkeiten
 im Code.
 
+Die aktuelle eigenstaendige Refactoring-Etappe und ihre Regressionsnachweise
+sind in [EigenstaendigesRefactoring.md](docs/EigenstaendigesRefactoring.md)
+dokumentiert.
+
 ## 1. Ziel des Projekts
 
 `simSharpSimulation` simuliert den Patientenfluss in einer Arztpraxis bzw.
@@ -46,15 +50,23 @@ simSharpSimulation/
 |   |-- Prozess/
 |   |   |-- README_Prozess.md
 |   |   |-- PatientenGenerator.cs
+|   |   |-- PatientenTyp.cs und PatientenBehandlungsplan.cs
+|   |   |-- Aufnahmestopp.cs und Tagesressourcen.cs
 |   |   |-- RezeptionPhase.cs
 |   |   |-- SchwesterPhase.cs
 |   |   |-- ArztPhase.cs
 |   |   |-- BehandlungsPhaseErgebnis.cs
 |   |   |-- PatientenProzess/
 |   |       |-- PatientenProzess.cs
-|   |       |-- PatientenProzess.PatientenAblauf.cs
-|   |       |-- PatientenProzess.Prognose.cs
-|   |       |-- PatientenProzess.Helfer.cs
+|   |       |-- Aufnahmeprognose.cs
+|   |       |-- PatientenTagesablauf.cs
+|   |       |-- PatientenTagesablauf.PatientenAblauf.cs
+|   |       |-- PatientenTagesablauf.Prognose.cs
+|   |       |-- PatientenTagesablauf.Helfer.cs
+|   |-- Auswertung/
+|   |   |-- FinanzRechner.cs
+|   |   |-- PrognoseStatistik.cs und PrognoseStatistik.Export.cs
+|   |-- SimulationsEreignisFormat.cs
 |   |-- Diagramm/
 |   |   |-- GenerateDiagram.cs
 |   |   |-- einzelne Diagrammklassen
@@ -64,7 +76,6 @@ simSharpSimulation/
 |   |   |-- FinanzWpfFenster.HitMiss.cs
 |   |   |-- FinanzWpfFenster.Wartezeiten.cs
 |   |   |-- Kosten/
-|   |   |   |-- FinanzRechner.cs
 |   |   |   |-- FinanzVisualisierung.cs
 |   |   |   |-- FinanzWpfFenster.Finanzen.cs
 |   |   |-- Prognose/
@@ -72,6 +83,12 @@ simSharpSimulation/
 |   |       |-- PrognoseVisualisierung.cs
 |   |-- images/
 ```
+
+`PraxisSimulation.Core` bindet die gemeinsamen Modellquellen ein und wird von
+Godot, Server und dem .NET-Prüfprogramm referenziert. Die Desktopprojekte
+kompilieren dieselben Quellen im bestehenden Projektlayout. Der Godot-Adapter
+greift typisiert auf den Kern zu. Das Kernprojekt hängt von SimSharp und MathNet
+ab. WPF, ScottPlot und Godot liegen außerhalb des Kerns.
 
 ## 3. Programmstart
 
@@ -121,9 +138,12 @@ Die Details der Prozesslogik sind zusaetzlich in
 
 - `PatientenGenerator.cs`: erzeugt Ankunftszeiten und startet Patientenprozesse.
 - `PatientenProzess.cs`: orchestriert Tage, Ressourcen und SimSharp-Simulation.
-- `PatientenProzess.PatientenAblauf.cs`: beschreibt den Ablauf eines einzelnen Patienten.
-- `PatientenProzess.Prognose.cs`: enthaelt Prognoseformeln und prognosebasierte Abbrueche.
-- `PatientenProzess.Helfer.cs`: enthaelt technische Hilfsmethoden fuer Ressourcen und Patiententypen.
+- `PatientenTagesablauf.PatientenAblauf.cs`: beschreibt den Ablauf eines einzelnen Patienten.
+- `PatientenTagesablauf.Prognose.cs`: enthaelt Prognoseformeln und prognosebasierte Abbrueche.
+- `PatientenTagesablauf.Helfer.cs`: protokolliert den Ausgangspfad nach einem Abbruch.
+- `PatientenBehandlungsplan`: zieht Dauern, Terminstatus und Pfade in der historischen Reihenfolge.
+- `Aufnahmestopp` und `Aufnahmeprognose`: berechnen den Aufnahmestopp und verwalten die Zulassungsentscheidung je Tag.
+- `Tagesressourcen`: erzeugt Personalpools, separate Raumressourcen und den Belegungsstatus fuer Prognosen.
 - `RezeptionPhase.cs`: kapselt Warte- und Behandlungslogik der Rezeption.
 - `SchwesterPhase.cs`: kapselt Schwesterlogik inklusive Prioritaet und Feierabend-Abbruch.
 - `ArztPhase.cs`: kapselt Arztwarteschlange, Arztbehandlung und Hit-Erfassung.
@@ -174,7 +194,16 @@ Gespeichert werden unter anderem:
 Aus diesen Daten werden Konsolenausgaben, WPF-Tabellen, Reports und Diagramme
 erzeugt.
 
+`PrognoseStatistik` verwaltet Prognosedaten, Genauigkeit und Kalibrierung.
+`PrognoseStatistik.Export.cs` erzeugt den bestehenden Textbericht und JSON-Export.
+Aufrufer nutzen dafür weiterhin `SimulationsDaten`.
+
 ## 7. Trace und Events
+
+`SimulationsEreignisFormat` lädt das Zustandsmapping und erzeugt aus einem
+Ereignis die Trace-Zeile und die Meldung für Godot bzw. den Server.
+`SimulationsDaten` speichert zuerst die Trace-Zeile und veröffentlicht dann die
+Meldung.
 
 Der Trace wird als Semikolon-getrennte Textdatei geschrieben:
 
@@ -216,7 +245,7 @@ Die PNG-Dateien werden unter `simSharpSimulation/images/` gespeichert.
 
 ## 9. Finanzlogik
 
-Die Finanzlogik liegt im WPF-Unterordner `WPF Fenster/Kosten`.
+`Auswertung/FinanzRechner.cs` enthält die Finanzrechnung. Berichte, Diagramme und die WPF-Anbindung liegen in `WPF Fenster/Kosten`.
 
 - `FinanzRechner.cs`: berechnet Tagesergebnisse, Kosten, Umsaetze und Fixkosten.
 - `FinanzVisualisierung.cs`: fuehrt Finanzsimulationen aus, erzeugt Finanzberichte und Diagramme.
@@ -295,9 +324,8 @@ Checkpoints sind:
 - VorArzt
 - NachArzt
 
-`PatientenProzess.Prognose.cs` berechnet erwartete Restzeiten aus mittleren
-Service- und Wegezeiten. Das Modell ist aktuell mittelwertbasiert und noch nicht
-queue-sensitiv.
+`PatientenTagesablauf.Prognose.cs` berechnet erwartete Restzeiten aus mittleren
+Service- und Wegezeiten. Die Prognose berücksichtigt vorab gezogene Dauern sowie aktuelle und erwartete Warteschlangen. `PrognoseStatistik` gleicht prognostizierte mit tatsächlichen Restzeiten ab und aktualisiert die Kalibrierung.
 
 Ausgaben:
 
@@ -351,3 +379,41 @@ Typische Erweiterungen:
 - Diagrammcode getrennt von Prozesslogik halten.
 - WPF-UI-Erweiterungen bevorzugt in eigenen Partial-Dateien ergaenzen.
 - Bei neuen Kennzahlen README und diese Architekturdatei aktualisieren.
+
+
+## 16. Optionale Simulationsparameter
+
+`simulation-konfiguration.json` akzeptiert diese zusätzlichen Felder. Fehlen
+sie in älteren Dateien, gelten die bisherigen Werte.
+
+| Feld | Standard |
+|---|---:|
+| `PrognosePruefungVorSchliessungMinuten` | 60 |
+| `NachlaufMinuten` | 180 |
+| `WahrscheinlichkeitNachArztZurRezeption` | 0,6 |
+
+Personalstärken werden pro Rolle gelesen und an die Personalpools bzw. die
+Rezeptionsressource übergeben. Arzt- und Schwesternräume haben separat
+konfigurierte Kapazitäten aus `Finanzen.Fixkosten`. Diese Werte ändern sich
+unabhängig voneinander. Für die Rezeption gibt es im Kern eine Personalressource.
+
+## 17. Reihenfolge des Refactorings und offene Punkte
+
+1. Referenzlaeufe vor der ersten Modellaenderung sichern. Ereignisreihenfolge,
+   exakte Zeiten und Auswertungen zeigen auch Abweichungen bei gleichen Fallzahlen.
+2. Tagessteuerung und Ressourcen zuerst trennen. So ist sichtbar, welche
+   Kapazitaeten je Tag gelten und wo ein neuer Patientenprozess gestartet wird.
+3. Behandlungsplan und Aufnahmeprognose auslagern. Die Reihenfolge der
+   Zufallsziehungen und die Reihenfolge bei gleichen Prognosewerten bleiben
+   als Invarianten im Code erkennbar.
+4. Prognosestatistik, Export und Ereignisformat aus dem Ergebnisobjekt
+   herausziehen. Dessen vorhandene API bleibt der Zugang fuer UI und Reports.
+5. Godot typisiert anbinden und die getrennten Kapazitaeten im Adapter testen.
+
+Die globale, aenderbare Konfiguration koppelt parallele Simulationen mit
+verschiedenen Parametern. Ein unveraenderlicher Satz von Parametern je Lauf
+waere eine Grundlage fuer parallele Szenariovergleiche. Der Patientenablauf
+bleibt ein laengerer SimSharp-Iterator mit fachlich relevanter Reihenfolge.
+Weitere Extraktionen sollten Stationsgrenzen nutzen und die Taktung gegen
+die Referenzlaeufe pruefen. Der Mitarbeiterpool liest die Queue-Laenge ueber
+SimSharp-Interna. Dieser Zugriff ist bei einem Paketwechsel zu pruefen.

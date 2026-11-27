@@ -9,29 +9,26 @@ namespace simSharpSimulation
     {
         public static IEnumerable<Event> Generiere(
             Simulation env,
-            Resource rezeption,
-            BeweglicherArztPool aerzte,
-            BeweglicherSchwesterPool schwestern,
             Random rnd,
             SimulationsDaten daten,
             int erstePatientId,
-            Func<Simulation, int, Resource, BeweglicherSchwesterPool, BeweglicherArztPool, IEnumerable<Event>> erzeugePatientenProzess)
+            Func<int, IEnumerable<Event>> erzeugePatientenProzess)
         {
-            double aufnahmestoppMinuten = BerechneAufnahmestoppZeitpunkt();
+            double aufnahmestoppMinuten = Aufnahmestopp.BerechneZeitpunkt();
 
             // Exponentielle Zwischenankunftszeiten je Tagesphase ergeben einen
             // inhomogenen Poisson-Prozess mit konstanter Rate pro Phase.
             // Alle Ankuenfte werden vorab gezogen. Diese Reihenfolge der Zufallsziehungen
             // ist fuer reproduzierbare Laeufe mit demselben Seed relevant.
             var ankunftszeiten = new List<double>();
-            GenerierePhase(ankunftszeiten, rnd, 0.0, 120.0,
+            GenerierePhase(ankunftszeiten, rnd, 0.0, PatientenKonfiguration.BeginnZweiteAnkunftsphaseMinuten,
                 PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN);
-            GenerierePhase(ankunftszeiten, rnd, 120.0, 300.0,
+            GenerierePhase(ankunftszeiten, rnd, PatientenKonfiguration.BeginnZweiteAnkunftsphaseMinuten, PatientenKonfiguration.BeginnDritteAnkunftsphaseMinuten,
                 PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN);
-            GenerierePhase(ankunftszeiten, rnd, 300.0, SimulationKonfiguration.SIMULATIONSDAUER,
+            GenerierePhase(ankunftszeiten, rnd, PatientenKonfiguration.BeginnDritteAnkunftsphaseMinuten, SimulationKonfiguration.SIMULATIONSDAUER,
                 PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN);
 
-            int aufnahmekapazitaet = BerechneAufnahmestoppKapazitaet();
+            int aufnahmekapazitaet = Aufnahmestopp.BerechneArztkapazitaet(SimulationKonfiguration.SIMULATIONSDAUER);
             daten.ErfassePrognoseAufnahmepruefung(env.StartDate, aufnahmestoppMinuten, aufnahmekapazitaet);
 
             int naechstePatientId = erstePatientId;
@@ -53,7 +50,7 @@ namespace simSharpSimulation
                     continue;
                 }
 
-                env.Process(erzeugePatientenProzess(env, naechstePatientId, rezeption, schwestern, aerzte));
+                env.Process(erzeugePatientenProzess(naechstePatientId));
                 naechstePatientId++;
             }
         }
@@ -81,22 +78,6 @@ namespace simSharpSimulation
 
                 ankunftszeiten.Add(ankunftszeitMinuten);
             }
-        }
-
-        private static double BerechneAufnahmestoppZeitpunkt()
-        {
-            return Math.Max(
-                0.0,
-                SimulationKonfiguration.SIMULATIONSDAUER -
-                SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN);
-        }
-
-        private static int BerechneAufnahmestoppKapazitaet()
-        {
-            double simulationsdauerMinuten = SimulationKonfiguration.SIMULATIONSDAUER;
-            double mittlereArztBehandlungsdauer = Math.Max(0.1, ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER);
-            int kapazitaet = (int)Math.Floor((simulationsdauerMinuten * ArztKonfiguration.ANZAHL_AERZTE) / mittlereArztBehandlungsdauer);
-            return Math.Max(0, kapazitaet);
         }
     }
 }

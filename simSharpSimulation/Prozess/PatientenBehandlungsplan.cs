@@ -1,14 +1,39 @@
 using System;
-using System.Collections.Generic;
-using SimSharp;
-using static simSharpSimulation.SimulationsHelfer;
 
 namespace simSharpSimulation
 {
-    // Gemeinsam genutzte Hilfen fuer Zufallsdauern, Simulationszeit, Prioritaeten
-    // und den Klinikabgang nach einem Abbruch.
-    internal sealed partial class PatientenProzess
+    internal readonly record struct PatientenBehandlungsplan(
+        bool HatTermin,
+        double ErsteRezeptionsdauer,
+        double ZweiteRezeptionsdauer,
+        double SchwesterBehandlungsdauer,
+        double ArztBehandlungsdauer,
+        double SchwesterWartezimmerdauer,
+        double ArztWartezimmerdauer,
+        bool BrauchtVorbereitung,
+        bool GehtNachArztZurRezeption)
     {
+        internal static PatientenBehandlungsplan Ziehen(PatientenTyp patientenTyp, Random rnd)
+        {
+            bool hatTermin = rnd.NextDouble() < PatientenKonfiguration.TERMIN_WAHRSCHEINLICHKEIT;
+            // Dauern und Pfadentscheidungen werden einmal vorab gezogen, auch fuer spaeter nicht genutzte Stationen.
+            // Prognose und Ablauf verwenden dieselben Werte; die Ziehungsreihenfolge muss erhalten bleiben.
+            double ersteRezeptionsdauer = ZieheRezeptionsdauer(rnd);
+            double zweiteRezeptionsdauer = ZieheRezeptionsdauer(rnd);
+            double schwesterBehandlungsdauer = ZieheSchwesterBehandlungsdauer(patientenTyp, rnd);
+            double arztBehandlungsdauer = ZieheArztBehandlungsdauer(patientenTyp, rnd);
+            double schwesterWartezimmerdauer = ZieheSchwesterWartezimmerdauer(hatTermin, rnd);
+            double arztWartezimmerdauer = ZieheArztWartezimmerdauer(hatTermin, rnd);
+            double vorbereitungsWahrscheinlichkeit = hatTermin
+                ? PatientenKonfiguration.TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT
+                : PatientenKonfiguration.OHNE_TERMIN_VORBEREITUNG_WAHRSCHEINLICHKEIT;
+            bool brauchtVorbereitung = rnd.NextDouble() < vorbereitungsWahrscheinlichkeit;
+            bool gehtNachArztZurRezeption = rnd.NextDouble() < SimulationKonfiguration.WAHRSCHEINLICHKEIT_NACH_ARZT_ZUR_REZEPTION;
+            return new PatientenBehandlungsplan(hatTermin, ersteRezeptionsdauer, zweiteRezeptionsdauer,
+                schwesterBehandlungsdauer, arztBehandlungsdauer, schwesterWartezimmerdauer,
+                arztWartezimmerdauer, brauchtVorbereitung, gehtNachArztZurRezeption);
+        }
+
         // Zieht konkrete Behandlungsdauern vorab, damit Prognose und Simulation dieselben
         // Lognormal-Ausreisser verwenden.
         private static double ZieheLogNormalDauer(double mittelwert, double variationskoeffizient, Random rnd)
@@ -66,21 +91,6 @@ namespace simSharpSimulation
             return MathNet.Numerics.Distributions.Exponential.Sample(
                 rnd,
                 1.0 / (PatientenKonfiguration.MITTLERE_WARTEZIMMER_DAUER_ARZT * faktor));
-        }
-
-        private IEnumerable<Event> VerlasseKlinikNachAbbruch(
-            Simulation env,
-            int patientId,
-            TimeSpan wegZumAusgang)
-        {
-            double jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "geht_zum_ausgang", patientId, bewegungsdauerMinuten: wegZumAusgang.TotalMinutes);
-            yield return env.Timeout(wegZumAusgang);
-
-            jetztMinuten = AktuelleSimulationszeitMinuten(env);
-            daten.LogEvent(jetztMinuten, "verlaesst_klinik", patientId);
-            daten.SchliessePrognosen(patientId, jetztMinuten);
-            EntferneAktivePatientenPrognose(patientId);
         }
 
     }

@@ -7,11 +7,11 @@ Diese Datei dokumentiert die Ablauf- und Prognoselogik im Ordner `simSharpSimula
 Der Prozessbereich ist in zwei Ebenen aufgeteilt:
 
 - `PatientenGenerator.cs` erzeugt die Patientenankünfte eines Tages.
-- der Unterordner `PatientenProzess/` enthält die aufgeteilte `partial class PatientenProzess`.
+- der Unterordner `PatientenProzess/` enthält die Tagessteuerung, den `PatientenTagesablauf` und die `Aufnahmeprognose`.
 - `RezeptionPhase.cs`, `SchwesterPhase.cs` und `ArztPhase.cs` kapseln die stationsspezifische Wartelogik, Behandlung und Feierabend-Abbrüche.
 - `BehandlungsPhaseErgebnis.cs` dient als einfacher Rückkanal, damit eine Phase dem Hauptprozess melden kann, dass der Patient die Klinik bereits verlassen hat.
 
-Die Prognoselogik sitzt aktuell zentral im Unterordner `PatientenProzess/`, fachlich aber weiterhin in derselben Klasse `PatientenProzess`. Die Stationsklassen berechnen selbst keine Prognosen, sondern schließen nur offene Prognoseprüfungen, wenn ein Patient wegen Feierabend die Klinik verlassen muss.
+Die Prognoselogik sitzt aktuell zentral im Unterordner `PatientenProzess/`, in `PatientenTagesablauf` und `Aufnahmeprognose`. Die Stationsklassen berechnen selbst keine Prognosen, sondern schließen nur offene Prognoseprüfungen, wenn ein Patient wegen Feierabend die Klinik verlassen muss.
 
 ## Dateien und Verantwortung
 
@@ -19,11 +19,8 @@ Die Prognoselogik sitzt aktuell zentral im Unterordner `PatientenProzess/`, fach
 
 Verantwortung:
 
-- erzeugt pro Tag bis zu `PatientenKonfiguration.ANZAHL_PATIENTEN_TAG` Ankunftszeitpunkte
-- verwendet eine Normalverteilung mit `ERWARTUNGSWERT` und `STANDARDABWEICHUNG`
-- verwirft Ankünfte nach `SimulationKonfiguration.SIMULATIONSDAUER`
-- sortiert alle Ankünfte chronologisch
-- behandelt Patienten vor Öffnung explizit als FIFO-Warteschlange
+- zieht Ankunftszeiten fuer drei Tagesphasen mit exponentiellen Zwischenankunftszeiten
+- protokolliert Abweisungen am Aufnahmestopp vor dem Klinikeintritt
 - startet für jede Ankunft einen separaten Patientenprozess mit `env.Process(...)`
 
 Wichtig:
@@ -41,7 +38,7 @@ Verantwortung:
 - Start des `PatientenGenerator`
 - Steuerung von Tagesstart, Tagesende und Nachlaufpuffer
 
-### `PatientenProzess/PatientenProzess.PatientenAblauf.cs`
+### `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs`
 
 Verantwortung:
 
@@ -50,7 +47,7 @@ Verantwortung:
 - Einbettung aller Prognose-Checkpoints in den fachlichen Ablauf
 - Abschluss des Patienten mit `verlaesst_klinik` und Gesamtprozesszeit
 
-### `PatientenProzess/PatientenProzess.Prognose.cs`
+### `PatientenProzess/PatientenTagesablauf.Prognose.cs`
 
 Verantwortung:
 
@@ -59,13 +56,16 @@ Verantwortung:
 - Berechnung der erwarteten Restzeiten
 - Hilfsformeln für Schwester-, Arzt- und Ausgangspfad
 
-### `PatientenProzess/PatientenProzess.Helfer.cs`
+### `PatientenProzess/PatientenTagesablauf.Helfer.cs`
 
 Verantwortung:
 
-- Auswahl freier oder zufälliger Ressourcen
-- Wahl des `PatientenTyp`
-- technische Hilfsmethoden zur Belegungsprüfung
+- protokolliert und simuliert den Weg zum Ausgang nach einem Abbruch
+- schliesst offene Prognosepruefungen und entfernt den Patienten aus den Prognosewarteschlangen
+
+`PatientenBehandlungsplan.cs` zieht die Stations- und Wartezimmerdauern und
+entscheidet ueber Termin, Vorbereitung und Rueckweg. `Tagesressourcen.cs`
+erzeugt pro Tag Personalpools, separate Raumressourcen und Prognosestatus.
 
 ### `BehandlungsPhaseErgebnis.cs`
 
@@ -90,7 +90,7 @@ Danach startet der Generator den Tagesfluss. Jeder Tag läuft bis `SIMULATIONSDA
 
 ### Patientenfluss
 
-`PatientenProzess/PatientenProzess.PatientenAblauf.cs` enthält den normalen Pfad eines Patienten:
+`PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs` enthält den normalen Pfad eines Patienten:
 
 1. `betritt_klinik`
 2. Bewegung zur Rezeption
@@ -134,7 +134,7 @@ Die spätere Auswertung erfolgt über `SimulationsDaten.SchliessePrognosen(...)`
 
 ### Aktuelle Checkpoints
 
-Die Prognose wird in `PatientenProzess/PatientenProzess.PatientenAblauf.cs` an diesen Phasen ausgelöst:
+Die Prognose wird in `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs` an diesen Phasen ausgelöst:
 
 - `Ankunft`
 - `NachRezeption`
@@ -154,9 +154,9 @@ Verwendet werden insbesondere:
 - mittlere Schwester-Behandlungszeit aus `SchwesterKonfiguration`
 - mittlere Arzt-Behandlungszeit aus `ArztKonfiguration`
 - mittlere Wartezimmerzeiten und Terminfaktoren aus `PatientenKonfiguration`
-- Pfadwahrscheinlichkeit `WahrscheinlichkeitNachArztZurRezeption = 0.6`
+- Pfadwahrscheinlichkeit `WahrscheinlichkeitNachArztZurRezeption` mit Standardwert 0,6
 
-Die Formeln liegen in `PatientenProzess/PatientenProzess.Prognose.cs`.
+Die Formeln liegen in `PatientenProzess/PatientenTagesablauf.Prognose.cs`.
 
 Hilfsmethoden der Prognose:
 
@@ -184,7 +184,7 @@ Deshalb ist das Modell aktuell ein mittelwertbasiertes Flussmodell, kein queue-g
 - `true`: Prognose sagt, der Patient wird voraussichtlich vor Schichtende fertig
 - `false`: Prognose sagt, der Patient wird voraussichtlich nicht vor Schichtende fertig
 
-Wenn `false` zurückkommt, beendet `PatientenProzess/PatientenProzess.PatientenAblauf.cs` den Ablauf sofort mit `BrichWegenPrognoseAb(...)` aus `PatientenProzess/PatientenProzess.Prognose.cs`.
+Wenn `false` zurückkommt, beendet `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs` den Ablauf sofort mit `BrichWegenPrognoseAb(...)` aus `PatientenProzess/PatientenTagesablauf.Prognose.cs`.
 
 ### Verhalten bei Prognose-Abbruch
 
@@ -239,7 +239,7 @@ Die Rezeption selbst erzeugt keine Prognose.
 
 Sie hat aber zwei wichtige Berührungspunkte:
 
-- Nach der ersten Rezeption folgt im Hauptprozess aus `PatientenProzess/PatientenProzess.PatientenAblauf.cs` der Checkpoint `NachRezeption`.
+- Nach der ersten Rezeption folgt im Hauptprozess aus `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs` der Checkpoint `NachRezeption`.
 - Wenn ein Patient wegen Feierabend in der Rezeptionswarteschlange abbricht, ruft die Phase `daten.SchliessePrognosen(...)` auf.
 
 ## Schwester: `SchwesterPhase.cs`
@@ -265,7 +265,7 @@ Die Schwesterphase kapselt:
 
 Die Schwesterphase selbst rechnet keine Prognose aus.
 
-Die Prognose wird im Hauptprozess aus `PatientenProzess/PatientenProzess.PatientenAblauf.cs` um die Schwesterphase herum gesetzt:
+Die Prognose wird im Hauptprozess aus `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs` um die Schwesterphase herum gesetzt:
 
 - `VorSchwester`
 - `NachSchwester`
@@ -296,7 +296,7 @@ Die Arztphase kapselt:
 
 Die Arztphase rechnet ebenfalls keine Prognose selbst.
 
-Die Prognosepunkte davor bzw. danach liegen im Hauptprozess aus `PatientenProzess/PatientenProzess.PatientenAblauf.cs`:
+Die Prognosepunkte davor bzw. danach liegen im Hauptprozess aus `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs`:
 
 - `VorArzt`
 - `NachArzt`
@@ -307,8 +307,8 @@ Wenn der Patient die Arztwarteschlange wegen Feierabend verlassen muss, schließ
 
 Die Trennung ist bewusst so gewählt:
 
-- `PatientenProzess/PatientenProzess.PatientenAblauf.cs` entscheidet den fachlichen Gesamtpfad
-- `PatientenProzess/PatientenProzess.Prognose.cs` bündelt die Prognoseformeln und den Prognose-Abbruch
+- `PatientenProzess/PatientenTagesablauf.PatientenAblauf.cs` entscheidet den fachlichen Gesamtpfad
+- `PatientenProzess/PatientenTagesablauf.Prognose.cs` bündelt die Prognoseformeln und den Prognose-Abbruch
 - Stationsphasen entscheiden Ressourcenzuteilung, Warten, Behandlung und Feierabend-Abbruch
 
 Dadurch bleibt die Prognose an einer Stelle gebündelt und die Stationslogik unabhängig von Prognoseformeln.

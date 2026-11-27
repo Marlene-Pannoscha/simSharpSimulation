@@ -10,10 +10,15 @@
     <Compile Include="../simSharpSimulation/Ressourcen/*.cs" LinkBase="Ressourcen" />
     <Compile Include="../simSharpSimulation/SimulationKonfiguration.cs" />
     <Compile Include="../simSharpSimulation/SimulationsDaten.cs" />
+    <Compile Include="../simSharpSimulation/SimulationsEreignisFormat.cs" />
     <Compile Include="../simSharpSimulation/SimulationLiveEvent.cs" />
     <Compile Include="../simSharpSimulation/SimulationEventQueue.cs" />
     <Compile Include="../simSharpSimulation/ProjektPfade.cs" />
     <Content Include="../simSharpSimulation/Ressourcen/*.json" Link="Ressourcen/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <InternalsVisibleTo Include="PraxisSimulation.Regression" />
+    <InternalsVisibleTo Include="Praxis.Visualisierung.Pruefung" />
+    <InternalsVisibleTo Include="Praxis.Visualisierung" />
+    <Compile Include="../simSharpSimulation/Auswertung/*.cs" LinkBase="Auswertung" />
     <PackageReference Include="SimSharp" Version="3.4.2" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
   </ItemGroup>

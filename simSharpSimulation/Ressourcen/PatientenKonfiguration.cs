@@ -3,15 +3,13 @@ using System.Linq;
 
 namespace simSharpSimulation
 {
-    public enum PatientenTyp
-    {
-        Kurz,
-        Mittel,
-        Lang
-    }
-
     internal static class PatientenKonfiguration
     {
+        internal const double BeginnZweiteAnkunftsphaseMinuten = 120.0;
+        internal const double DauerZweiteAnkunftsphaseMinuten = 180.0;
+        internal const double BeginnDritteAnkunftsphaseMinuten =
+            BeginnZweiteAnkunftsphaseMinuten + DauerZweiteAnkunftsphaseMinuten;
+
         public static double ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN { get; internal set; }
         public static double ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN { get; internal set; }
         public static double ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN { get; internal set; }
@@ -55,10 +53,10 @@ namespace simSharpSimulation
         public static double BerechneErwarteteAnkuenfte(double simulationsdauerMinuten)
         {
             double dauer = Math.Max(0.0, simulationsdauerMinuten);
-            double erstePhase = Math.Min(dauer, 120.0) / ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN;
-            double zweitePhase = Math.Min(Math.Max(dauer - 120.0, 0.0), 180.0)
+            double erstePhase = Math.Min(dauer, BeginnZweiteAnkunftsphaseMinuten) / ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN;
+            double zweitePhase = Math.Min(Math.Max(dauer - BeginnZweiteAnkunftsphaseMinuten, 0.0), DauerZweiteAnkunftsphaseMinuten)
                 / ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN;
-            double drittePhase = Math.Max(dauer - 300.0, 0.0)
+            double drittePhase = Math.Max(dauer - BeginnDritteAnkunftsphaseMinuten, 0.0)
                 / ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN;
             return erstePhase + zweitePhase + drittePhase;
         }

@@ -1,7 +1,5 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,8 +9,6 @@ namespace simSharpSimulation
     {
         private static readonly JsonSerializerOptions JsonOptionen = new()
         {
-            WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
             PropertyNameCaseInsensitive = true,
             Converters = { new JsonStringEnumConverter() }
         };
@@ -22,28 +18,33 @@ namespace simSharpSimulation
         // Hilfszugang: berechnete Mietkosten pro Tag auf Basis der Raumflaechen.
         public static double MietkostenProTag => Finanzen.Fixkosten.BerechneMietkostenProTag();
 
-        public static void LadeAlle()
-        {
-            string zielOrdner = ErmittleRessourcenOrdner();
-            if (!AlleKonfigurationsdateienVorhanden(zielOrdner))
-            {
-                throw new FileNotFoundException($"Konfigurationen fehlen im Ressourcenordner: {zielOrdner}");
-            }
+        public static void LadeAlle() => LadeAlle(ErmittleRessourcenOrdner());
 
-            var arzt = LeseJson<ArztKonfigurationJson>(Path.Combine(zielOrdner, "arzt-konfiguration.json"));
+        internal static void LadeAlle(string zielOrdner)
+        {
+            var arzt = LeseJson<ArztKonfigurationJson>(zielOrdner, "arzt-konfiguration.json");
+            var schwester = LeseJson<SchwesterKonfigurationJson>(zielOrdner, "schwester-konfiguration.json");
+            var rezeption = LeseJson<RezeptionKonfigurationJson>(zielOrdner, "rezeption-konfiguration.json");
+            var patienten = LeseJson<PatientenKonfigurationJson>(zielOrdner, "patienten-konfiguration.json");
+            var simulation = LeseJson<SimulationKonfigurationJson>(zielOrdner, "simulation-konfiguration.json");
+            var finanzen = LeseFinanzen(zielOrdner);
+
+            Konfigurationspruefung.Pruefe(arzt, schwester, rezeption, patienten, simulation);
+            var typenVerteilung = patienten.TypenVerteilung
+                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.VariationskoeffizientArzt,
+                    t.BehandlungszeitSchwester, t.VariationskoeffizientSchwester))
+                .ToArray();
+
             ArztKonfiguration.ANZAHL_AERZTE = arzt.AnzahlAerzte;
             ArztKonfiguration.MITTLERE_BEHANDLUNGSDAUER = arzt.MittlereBehandlungsdauer;
 
-            var schwester = LeseJson<SchwesterKonfigurationJson>(Path.Combine(zielOrdner, "schwester-konfiguration.json"));
             SchwesterKonfiguration.ANZAHL_SCHWESTERN = schwester.AnzahlSchwestern;
             SchwesterKonfiguration.MITTLERE_BEHANDLUNGSDAUER = schwester.MittlereBehandlungsdauer;
 
-            var rezeption = LeseJson<RezeptionKonfigurationJson>(Path.Combine(zielOrdner, "rezeption-konfiguration.json"));
             RezeptionKonfiguration.ANZAHL_REZEPTIONISTEN = rezeption.AnzahlRezeptionisten;
             RezeptionKonfiguration.MITTELREZEPTIONSZEIT = rezeption.MittelRezeptionszeit;
             RezeptionKonfiguration.VARIATIONSKOEFFIZIENT_REZEPTION = rezeption.VariationskoeffizientRezeption;
 
-            var patienten = LeseJson<PatientenKonfigurationJson>(Path.Combine(zielOrdner, "patienten-konfiguration.json"));
             PatientenKonfiguration.ZWISCHENANKUNFT_ERSTE_2_STUNDEN_MINUTEN = patienten.ZwischenankunftErste2StundenMinuten;
             PatientenKonfiguration.ZWISCHENANKUNFT_NAECHSTE_3_STUNDEN_MINUTEN = patienten.ZwischenankunftNaechste3StundenMinuten;
             PatientenKonfiguration.ZWISCHENANKUNFT_LETZTE_3_STUNDEN_MINUTEN = patienten.ZwischenankunftLetzte3StundenMinuten;
@@ -56,58 +57,43 @@ namespace simSharpSimulation
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_SCHWESTER = patienten.OhneTerminWartezimmerFaktorSchwester;
             PatientenKonfiguration.MIT_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.MitTerminWartezimmerFaktorArzt;
             PatientenKonfiguration.OHNE_TERMIN_WARTEZIMMER_FAKTOR_ARZT = patienten.OhneTerminWartezimmerFaktorArzt;
-            PatientenKonfiguration.TYPEN_VERTEILUNG = patienten.TypenVerteilung
-                .Select(t => (t.Typ, t.Wahrscheinlichkeit, t.BehandlungszeitArzt, t.VariationskoeffizientArzt, t.BehandlungszeitSchwester, t.VariationskoeffizientSchwester))
-                .ToArray();
+            PatientenKonfiguration.TYPEN_VERTEILUNG = typenVerteilung;
 
-            var simulation = LeseJson<SimulationKonfigurationJson>(Path.Combine(zielOrdner, "simulation-konfiguration.json"));
             SimulationKonfiguration.RANDOM_SEED = simulation.RandomSeed;
             SimulationKonfiguration.SIMULATIONSDAUER = simulation.Simulationsdauer;
+            SimulationKonfiguration.PROGNOSE_PRUEFUNG_VOR_SCHLIESSUNG_MINUTEN = simulation.PrognosePruefungVorSchliessungMinuten;
+            SimulationKonfiguration.NACHLAUF_MINUTEN = simulation.NachlaufMinuten;
+            SimulationKonfiguration.WAHRSCHEINLICHKEIT_NACH_ARZT_ZUR_REZEPTION = simulation.WahrscheinlichkeitNachArztZurRezeption;
             SimulationKonfiguration.BEWEGUNGSZEIT_EINGANG_ZUR_REZEPTION_SEKUNDEN = simulation.BewegungszeitEingangZurRezeptionSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_INNERHALB_KLINIK_SEKUNDEN = simulation.BewegungszeitInnerhalbKlinikSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_ARZT_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitArztZumAusgangSekunden;
             SimulationKonfiguration.BEWEGUNGSZEIT_REZEPTION_ZUM_AUSGANG_SEKUNDEN = simulation.BewegungszeitRezeptionZumAusgangSekunden;
 
-            LadeFinanzen();
+            Finanzen = finanzen;
         }
 
-        public static void LadeFinanzen()
-        {
-            string zielOrdner = ErmittleRessourcenOrdner();
-            if (!AlleKonfigurationsdateienVorhanden(zielOrdner))
-            {
-                throw new FileNotFoundException($"Konfigurationen fehlen im Ressourcenordner: {zielOrdner}");
-            }
+        public static void LadeFinanzen() => Finanzen = LeseFinanzen(ErmittleRessourcenOrdner());
 
-            Finanzen = LeseJson<FinanzKonfigurationJson>(Path.Combine(zielOrdner, "finanz-konfiguration.json"));
+        private static FinanzKonfigurationJson LeseFinanzen(string ordner)
+        {
+            var finanzen = LeseJson<FinanzKonfigurationJson>(ordner, "finanz-konfiguration.json");
+            Konfigurationspruefung.PruefeFinanzen(finanzen);
+            return finanzen;
         }
 
-        public static void ExportiereAlle()
+        private static T LeseJson<T>(string ordner, string dateiname)
         {
-            throw new InvalidOperationException("ExportiereAlle ist deaktiviert. Bitte JSON-Konfigurationen bereitstellen.");
-        }
-
-        private static T LeseJson<T>(string pfad)
-        {
+            string pfad = Path.Combine(ordner, dateiname);
             string json = File.ReadAllText(pfad);
-            return JsonSerializer.Deserialize<T>(json, JsonOptionen)
-                ?? throw new InvalidDataException($"Konfiguration konnte nicht geladen werden: {pfad}");
-        }
-
-        private static void SchreibeJson<T>(string pfad, T objekt)
-        {
-            string json = JsonSerializer.Serialize(objekt, JsonOptionen);
-            File.WriteAllText(pfad, json);
-        }
-
-        private static bool AlleKonfigurationsdateienVorhanden(string ordner)
-        {
-            return File.Exists(Path.Combine(ordner, "arzt-konfiguration.json"))
-                && File.Exists(Path.Combine(ordner, "schwester-konfiguration.json"))
-                && File.Exists(Path.Combine(ordner, "rezeption-konfiguration.json"))
-                && File.Exists(Path.Combine(ordner, "patienten-konfiguration.json"))
-                && File.Exists(Path.Combine(ordner, "simulation-konfiguration.json"))
-                && File.Exists(Path.Combine(ordner, "finanz-konfiguration.json"));
+            try
+            {
+                return JsonSerializer.Deserialize<T>(json, JsonOptionen)
+                    ?? throw new InvalidDataException($"Konfiguration fehlt in {pfad}.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidDataException($"Ungueltige Konfiguration in {pfad} bei {ex.Path}.", ex);
+            }
         }
 
         private static string ErmittleRessourcenOrdner()
@@ -125,141 +111,5 @@ namespace simSharpSimulation
 
             return Path.Combine(aktuellerOrdner, "Ressourcen");
         }
-    }
-
-    internal sealed class ArztKonfigurationJson
-    {
-        public int AnzahlAerzte { get; set; }
-        public double MittlereBehandlungsdauer { get; set; }
-        public string Beschreibung { get; set; } = string.Empty;
-    }
-
-    internal sealed class SchwesterKonfigurationJson
-    {
-        public int AnzahlSchwestern { get; set; }
-        public double MittlereBehandlungsdauer { get; set; }
-        public string Beschreibung { get; set; } = string.Empty;
-    }
-
-    internal sealed class RezeptionKonfigurationJson
-    {
-        public int AnzahlRezeptionisten { get; set; }
-        public double MittelRezeptionszeit { get; set; }
-        public double VariationskoeffizientRezeption { get; set; } = 1.0;
-        public string Beschreibung { get; set; } = string.Empty;
-    }
-
-    internal sealed class PatientenKonfigurationJson
-    {
-        public double ZwischenankunftErste2StundenMinuten { get; set; }
-        public double ZwischenankunftNaechste3StundenMinuten { get; set; }
-        public double ZwischenankunftLetzte3StundenMinuten { get; set; }
-        public double TerminWahrscheinlichkeit { get; set; }
-        public double TerminVorbereitungWahrscheinlichkeit { get; set; }
-        public double OhneTerminVorbereitungWahrscheinlichkeit { get; set; }
-        public double MittlereWartezimmerDauerSchwester { get; set; }
-        public double MittlereWartezimmerDauerArzt { get; set; }
-        public double MitTerminWartezimmerFaktorSchwester { get; set; }
-        public double OhneTerminWartezimmerFaktorSchwester { get; set; }
-        public double MitTerminWartezimmerFaktorArzt { get; set; }
-        public double OhneTerminWartezimmerFaktorArzt { get; set; }
-        public List<PatientenTypKonfigurationJson> TypenVerteilung { get; set; } = new();
-        public string Beschreibung { get; set; } = string.Empty;
-    }
-
-    internal sealed class PatientenTypKonfigurationJson
-    {
-        public PatientenTyp Typ { get; set; }
-        public double Wahrscheinlichkeit { get; set; }
-        public double BehandlungszeitArzt { get; set; }
-        public double VariationskoeffizientArzt { get; set; }
-        public double BehandlungszeitSchwester { get; set; }
-        public double VariationskoeffizientSchwester { get; set; }
-    }
-
-    internal sealed class SimulationKonfigurationJson
-    {
-        public int RandomSeed { get; set; }
-        public double Simulationsdauer { get; set; }
-        public int BewegungszeitEingangZurRezeptionSekunden { get; set; }
-        public int BewegungszeitInnerhalbKlinikSekunden { get; set; }
-        public int BewegungszeitArztZumAusgangSekunden { get; set; }
-        public int BewegungszeitRezeptionZumAusgangSekunden { get; set; }
-    }
-
-    internal sealed class FinanzKonfigurationJson
-    {
-        public PersonalKostenJson Personal { get; set; } = new();
-        public FixkostenJson Fixkosten { get; set; } = new();
-        public VariableKostenJson VariableKosten { get; set; } = new();
-        public VersicherungsKostenJson Versicherung { get; set; } = new();
-        public SaisonfaktorenJson Saisonfaktoren { get; set; } = new();
-    }
-
-    internal sealed class PersonalKostenJson
-    {
-        public double ArztLohnProPatient { get; set; } = 30.0;
-        public double ArztLohnProStunde { get; set; } = 85.0;
-        public double SchwesterLohnProStunde { get; set; } = 32.0;
-        public double RezeptionLohnProStunde { get; set; } = 24.0;
-        public int ArbeitsstundenProTag { get; set; } = 8;
-    }
-
-    internal sealed class FixkostenJson
-    {
-        public List<MietkostenMietAufteilung> MietkostenAufteilung { get; set; } = new();
-        public int AnzahlBehandlungsraeumeSchwester { get; set; }
-        public double FlaecheBehandlungsraumSchwesterQuadratmeter { get; set; }
-        public int AnzahlBehandlungsraeumeArzt { get; set; }
-        public double FlaecheBehandlungsraumArztQuadratmeter { get; set; }
-        public double FlaecheWartezimmerQuadratmeter { get; set; }
-        public double InfrastrukturProTag { get; set; }
-        public double ITUndVerwaltungProTag { get; set; }
-        public double VersicherungenProTag { get; set; }
-        public double EnergiekostenProQmProMonat { get; set; }
-        public double ReinigungskostenProQmProMonat { get; set; }
-        // JSON uses 'GeraeteLeasingProTag' (no hyphen/umlaut) — map to this property name.
-        public double GeraeteLeasingProTag { get; set; }
-        public double GeraeteWartungProTag { get; set; }
-        public double SonstigeFixkostenProTag { get; set; }
-
-        public double BerechneMietkostenProTag()
-        {
-            double flaecheGesamt = (AnzahlBehandlungsraeumeSchwester * FlaecheBehandlungsraumSchwesterQuadratmeter)
-                + (AnzahlBehandlungsraeumeArzt * FlaecheBehandlungsraumArztQuadratmeter)
-                + FlaecheWartezimmerQuadratmeter;
-
-            // Bestimme geeigneten Preis pro Quadratmeter aus der Aufteilung.
-            var aufteilung = MietkostenAufteilung?.FirstOrDefault(s => flaecheGesamt >= s.MinFlaeche && flaecheGesamt <= s.MaxFlaeche);
-            double kostenProQm = aufteilung?.KostenProQm ?? MietkostenAufteilung?.LastOrDefault()?.KostenProQm ?? 0.0;
-            return (kostenProQm * Math.Max(flaecheGesamt, 0.0) * 12.0) / 365.0;
-        }
-    }
-
-    internal sealed class VariableKostenJson
-    {
-        public double MedizinischesMaterialProPatient { get; set; } = 13.85;
-    }
-
-    internal sealed class MietkostenMietAufteilung
-    {
-        public double MinFlaeche { get; set; }
-        public double MaxFlaeche { get; set; }
-        public double KostenProQm { get; set; }
-    }
-
-    internal sealed class VersicherungsKostenJson
-    {
-        public double AnteilPrivatversichert { get; set; } = 0.2;
-        public double EinnahmePrivatpatient { get; set; } = 150.0;
-        public double EinnahmeGesetzlichPatient { get; set; } = 90.0;
-    }
-
-    internal sealed class SaisonfaktorenJson
-    {
-        public double Winter { get; set; }
-        public double Fruehling { get; set; }
-        public double Sommer { get; set; }
-        public double Herbst { get; set; }
     }
 }

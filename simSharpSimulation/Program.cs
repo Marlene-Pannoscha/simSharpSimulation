@@ -1,7 +1,6 @@
 
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 
 namespace simSharpSimulation
@@ -49,7 +48,7 @@ namespace simSharpSimulation
 
             ErzeugeSimulationsDiagramme(daten);
 
-            ExportiereSimulationsDaten(daten);
+            SimulationsExport.Schreibe(daten, Console.Out);
 
             Console.WriteLine();
             Console.WriteLine(daten.ErzeugePrognoseReportText());
@@ -181,26 +180,6 @@ namespace simSharpSimulation
 
         }
 
-        private static void ExportiereSimulationsDaten(SimulationsDaten daten)
-        {
-        // --- 7. EXPORT IN TEXTDATEI ---
-        Console.WriteLine("--- Speichere Trace-File: klinik_trace.txt ---");
-        var traceWithHeader = daten.TraceData.ToList();
-        // Nur noch Heading-Zeile (keine Kommentarzeilen mehr)
-        traceWithHeader.Insert(0, "Zeit;EventTyp;VonZustand;ZuZustand;PatientId;ArztId;SchwesterId");
-        File.WriteAllLines("klinik_trace.txt", traceWithHeader);
-        Console.WriteLine("--- Trace-File erfolgreich gespeichert. ---");
-
-        string prognosePfad = "prognose_report.txt";
-        daten.SchreibePrognoseReport(prognosePfad);
-        Console.WriteLine($"--- Prognose-Report gespeichert: {prognosePfad} ---");
-
-        string prognoseJsonPfad = "prognose_daten.json";
-        daten.SchreibePrognoseDatenJson(prognoseJsonPfad);
-        Console.WriteLine($"--- Prognose-Daten gespeichert: {prognoseJsonPfad} ---");
-
-        }
-
         private static void SchreibeFinanzwerte(Tagesergebnis finanzen)
         {
             Console.WriteLine($"Umsatz: {finanzen.Umsatz:F2} €");
@@ -230,9 +209,6 @@ namespace simSharpSimulation
         private static (SimulationsDaten Daten, TimeSpan Simulationszeit) FuehreSimulationMitZeitmessungAus()
         {
             var daten = new SimulationsDaten();
-            var eventQueue = new SimulationEventQueue();
-
-            daten.LiveEventOccurred += eventQueue.Publish;
             var simulation = new PatientenProzess(SimulationKonfiguration.RANDOM_SEED, daten);
             Stopwatch simulationsStoppuhr = Stopwatch.StartNew();
             simulation.FuehreAus();
